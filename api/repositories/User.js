@@ -1,62 +1,47 @@
-import { response } from "express";
 import pool from "../db.cjs";
 
 class UserRepository {
   static async createUser({ userName, hashedPassword, role }) {
-    const response = await pool.query(
-      "INSERT INTO users (name, password, role) VALUES (?, ?, ?) RETURNING *",
-      [userName, hashedPassword, role]
-    );
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
 
-    return response.rows[0];
+      const [insertResult] = await connection.query(
+        "INSERT INTO users (name, password, role) VALUES (?, ?, ?)",
+        [userName, hashedPassword, role]
+      );
+
+      const userId = insertResult.insertId;
+      const [rows] = await connection.query(
+        "SELECT * FROM users WHERE id = ?",
+        [userId]
+      );
+
+      await connection.commit();
+
+      return rows[0];
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
-  // static async getUserData(userName) {
-  //   const response = await pool.query("SELECT * FROM users WHERE name=$1", [
-  //     userName,
-  //   ]);
-
-  //   if (!response.rows.length) {
-  //     return null;
-  //   }
-
-  //   return response.rows[0];
-  // };
   static async getUserData(userName) {
-    console.log(userName);
-    // const response = await pool.query("SELECT * FROM users WHERE name = ?", [userName]);
     try {
-      const response = await pool.query("SELECT * FROM users WHERE name = ?", [userName]);
-      console.log("response_log", response);
-      // Додатковий код обробки відповіді від бази даних
+      const [rows] = await pool.query("SELECT * FROM users WHERE name = ?", [userName]);
+      console.log("!!!!!!![rows]!!!!!!!");
+      console.log([rows]);
+      console.log("!!!!!!![rows]!!!!!!!");
+      return rows.length > 0 ? rows[0] : null;
     } catch (error) {
-      console.error("Помилка запиту до бази даних:", error);
+      console.log('@@@@@@@@@@@@@@@@@@@@getUserData@@@@@@@@@@@@@@@');
+      console.log(error);
+      console.log('@@@@@@@@@@@@@@@@@@@@getUserData@@@@@@@@@@@@@@@');
+
+      throw error;
     }
-
-    // console.log("response_log", response);
-
-    console.log(!response);
-    console.log(!response.rows);
-    // console.log("AAAAAAAAAAAAAAAAA!", response.RowDataPacket[0]);
-
-    // if (!response.rows) {
-    //   return;
-    // }
-    // if (!response || !response.rows || !response.rows.length) {
-    //   return null;
-    // }
-    // pool.query("SELECT * FROM users", (error, results, fields) => {
-    pool.query(("SELECT * FROM users WHERE name = ?", [userName]), (error, results, fields) => {
-      if (error) {
-        console.error("Помилка запиту:", error);
-        return;
-      }
-    
-      console.log("Результати запиту:", results); // Результати у вигляді масиву об'єктів
-    });
-    
-    // return response.rows[0];
-
   }
 }
 

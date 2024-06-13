@@ -43,9 +43,15 @@ export class BadRequest extends WebError {
 
 class ErrorUtils {
   static catchError(res, error) {
-    console.log(error);
-    return res.status(error.status || 500).json(error);
+    console.error(error);
+    return res.status(error.status || 500).json({ error: error.error || "Internal Server Error" });
   }
+}
+
+export function catchError(fn) {
+  return function (req, res, next) {
+    fn(req, res, next).catch(next);
+  };
 }
 
 export default ErrorUtils;

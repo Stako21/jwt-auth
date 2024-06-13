@@ -27,6 +27,10 @@ app.use(
 
 app.use("/auth", AuthRootRouter);
 
+app.get("/resource/protected", TokenService.checkAccess, (req, res) => {
+  return res.status(200).json("Ласкаво прошу!" + Date.now());
+})
+
 app.listen(PORT, () => {
   console.log("Сервер успешно запущен");
 });
