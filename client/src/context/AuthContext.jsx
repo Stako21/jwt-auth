@@ -8,19 +8,19 @@ import inMemoryJWT from "../services/inMemoryJWT";
 
 export const AuthClient = axios.create({
   baseURL: `${config.API_URL}/auth`,
-  withCredentials: true,
-})
+  withCredentials: true, // Важливо для передачі кукі
+});
 
 const ResourceClient = axios.create({
   baseURL: `${config.API_URL}/resource`,
-})
+});
 
 ResourceClient.interceptors.request.use(
   (config) => {
     const accessToken = inMemoryJWT.getToken();
 
     if (accessToken) {
-      config.headers["Authorization"] = `Bearer ${accessToken}`
+      config.headers["Authorization"] = `Bearer ${accessToken}`;
     }
 
     return config;
@@ -28,7 +28,7 @@ ResourceClient.interceptors.request.use(
   (error) => {
     Promise.reject(error);
   }
-)
+);
 
 export const AuthContext = createContext({});
 
@@ -39,6 +39,8 @@ const AuthProvider = ({ children }) => {
 
   const handleFetchProtected = () => {
     ResourceClient.get("/protected").then((res) => {
+      console.log('res.data');
+      console.log(res.data);
       setData(res.data);
     })
       .catch(showErrorMessage)
@@ -46,47 +48,94 @@ const AuthProvider = ({ children }) => {
 
   const handleLogOut = () => {
     AuthClient.post("/logout")
-    .then(() => {
-      inMemoryJWT.deleteToken();
-      setIsUserLogged(false);
+      .then(() => {
+        inMemoryJWT.deleteToken();
+        setIsUserLogged(false);
+      })
+      .catch(showErrorMessage);
+  };
+  
+  const handleSignUp = (data) => {
+    AuthClient.post("/sign-up", data).then((res) => {
+      const { accessToken, accessTokenExpiration } = res.data;
+  
+      inMemoryJWT.setToken(accessToken, accessTokenExpiration);
+      setIsUserLogged(true);
     })
     .catch(showErrorMessage);
   };
-
-  const handleSignUp = (data) => {
-    AuthClient.post("/sign-up", data).then((res) => {
-      const { accessToken, accessTokenExpirstion } = res.data;
-
-      inMemoryJWT.setToken(accessToken, accessTokenExpirstion);
-      setIsUserLogged(true);
-    })
-      .catch(showErrorMessage)
-  };
-
+  
   const handleSignIn = (data) => {
     AuthClient.post("/sign-in", data).then((res) => {
-      const { accessToken, accessTokenExpirstion } = res.data;
-
-      inMemoryJWT.setToken(accessToken, accessTokenExpirstion);
+      const { accessToken, accessTokenExpiration } = res.data;
+  
+      inMemoryJWT.setToken(accessToken, accessTokenExpiration);
       setIsUserLogged(true);
     })
-      .catch(showErrorMessage)
+    .catch(showErrorMessage);
   };
-
+  
   useEffect(() => {
+    console.log('Attempting to refresh token');
     AuthClient.post("/refresh").then((res) => {
-      const { accessToken, accessTokenExpirstion } = res.data;
-
-      inMemoryJWT.setToken(accessToken, accessTokenExpirstion);
-
+      const { accessToken, accessTokenExpiration } = res.data;
+  
+      inMemoryJWT.setToken(accessToken, accessTokenExpiration);
+  
       setIsAppReady(true);
       setIsUserLogged(true);
     })
-    .catch(() => {
+    .catch((err) => {
+      console.error('Refresh token error:', err);
       setIsAppReady(true);
-      setIsUserLogged(true)
-    })
-  })
+      setIsUserLogged(false);
+    });
+  }, []);
+
+  // const handleLogOut = () => {
+  //   AuthClient.post("/logout")
+  //   .then(() => {
+  //     inMemoryJWT.deleteToken();
+  //     setIsUserLogged(false);
+  //   })
+  //   .catch(showErrorMessage);
+  // };
+
+  // const handleSignUp = (data) => {
+  //   AuthClient.post("/sign-up", data).then((res) => {
+  //     const { accessToken, accessTokenExpirstion } = res.data;
+
+  //     inMemoryJWT.setToken(accessToken, accessTokenExpirstion);
+  //     setIsUserLogged(true);
+  //   })
+  //     .catch(showErrorMessage)
+  // };
+
+  // const handleSignIn = (data) => {
+  //   AuthClient.post("/sign-in", data).then((res) => {
+  //     const { accessToken, accessTokenExpirstion } = res.data;
+
+  //     inMemoryJWT.setToken(accessToken, accessTokenExpirstion);
+  //     setIsUserLogged(true);
+  //   })
+  //     .catch(showErrorMessage)
+  // };
+
+  // useEffect(() => {
+  //   AuthClient.post("/refresh").then((res) => {
+  //     const { accessToken, accessTokenExpirstion } = res.data;
+
+  //     inMemoryJWT.setToken(accessToken, accessTokenExpirstion);
+
+  //     setIsAppReady(true);
+  //     setIsUserLogged(true);
+  //   })
+  //   .catch(() => {
+  //     console.error(err);
+  //     setIsAppReady(true);
+  //     setIsUserLogged(true)
+  //   })
+  // })
 
   return (
     <AuthContext.Provider

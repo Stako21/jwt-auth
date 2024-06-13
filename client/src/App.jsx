@@ -10,6 +10,9 @@ import { AuthContext } from "./context/AuthContext";
 const App = () => {
   const { isUserLogged } = useContext(AuthContext);
 
+  console.log('isUserLogged');
+  console.log(isUserLogged);
+
   return (
     <div className={style.wrapper}>
       <SnackbarProvider />
