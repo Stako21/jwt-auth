@@ -77,7 +77,7 @@ const AuthProvider = ({ children }) => {
     AuthClient.post("/refresh").then((res) => {
       const { accessToken, accessTokenExpirstion } = res.data;
 
-      setToken(accessToken, accessTokenExpirstion);
+      inMemoryJWT.setToken(accessToken, accessTokenExpirstion);
 
       setIsAppReady(true);
       setIsUserLogged(true);

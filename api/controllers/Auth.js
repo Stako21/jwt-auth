@@ -58,27 +58,25 @@ class AuthController {
   static async refresh(req, res) {
     const { fingerprint } = req;
     const currentRefreshToken = req.cookies.refreshToken;
-
-    //+
+  
     console.log('currentRefreshToken:', currentRefreshToken); // Дополнительное логирование
-
-    // if (!currentRefreshToken) {
-    //   return ErrorsUtils.catchError(res, new Unprocessable({
-    //     path: "cookies.refreshToken",
-    //     errors: ["Поле обязательно!"],
-    //   }));
-    // }
-    //+
-
+  
+    if (!currentRefreshToken) {
+      return ErrorsUtils.catchError(res, new ErrorsUtils.Unprocessable({
+        path: "cookies.refreshToken",
+        errors: ["Поле обязательно!"],
+      }));
+    }
+  
     try {
       const { accessToken, refreshToken, accessTokenExpiration } =
         await AuthService.refresh({
           currentRefreshToken,
           fingerprint,
         });
-
+  
       res.cookie("refreshToken", refreshToken, COOKIE_SETTINGS.REFRESH_TOKEN);
-
+  
       return res.status(200).json({ accessToken, accessTokenExpiration });
     } catch (err) {
       console.log("err", err);
