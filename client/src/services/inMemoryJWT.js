@@ -1,42 +1,69 @@
-const inMemoryJWTService = () => {
-  let inMemoryJWT = null;
-  let refreshTimeoutId = null;
+// const inMemoryJWTService = () => {
+//   let inMemoryJWT = null;
+//   let refreshTimeoutId = null;
 
-  const refreshToken = (expiration) => {
-    const timeoutTrigger = expiration - 10000;
+//   const refreshToken = (expiration) => {
+//     const timeoutTrigger = expiration - 10000;
 
-    refreshTimeoutId = setTimeout(() => {
-      AuthClient.post("/refresh").then((res) => {
-        const { accessToken, accessTokenExpirstion } = res.data;
+//     refreshTimeoutId = setTimeout(() => {
+//       AuthClient.post("/refresh").then((res) => {
+//         const { accessToken, accessTokenExpirstion } = res.data;
   
-        setToken(accessToken, accessTokenExpirstion);
-      })
-        .catch(console.error);
-    }, timeoutTrigger);
+//         setToken(accessToken, accessTokenExpirstion);
+//       })
+//         .catch(console.error);
+//     }, timeoutTrigger);
+//   }
+
+//   const abortRefreshToken = () => {
+//     if (refreshTimeoutId) {
+//       clearInterval(refreshTimeoutId);
+//     }
+//   };
+
+//   const getToken = () => inMemoryJWT;
+
+//   const setToken = (token, tokenExpirstion) => {
+//     inMemoryJWT = token;
+//     refreshToken(tokenExpirstion);
+//   }
+
+//   const deleteToken = (token, tokenExpirstion) => {
+//     inMemoryJWT = null;
+//     abortRefreshToken();
+//   }
+//   // const deleteToken = (token, tokenExpirstion) => {
+//   //   inMemoryJWT = token
+//   // }
+
+//   return { getToken, setToken, deleteToken };
+// };
+
+// export default inMemoryJWTService();
+
+class inMemoryJWT {
+  constructor() {
+    this.token = null;
+    this.expiration = null;
   }
 
-  const abortRefreshToken = () => {
-    if (refreshTimeoutId) {
-      clearInterval(refreshTimeoutId);
+  setToken(token, expiration) {
+    this.token = token;
+    this.expiration = expiration;
+  }
+
+  getToken() {
+    if (new Date() < new Date(this.expiration)) {
+      return this.token;
     }
-  };
-
-  const getToken = () => inMemoryJWT;
-
-  const setToken = (token, tokenExpirstion) => {
-    inMemoryJWT = token;
-    refreshToken(tokenExpirstion);
+    this.deleteToken();
+    return null;
   }
 
-  const deleteToken = (token, tokenExpirstion) => {
-    inMemoryJWT = null;
-    abortRefreshToken();
+  deleteToken() {
+    this.token = null;
+    this.expiration = null;
   }
-  // const deleteToken = (token, tokenExpirstion) => {
-  //   inMemoryJWT = token
-  // }
+}
 
-  return { getToken, setToken, deleteToken };
-};
-
-export default inMemoryJWTService();
+export default new inMemoryJWT();
