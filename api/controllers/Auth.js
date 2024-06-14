@@ -1,5 +1,5 @@
 import AuthService from "../services/Auth.js";
-import ErrorsUtils from "../utils/Errors.js";
+import ErrorsUtils, { Unprocessable } from "../utils/Errors.js";
 import { COOKIE_SETTINGS } from "../constants.js";
 
 class AuthController {
@@ -59,14 +59,14 @@ class AuthController {
     const { fingerprint } = req;
     const currentRefreshToken = req.cookies.refreshToken;
   
-    console.log('currentRefreshToken:', currentRefreshToken); // Дополнительное логирование
+    console.log('currentRefreshToken:', currentRefreshToken); // Логування токену
   
-    // if (!currentRefreshToken) {
-    //   return ErrorsUtils.catchError(res, new ErrorsUtils.Unprocessable({
-    //     path: "cookies.refreshToken",
-    //     errors: ["Поле обязательно!"],
-    //   }));
-    // }
+    if (!currentRefreshToken) {
+      return ErrorsUtils.catchError(res, new Unprocessable({
+        path: "cookies.refreshToken",
+        errors: ["Поле обязательно!"],
+      }));
+    }
   
     try {
       const { accessToken, refreshToken, accessTokenExpiration } =
@@ -76,6 +76,8 @@ class AuthController {
         });
   
       res.cookie("refreshToken", refreshToken, COOKIE_SETTINGS.REFRESH_TOKEN);
+
+      console.log('Refresh: refreshToken set in cookie:', refreshToken);
   
       return res.status(200).json({ accessToken, accessTokenExpiration });
     } catch (err) {

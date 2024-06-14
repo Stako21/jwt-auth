@@ -34,6 +34,9 @@ class UserRepository {
       console.log("!!!!!!![rows]!!!!!!!");
       console.log([rows]);
       console.log("!!!!!!![rows]!!!!!!!");
+      console.log("!!!!!!!rows!!!!!!!");
+      console.log(rows);
+      console.log("!!!!!!!rows!!!!!!!");
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
       console.log('@@@@@@@@@@@@@@@@@@@@getUserData@@@@@@@@@@@@@@@');
