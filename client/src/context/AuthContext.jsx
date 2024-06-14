@@ -21,7 +21,10 @@ ResourceClient.interceptors.request.use(
 
     if (accessToken) {
       config.headers["Authorization"] = `Bearer ${accessToken}`
+      console.log(config.headers["Authorization"]);
     }
+
+    console.log(config);
 
     return config;
   },
@@ -39,7 +42,10 @@ const AuthProvider = ({ children }) => {
 
   const handleFetchProtected = () => {
     ResourceClient.get("/protected").then((res) => {
+      console.log('####################res.data##############################');
+      console.log(res.data);
       setData(res.data);
+
     })
       .catch(showErrorMessage)
   };
