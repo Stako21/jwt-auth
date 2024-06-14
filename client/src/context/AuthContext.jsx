@@ -76,6 +76,15 @@ const AuthProvider = ({ children }) => {
         const { accessToken, accessTokenExpiration } = res.data;
         inMemoryJWT.setToken(accessToken, accessTokenExpiration);
         setIsUserLogged(true);
+
+        console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&res.data");
+        console.log(data);
+
+        console.log("***********************userName");
+        console.log(data.userName);
+
+        const message = `${data.userName}`
+        enqueueSnackbar(message, { variant: 'success' })
       })
       .catch(showErrorMessage);
   };
@@ -92,6 +101,21 @@ const AuthProvider = ({ children }) => {
         setIsAppReady(true);
         setIsUserLogged(false);
       });
+  }, []);
+
+  useEffect(() => {
+    const handlePersistentLogOut = (event) => {
+      if (event.key === config.LOGOUT_STORAGE_KEY) {
+        inMemoryJWT.deleteToken();
+        setIsUserLogged(false);
+      }
+    };
+
+    window.addEventListener("storage", handlePersistentLogOut);
+
+    return () => {
+      window.removeEventListener("storage", handlePersistentLogOut);
+    }
   }, []);
 
   return (

@@ -31,7 +31,6 @@ class RefreshSessionRepository {
     } catch (error) {
       console.error("Error inserting refresh session:", error);
     }
-
   }
 
   static async deleteRefreshSession(refreshToken) { 

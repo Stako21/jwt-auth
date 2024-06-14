@@ -16,6 +16,9 @@ class AuthService {
 
     const isPasswordValid = bcrypt.compareSync(password, userData.password)
 
+    console.log("$$$$$$$$$$$$$$$$$$$$$$$isPasswordValid");
+    console.log(isPasswordValid);
+
     if (!isPasswordValid) {
       throw new Unauthorized("Неправильний логін або пароль");
     }
@@ -72,6 +75,11 @@ class AuthService {
     if (!currentRefreshToken) {
       console.log("!currentRefreshToken");
       throw new Unauthorized()
+    }
+
+    if (refreshSession.finger_print !== fingerprint.hash) {
+      console.log("Спроба несанкціонованого оновлення токенів!");
+      throw new Forbidden();
     }
 
     const refreshSession = await RefreshSessionsRepository.getRefreshSession(currentRefreshToken);
