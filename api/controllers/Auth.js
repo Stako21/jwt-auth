@@ -61,12 +61,12 @@ class AuthController {
   
     console.log('currentRefreshToken:', currentRefreshToken); // Дополнительное логирование
   
-    if (!currentRefreshToken) {
-      return ErrorsUtils.catchError(res, new ErrorsUtils.Unprocessable({
-        path: "cookies.refreshToken",
-        errors: ["Поле обязательно!"],
-      }));
-    }
+    // if (!currentRefreshToken) {
+    //   return ErrorsUtils.catchError(res, new ErrorsUtils.Unprocessable({
+    //     path: "cookies.refreshToken",
+    //     errors: ["Поле обязательно!"],
+    //   }));
+    // }
   
     try {
       const { accessToken, refreshToken, accessTokenExpiration } =
