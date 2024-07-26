@@ -23,7 +23,7 @@ class AuthService {
       throw new Unauthorized("Неправильний логін або пароль");
     }
 
-    const payload = { id: userData.id, role: userData.role, userName };
+    const payload = { id: userData.id, role: userData.role, userName: userData.NAME };
 
     const accessToken = await TokenService.generateAccessToken(payload);
     const refreshToken = await TokenService.generateRefreshToken(payload);
@@ -50,7 +50,7 @@ class AuthService {
     const hashedPassword = bcrypt.hashSync(password, 8);
     const user = await UserRepository.createUser({ userName, hashedPassword, role });
 
-    const payload = { id: user.id, userName, role };
+    const payload = { id: user.id, userName: userData.NAME, role };
     const accessToken = await TokenService.generateAccessToken(payload);
     const refreshToken = await TokenService.generateRefreshToken(payload);
 
