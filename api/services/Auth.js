@@ -121,9 +121,12 @@ class AuthService {
     const { id, role, name: userName } = userData;
   
     const actualPayload = { id, userName, role };
-
+    
     console.log('**********************actualPayload*****************', actualPayload);
-  
+
+    const actualPayload1 = { id, userName: userData.NAME , role };
+    console.log('**********************actualPayload1*****************', actualPayload1);
+    
     const accessToken = await TokenService.generateAccessToken(actualPayload);
     const refreshToken = await TokenService.generateRefreshToken(actualPayload);
   
