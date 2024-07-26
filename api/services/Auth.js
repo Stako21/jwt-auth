@@ -101,8 +101,12 @@ class AuthService {
     } catch (error) {
       throw new Forbidden(error);
     }
+
+    console.log('&&&&&&&&&&&&&&&&&&&&&&&&&payload', payload);
+    console.log('&&&&&&&&&&&&&&&&&&&&&&&&&payload.userName', payload.userName);
   
     if (!payload || !payload.userName) {
+      console.log(!payload || !payload.userName);
       console.log("Invalid payload or userName not found in payload");
       throw new Unauthorized();
     }
