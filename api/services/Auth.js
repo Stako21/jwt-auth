@@ -14,7 +14,7 @@ class AuthService {
       throw new NotFound("Користувача не знайдено");
     }
 
-    const isPasswordValid = bcrypt.compareSync(password, userData.password)
+    const isPasswordValid = bcrypt.compareSync(password, userData.PASSWORD)
 
     console.log("$$$$$$$$$$$$$$$$$$$$$$$isPasswordValid");
     console.log(isPasswordValid);
