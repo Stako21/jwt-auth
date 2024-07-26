@@ -74,22 +74,16 @@ class AuthService {
   static async refresh({ fingerprint, currentRefreshToken }) {
     if (!currentRefreshToken) {
       console.log("!currentRefreshToken");
-      throw new Unauthorized()
-    }
-
-    if (refreshSession.finger_print !== fingerprint.hash) {
-      console.log("Спроба несанкціонованого оновлення токенів!");
-      throw new Forbidden();
-    }
-
-    const refreshSession = await RefreshSessionsRepository.getRefreshSession(currentRefreshToken);
-
-    if (!refreshSession) {
-      console.log("!refreshSession");
-
       throw new Unauthorized();
     }
-
+  
+    const refreshSession = await RefreshSessionsRepository.getRefreshSession(currentRefreshToken);
+  
+    if (!refreshSession) {
+      console.log("!refreshSession");
+      throw new Unauthorized();
+    }
+  
     console.log("refreshSession.finger_print");
     console.log(refreshSession.finger_print);
     console.log("fingerprint.hash");
@@ -98,39 +92,49 @@ class AuthService {
       console.log("refreshSession.finger_print !== fingerprint.hash");
       throw new Forbidden();
     }
-
+  
     await RefreshSessionsRepository.deleteRefreshSession(currentRefreshToken);
-
+  
     let payload;
     try {
       payload = await TokenService.verifyRefreshToken(currentRefreshToken);
     } catch (error) {
       throw new Forbidden(error);
     }
-
-    const {
-      id,
-      role,
-      name: userName,
-    } = await UserRepository.getUserData(payload.userName);
-
+  
+    if (!payload || !payload.userName) {
+      console.log("Invalid payload or userName not found in payload");
+      throw new Unauthorized();
+    }
+  
+    const userData = await UserRepository.getUserData(payload.userName);
+  
+    if (!userData) {
+      console.log("User not found with userName:", payload.userName);
+      throw new Unauthorized();
+    }
+  
+    const { id, role, name: userName } = userData;
+  
     const actualPayload = { id, userName, role };
-
+  
     const accessToken = await TokenService.generateAccessToken(actualPayload);
     const refreshToken = await TokenService.generateRefreshToken(actualPayload);
-
+  
     await RefreshSessionsRepository.createRefreshSession({
       id,
       refreshToken,
       fingerprint,
     });
-
+  
     return {
       accessToken,
       refreshToken,
       accessTokenExpiration: ACCESS_TOKEN_EXPIRATION,
     };
   }
+  
+  
 }
 
 export default AuthService;
