@@ -46,6 +46,20 @@ class UserRepository {
       throw error;
     }
   }
+
+  static async getAllUsers() {
+    // const query = 'SELECT id, name, role FROM users';
+    const [rows] = await pool.query("SELECT id, name, role FROM users");
+    // const [rows] = await db.execute(query);
+    console.log("@@@!!!!!!![rows]!!!!!!!@@@");
+    console.log([rows]);
+    console.log("@@@!!!!!!![rows]!!!!!!!@@@");
+    console.log("###!!!!!!!rows!!!!!!!###");
+    console.log(rows);
+    console.log("###!!!!!!!rows!!!!!!!###");
+
+    return rows;
+  }
 }
 
 export default UserRepository;
