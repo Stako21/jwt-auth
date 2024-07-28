@@ -9,7 +9,7 @@ import { AuthContext } from "./context/AuthContext";
 
 const LogPageView = () => {
   const location = useLocation();
-  
+
   useEffect(() => {
     console.log(`Visited page: ${location.pathname}`);
   }, [location]);
@@ -29,13 +29,15 @@ const App = () => {
       <SnackbarProvider />
       <BrowserRouter>
         <LogPageView />
-        {!isUserLogged && (
-          <nav className={style.nav}>
-            <Link to="sign-in">Вход</Link>
-            <Link to="sign-up">Регистрация</Link>
-            {/* <Link to="demo">Демо</Link> */}
-          </nav>
-        )}
+        
+          {!isUserLogged && (
+            <nav className={style.nav}>
+              <Link to="sign-in">Вход</Link>
+              <Link to="sign-up">Регистрация</Link>
+              {/* <Link to="demo">Демо</Link> */}
+            </nav>
+          )}
+        
         <Routes>
           {isUserLogged ? (
             <Route path="demo" element={<Demo />} />

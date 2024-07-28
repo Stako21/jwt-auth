@@ -1,12 +1,15 @@
 import { memo } from "react";
 import style from "./select.module.scss";
+import cn from "classnames"
 
 export default memo(({ options = [], ...rest }) => (
-  <select {...rest} className={style.select}>
-    {options.map(({ id, title }) => (
-      <option key={id} value={id}>
-        {title}
-      </option>
-    ))}
-  </select>
+  <div className={cn ("select is-fullwidth", style.select)}>
+    <select {...rest}>
+      {options.map(({ id, title }) => (
+        <option key={id} value={id}>
+          {title}
+        </option>
+      ))}
+    </select>
+  </div>
 ));

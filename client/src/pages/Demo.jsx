@@ -9,6 +9,7 @@ export default function Demo() {
 
   return (
     <div className={style.wrapper}>
+    {/* <div className={style.wrapper}> */}
       <p>{JSON.stringify(data)}</p>
       <Button onClick={handleFetchProtected}>
         Запрос на защищенный роут
@@ -16,7 +17,9 @@ export default function Demo() {
       <Button onClick={handleLogOut}>
         Выйти
       </Button>
-      <UsersList />
+      <div>
+        <UsersList />
+      </div>
     </div>
   );
 }

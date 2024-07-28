@@ -21,9 +21,9 @@ const UsersList = () => {
   }, []);
 
   return (
-    <div>
+    <div className="container">
       <h1>Users List</h1>
-      <div className='listBox'>
+      <div className="list">
         <ul>
           {users.map(user => (
             <li key={user.id}>

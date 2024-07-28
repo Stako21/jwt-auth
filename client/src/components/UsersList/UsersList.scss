@@ -1,27 +1,31 @@
 @import "../../variables.scss";
 
-.listBox {
-  padding: 20px;
-  background-color: #f9f9f9;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-}
+// .listBox {
+//   padding: 20px;
+//   background-color: #f9f9f9;
+//   border: 1px solid #ddd;
+//   border-radius: 5px;
+// }
 
-.listBox ul {
-  list-style-type: none;
-  padding: 0;
-}
+// .listBox ul {
+//   list-style-type: none;
+//   padding: 0;
+// }
 
-.listBox li {
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-}
+// .listBox li {
+//   padding: 10px;
+//   border-bottom: 1px solid #ddd;
+// }
 
-.listBox li:last-child {
-  border-bottom: none;
-}
+// .listBox li:last-child {
+//   border-bottom: none;
+// }
 
-.listBox li span {
-  display: inline-block;
-  margin-right: 10px;
-}
+// .listBox li span {
+//   display: inline-block;
+//   margin-right: 10px;
+// }
+
+// .list {
+//   overflow-y: scroll;
+// }

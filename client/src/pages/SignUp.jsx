@@ -43,34 +43,40 @@ export default function SignUp() {
   });
 
   return (
-    <form className={style.wrapper} onSubmit={handleSubmit(handleSignUp)}>
-      <h2>Создать аккаунт</h2>
-      <Field
-        name="userName"
-        register={register}
-        autoComplete="off"
-        placeholder="Имя пользователя"
-        error={Boolean(errors.userName)}
-        helperText={errors.userName?.message}
-      />
-      <Field
-        name="password"
-        register={register}
-        autoComplete="off"
-        placeholder="Пароль"
-        error={Boolean(errors.password)}
-        helperText={errors.password?.message}
-      />
-      <Controller
-        control={control}
-        name="role"
-        render={({ field: { onChange, value } }) => (
-          <Select onChange={onChange} value={value} options={rolesList} />
-        )}
-      />
-      <Button disabled={isSubmitting} type="submit">
-        Зарегистрироваться
-      </Button>
-    </form>
+    <div className="container">
+      <div className="columns is-centered">
+        <div className="box column is-half">
+          <form className={style.wrapper} onSubmit={handleSubmit(handleSignUp)}>
+            <h2 className="title is-5 has-text-centered">Создать аккаунт</h2>
+            <Field
+              name="userName"
+              register={register}
+              autoComplete="off"
+              placeholder="Имя пользователя"
+              error={Boolean(errors.userName)}
+              helperText={errors.userName?.message}
+            />
+            <Field
+              name="password"
+              register={register}
+              autoComplete="off"
+              placeholder="Пароль"
+              error={Boolean(errors.password)}
+              helperText={errors.password?.message}
+            />
+            <Controller
+              control={control}
+              name="role"
+              render={({ field: { onChange, value } }) => (
+                <Select onChange={onChange} value={value} options={rolesList} />
+              )}
+            />
+            <Button disabled={isSubmitting} type="submit">
+              Зарегистрироваться
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 }
