@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import style from './UsersList.scss'
+// import style from './UsersList.scss'
 import config from '../../config';
 
 const UsersList = () => {

@@ -6,10 +6,23 @@
 
 .wrapper {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  position: relative;
+  // position: relative;
+}
+
+.navbar {
+border: solid green;
+
+  &__list {
+    display: flex;
+    gap: 20;
+    border: solid red;
+  }
+
+
 }
 
 // .header {
@@ -19,16 +32,16 @@
 //   border: solid red;
 // }
 
-.nav {
-  position: absolute;
-  display: flex;
-  gap: 15px;
-  top: 10px;
-}
+// .nav {
+//   position: absolute;
+//   display: flex;
+//   gap: 15px;
+//   top: 10px;
+// }
 
-.centered {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-}
+// .centered {
+//   display: flex;
+//   justify-content: center;
+//   align-items: center;
+//   height: 100vh;
+// }

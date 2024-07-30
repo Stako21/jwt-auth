@@ -6,6 +6,7 @@ import SignIn from "./pages/SignIn";
 import Demo from "./pages/Demo";
 import style from "./app.module.scss";
 import { AuthContext } from "./context/AuthContext";
+import cn from "classnames"
 
 const LogPageView = () => {
   const location = useLocation();
@@ -25,19 +26,26 @@ const App = () => {
   }, [isUserLogged]);
 
   return (
-    <div className={style.wrapper}>
+    <div className={cn (style.wrapper)}>
       <SnackbarProvider />
       <BrowserRouter>
         <LogPageView />
-        
-          {!isUserLogged && (
-            <nav className={style.nav}>
-              <Link to="sign-in">Вход</Link>
-              <Link to="sign-up">Регистрация</Link>
+
+        {!isUserLogged && (
+          <nav className={cn (style.navbar)}>
+            <ul className={cn (style.navbar__list)}>
+              {/* <nav className={style.nav}> */}
+              <li>
+                <Link to="sign-in">Вход</Link>
+              </li>
+              <li>
+                <Link to="sign-up">Регистрация</Link>
+              </li>
               {/* <Link to="demo">Демо</Link> */}
-            </nav>
-          )}
-        
+            </ul>
+          </nav>
+        )}
+
         <Routes>
           {isUserLogged ? (
             <Route path="demo" element={<Demo />} />

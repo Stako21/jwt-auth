@@ -7,6 +7,7 @@ import { signUpSchema } from "./validtionSchemas";
 import Select from "../components/Select/Select";
 import Field from "../components/Field/Field";
 import Button from "../components/Button/Button";
+import cn from "classnames"
 
 const defaultValues = {
   userName: "",
@@ -43,9 +44,8 @@ export default function SignUp() {
   });
 
   return (
-    <div className="container">
-      <div className="columns is-centered">
-        <div className="box column is-half">
+    <div className={cn("container", style.wrapper)}>
+        <div className="box">
           <form className={style.wrapper} onSubmit={handleSubmit(handleSignUp)}>
             <h2 className="title is-5 has-text-centered">Создать аккаунт</h2>
             <Field
@@ -77,6 +77,5 @@ export default function SignUp() {
           </form>
         </div>
       </div>
-    </div>
   );
 }
