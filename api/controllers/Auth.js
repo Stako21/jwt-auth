@@ -22,12 +22,31 @@ class AuthController {
     }
   }
 
+  // static async signUp(req, res) {
+  //   const { userName, password, role } = req.body;
+  //   const { fingerprint } = req;
+  //   try {
+  //     const { accessToken, refreshToken, accessTokenExpiration } =
+  //       await AuthService.signUp({ userName, password, role, fingerprint });
+
+  //     res.cookie("refreshToken", refreshToken, COOKIE_SETTINGS.REFRESH_TOKEN);
+
+  //     return res.status(200).json({ accessToken, accessTokenExpiration });
+  //   } catch (err) {
+  //     console.log('+++++++++++++++++err+++++++++++++++');
+  //     console.log(err);
+  //     console.log('+++++++++++++++++err+++++++++++++++');
+
+  //     return ErrorsUtils.catchError(res, err);
+  //   }
+  // }
+
   static async signUp(req, res) {
-    const { userName, password, role } = req.body;
+    const { userName, password, role, city } = req.body;
     const { fingerprint } = req;
     try {
       const { accessToken, refreshToken, accessTokenExpiration } =
-        await AuthService.signUp({ userName, password, role, fingerprint });
+        await AuthService.signUp({ userName, password, role, city, fingerprint });
 
       res.cookie("refreshToken", refreshToken, COOKIE_SETTINGS.REFRESH_TOKEN);
 

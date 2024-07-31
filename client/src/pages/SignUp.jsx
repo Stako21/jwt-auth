@@ -7,27 +7,25 @@ import { signUpSchema } from "./validtionSchemas";
 import Select from "../components/Select/Select";
 import Field from "../components/Field/Field";
 import Button from "../components/Button/Button";
-import cn from "classnames"
+import cn from "classnames";
 
 const defaultValues = {
   userName: "",
   password: "",
   role: 1,
+  city: 1, // default city value
 };
 
 const rolesList = [
-  {
-    id: 1,
-    title: "Администратор",
-  },
-  {
-    id: 2,
-    title: "Модератор",
-  },
-  {
-    id: 3,
-    title: "Пользователь",
-  },
+  { id: 1, title: "Администратор" },
+  { id: 2, title: "Модератор" },
+  { id: 3, title: "Пользователь" },
+];
+
+const citiesList = [
+  { id: 1, title: "Запорожье" },
+  { id: 2, title: "Днепр" },
+  { id: 3, title: "Кривой Рог" },
 ];
 
 export default function SignUp() {
@@ -45,37 +43,44 @@ export default function SignUp() {
 
   return (
     <div className={cn("container", style.wrapper)}>
-        <div className="box">
-          <form className={style.wrapper} onSubmit={handleSubmit(handleSignUp)}>
-            <h2 className="title is-5 has-text-centered">Создать аккаунт</h2>
-            <Field
-              name="userName"
-              register={register}
-              autoComplete="off"
-              placeholder="Имя пользователя"
-              error={Boolean(errors.userName)}
-              helperText={errors.userName?.message}
-            />
-            <Field
-              name="password"
-              register={register}
-              autoComplete="off"
-              placeholder="Пароль"
-              error={Boolean(errors.password)}
-              helperText={errors.password?.message}
-            />
-            <Controller
-              control={control}
-              name="role"
-              render={({ field: { onChange, value } }) => (
-                <Select onChange={onChange} value={value} options={rolesList} />
-              )}
-            />
-            <Button disabled={isSubmitting} type="submit">
-              Зарегистрироваться
-            </Button>
-          </form>
-        </div>
+      <div className="box">
+        <form className={style.wrapper} onSubmit={handleSubmit(handleSignUp)}>
+          <h2 className="title is-5 has-text-centered">Создать аккаунт</h2>
+          <Field
+            name="userName"
+            register={register}
+            autoComplete="off"
+            placeholder="Имя пользователя"
+            error={Boolean(errors.userName)}
+            helperText={errors.userName?.message}
+          />
+          <Field
+            name="password"
+            register={register}
+            autoComplete="off"
+            placeholder="Пароль"
+            error={Boolean(errors.password)}
+            helperText={errors.password?.message}
+          />
+          <Controller
+            control={control}
+            name="role"
+            render={({ field: { onChange, value } }) => (
+              <Select onChange={onChange} value={value} options={rolesList} />
+            )}
+          />
+          <Controller
+            control={control}
+            name="city"
+            render={({ field: { onChange, value } }) => (
+              <Select onChange={onChange} value={value} options={citiesList} />
+            )}
+          />
+          <Button disabled={isSubmitting} type="submit">
+            Зарегистрироваться
+          </Button>
+        </form>
       </div>
+    </div>
   );
 }

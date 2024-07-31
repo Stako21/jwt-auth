@@ -17,9 +17,9 @@ export default function Demo() {
       <Button onClick={handleLogOut}>
         Выйти
       </Button>
-      <div>
+      {/* <div className="block">
         <UsersList />
-      </div>
+      </div> */}
     </div>
   );
 }
