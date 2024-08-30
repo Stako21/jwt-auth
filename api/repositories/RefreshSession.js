@@ -8,15 +8,15 @@ class RefreshSessionRepository {
       [refreshToken]
     )
 
-    console.log("!!!!!!!!!!!!response!!!!!!!!!!!");
-    console.log(response);
+    // console.log("!!!!!!!!!!!!response!!!!!!!!!!!");
+    // console.log(response);
 
     if (!response.length) {
       return null;
     }
 
-    console.log("!!!!!!!!!!!!response[0]!!!!!!!!!!!");
-    console.log(response[0]);
+    // console.log("!!!!!!!!!!!!response[0]!!!!!!!!!!!");
+    // console.log(response[0]);
 
     return response[0]
   }

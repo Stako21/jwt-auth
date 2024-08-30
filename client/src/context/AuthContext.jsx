@@ -41,6 +41,7 @@ const AuthProvider = ({ children }) => {
   const [isAppReady, setIsAppReady] = useState(false);
   const [isUserLogged, setIsUserLogged] = useState(false);
   const [data, setData] = useState();
+  const [userInfo, setUserInfo] = useState();
 
   const handleFetchProtected = () => {
     ResourceClient.get("/protected")
@@ -77,13 +78,50 @@ const AuthProvider = ({ children }) => {
         inMemoryJWT.setToken(accessToken, accessTokenExpiration);
         setIsUserLogged(true);
 
+        console.log('accessToken ::::: ');
+        console.log(accessToken);
+
+        const arrayToken = accessToken.split('.');
+        const userRole = JSON.parse(atob(arrayToken[1])).role
+        const userName = JSON.parse(atob(arrayToken[1])).userName
+
+        console.log('Role :::: ', userRole);
+
+        setUserInfo({
+          userName: userName,
+          role: userRole,
+        })
+
+
+        // console.log('Decode accessToken ::::: ');
+        // console.log(jwt.decode(accessToken));
+        // console.log('accessTokenExpiration ::::: ');
+        // console.log(accessTokenExpiration);
+
+
         console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&res.data");
         console.log(data);
 
-        console.log("***********************userName");
-        console.log(data.userName);
+        // console.log("***********************userName");
+        // console.log(data.userName);
 
-        const message = `${data.userName}`
+        // const decodedToken = jwt.decode(accessToken);
+        // const userRole = decodedToken.role;
+
+        // console.log('User Role ::::');
+        // console.log(userRole);
+
+
+        // setData({
+        //   ...data,
+        //   role: userRole,
+        // });
+
+        // console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& data after Set");
+        // console.log(data);
+
+
+        const message = `${data.userName} ${userInfo.role}`
         enqueueSnackbar(message, { variant: 'success' })
       })
       .catch(showErrorMessage);
@@ -96,6 +134,32 @@ const AuthProvider = ({ children }) => {
         inMemoryJWT.setToken(accessToken, accessTokenExpiration);
         setIsAppReady(true);
         setIsUserLogged(true);
+
+        console.log('accessToken !!!::::: ');
+        console.log(accessToken);
+
+
+        const arrayToken = accessToken.split('.');
+        const userRole = JSON.parse(atob(arrayToken[1])).role
+        const userName = JSON.parse(atob(arrayToken[1])).userName
+
+        console.log('Role :::: ', userRole);
+
+        setUserInfo({
+          userName: userName,
+          role: userRole,
+        })
+
+        // console.log('accessToken ::::: ');
+        // console.log(accessToken);
+        // console.log('Decode accessToken ::::: ');
+        // console.log(jwt.decode(accessToken));
+
+
+        // const decodedToken = jwt.decode(accessToken);
+        // const userRole = decodedToken.role;
+
+        // setData({ role: userRole });
       })
       .catch(() => {
         setIsAppReady(true);
@@ -122,6 +186,7 @@ const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         data,
+        userInfo,
         handleFetchProtected,
         handleSignUp,
         handleSignIn,

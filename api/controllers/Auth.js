@@ -76,7 +76,7 @@ class AuthController {
 
   static async refresh(req, res) {
 
-    console.log('@@@@@@@@@@req.cookies@@@@@@@@@@@', req.cookies);
+    // console.log('@@@@@@@@@@req.cookies@@@@@@@@@@@', req.cookies);
 
     const { fingerprint } = req;
     const currentRefreshToken = req.cookies.refreshToken;

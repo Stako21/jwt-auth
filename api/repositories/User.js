@@ -6,9 +6,9 @@ class UserRepository {
     try {
       await connection.beginTransaction();
 
-      console.log('++++++++++++++++++++++++++++++');
-      console.log(userName, role, city);
-      console.log('++++++++++++++++++++++++++++++');
+      // console.log('++++++++++++++++++++++++++++++');
+      // console.log(userName, role, city);
+      // console.log('++++++++++++++++++++++++++++++');
 
       const [insertResult] = await connection.query(
         "INSERT INTO users (name, password, role, city) VALUES (?, ?, ?, ?)",
@@ -36,12 +36,12 @@ class UserRepository {
   static async getUserData(userName) {
   try {
     const [rows] = await pool.query("SELECT * FROM users WHERE name = ?", [userName]);
-    console.log("!!!!!!![rows]!!!!!!!");
-    console.log([rows]);
-    console.log("!!!!!!![rows]!!!!!!!");
-    console.log("!!!!!!!rows!!!!!!!");
-    console.log(rows);
-    console.log("!!!!!!!rows!!!!!!!");
+    // console.log("!!!!!!![rows]!!!!!!!");
+    // console.log([rows]);
+    // console.log("!!!!!!![rows]!!!!!!!");
+    // console.log("!!!!!!!rows!!!!!!!");
+    // console.log(rows);
+    // console.log("!!!!!!!rows!!!!!!!");
     return rows.length > 0 ? rows[0] : null;
   } catch (error) {
     console.log('@@@@@@@@@@@@@@@@@@@@getUserData@@@@@@@@@@@@@@@');
@@ -56,12 +56,12 @@ class UserRepository {
   // const query = 'SELECT id, name, role FROM users';
   const [rows] = await pool.query("SELECT id, name, role, city FROM users");
   // const [rows] = await db.execute(query);
-  console.log("@@@!!!!!!![rows]!!!!!!!@@@");
-  console.log([rows]);
-  console.log("@@@!!!!!!![rows]!!!!!!!@@@");
-  console.log("###!!!!!!!rows!!!!!!!###");
-  console.log(rows);
-  console.log("###!!!!!!!rows!!!!!!!###");
+  // console.log("@@@!!!!!!![rows]!!!!!!!@@@");
+  // console.log([rows]);
+  // console.log("@@@!!!!!!![rows]!!!!!!!@@@");
+  // console.log("###!!!!!!!rows!!!!!!!###");
+  // console.log(rows);
+  // console.log("###!!!!!!!rows!!!!!!!###");
 
   return rows;
 }

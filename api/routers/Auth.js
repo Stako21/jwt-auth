@@ -12,6 +12,7 @@ router.post("/refresh", AuthValidator.refresh, AuthController.refresh);
 
 // Новый маршрут для получения всех пользователей
 router.get("/users", UserController.getAllUsers);  // Добавляем маршрут для получения всех пользователей
+router.get("/adminPage");  // Добавляем маршрут для получения всех пользователей
 
 
 export default router;

@@ -22,6 +22,9 @@ class AuthService {
 
     const payload = { id: userData.id, role: userData.role, userName: userData.NAME };
 
+    console.log('SingIn payload ::::::: ', payload);
+    
+
     const accessToken = await TokenService.generateAccessToken(payload);
     const refreshToken = await TokenService.generateRefreshToken(payload);
 
@@ -50,6 +53,8 @@ class AuthService {
     const payload = { id: user.id, userName, role };
     const accessToken = await TokenService.generateAccessToken(payload);
     const refreshToken = await TokenService.generateRefreshToken(payload);
+
+    console.log('signUp payload ::::::: ', payload);
 
     await RefreshSessionsRepository.createRefreshSession({
       id: user.id,
@@ -92,6 +97,9 @@ class AuthService {
     } catch (error) {
       throw new Forbidden(error);
     }
+
+    console.log('refresh payload ::::::: ', payload);
+
 
     if (!payload || !payload.userName) {
       throw new Unauthorized();

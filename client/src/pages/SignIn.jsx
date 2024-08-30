@@ -6,6 +6,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { signInSchema } from "./validtionSchemas";
 import Field from "../components/Field/Field";
 import Button from "../components/Button/Button";
+import Header from "../components/Header/Header";
 import cn from "classnames";
 
 const defaultValues = {
@@ -26,6 +27,7 @@ export default function SignIn() {
   });
 
   return (
+    <>
     <div className={cn("container", style.wrapper)}>
       <div className="box">
         <form onSubmit={handleSubmit(handleSignIn)} className={style.wrapper}>
@@ -52,5 +54,6 @@ export default function SignIn() {
         </form>
       </div>
     </div>
+    </>
   );
 }
