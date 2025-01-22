@@ -2,6 +2,7 @@ import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import Button from "../components/Button/Button";
 import style from "./style.module.scss";
+import UsersList from "../components/UsersList/UsersList"
 
 export default function AdminPage() {
   const { userInfo, handleLogOut } = useContext(AuthContext);
@@ -14,6 +15,7 @@ export default function AdminPage() {
       <Button onClick={handleLogOut}>
         Выйти
       </Button>
+      <UsersList />
     </div>
   );
 }

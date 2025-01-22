@@ -7,6 +7,10 @@ import showErrorMessage from "../utils/showErrorMessage";
 import inMemoryJWT from "../services/inMemoryJWT";
 import { enqueueSnackbar } from "notistack";
 
+console.log("config.API_URL");
+console.log(config.API_URL);
+
+
 export const AuthClient = axios.create({
   baseURL: `${config.API_URL}/auth`,
   withCredentials: true,

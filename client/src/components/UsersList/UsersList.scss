@@ -29,3 +29,10 @@
 // .list {
 //   overflow-y: scroll;
 // }
+
+.containertable {
+  display: block;
+  max-height: 400px;
+  overflow-y: auto;
+}
+

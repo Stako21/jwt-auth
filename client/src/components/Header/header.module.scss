@@ -1,12 +1,54 @@
 @import "../../variables.scss";
 
+// header {
+//   width: 100%;
+//   height: 80px;
+//   display: flex;
+//   border: solid red 10px;
+//   gap: 20px;
+// }
+
+// h1 {
+//   color: $error-color;
+// }
+
 header {
-  // width: 100%;
-  // height: 50px;
-  // display: flex;
-  border: solid red 1px
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-h1 {
-  color: $error-color;
+header {
+  --px: 2rem;
+  --py: 2rem;
+  flex-grow: 0;
+  flex-shrink: 0;
+  gap: 0;
+  padding: var(--py) var(--px);
+  position: relative;
+  transition-duration: var(--bulma-duration);
+  transition-property: background-image;
+}
+
+@media screen and (min-width: 1300px) {
+  header {
+      gap: 1.25rem;
+  }
+}
+
+@media screen and (min-width: 1150px) {
+  header {
+      gap: 1rem;
+  }
+}
+@media screen and (min-width: 1000px) {
+  header {
+      gap: .75rem;
+  }
+}
+
+.navbar-item {
+  display: flex;
+  border: $error-color solid 2px;
 }

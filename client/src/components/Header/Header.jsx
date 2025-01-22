@@ -9,35 +9,38 @@ const Header = () => {
   const { isUserLogged } = useContext(AuthContext);
 
   return (
-    <nav className="navbar" role="navigation" aria-label="main navigation">
-      <div className="navbar-brand">
-        <a role="button" className="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-        </a>
-      </div>
+    <header className="bd-header">
 
-      <div id="navbarBasicExample" className="navbar-menu">
-        {!isUserLogged && (
-          <>
-            <div className="navbar-end">
-              <div className="navbar-item">
-                {/* <nav className={style.nav}> */}
-                <div className="buttons">
-                  <Link to="sign-in" className="button is-light" >Вход</Link>
+      <nav className="navbar" role="navigation" aria-label="main navigation">
+        <div className="navbar-brand">
+          <a role="button" className="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+          </a>
+        </div>
+
+        <div id="navbarBasicExample" className="navbar-menu">
+          {!isUserLogged && (
+            <>
+              <div className="navbar-end">
+                <div className="navbar-item">
+                  {/* <nav className={style.nav}> */}
+                  <div className="">
+                    <Link to="sign-in" className="navbar-in-link" >Вход</Link>
+                  </div>
+                  <div className="">
+                    <Link to="sign-up" className="navbar-up-link" >Регистрация</Link>
+                  </div>
+                  {/* <Link to="demo">Демо</Link> */}
                 </div>
-                <div className="buttons">
-                  <Link to="sign-up" className="button is-light" >Регистрация</Link>
-                </div>
-                {/* <Link to="demo">Демо</Link> */}
               </div>
-            </div>
-          </>
-        )}
-      </div>
-    </nav>
+            </>
+          )}
+        </div>
+      </nav>
+    </header>
   )
 };
 

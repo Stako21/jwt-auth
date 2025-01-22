@@ -14,5 +14,8 @@ router.post("/refresh", AuthValidator.refresh, AuthController.refresh);
 router.get("/users", UserController.getAllUsers);  // Добавляем маршрут для получения всех пользователей
 router.get("/adminPage");  // Добавляем маршрут для получения всех пользователей
 
+// Маршрут для удаления пользователя
+router.delete('/users/:id', UserController.deleteUser); // Указание метода deleteUser
+
 
 export default router;
