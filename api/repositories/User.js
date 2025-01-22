@@ -59,6 +59,16 @@ class UserRepository {
       connection.release();
     }
   }
+
+  static async updateUserPassword(userId, hashedPassword) {
+    const query = "UPDATE users SET password = ? WHERE id = ?";
+    try {
+      const [result] = await pool.query(query, [hashedPassword, userId]);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default UserRepository;

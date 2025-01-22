@@ -16,6 +16,7 @@ router.get("/adminPage");  // Добавляем маршрут для полу�
 
 // Маршрут для удаления пользователя
 router.delete('/users/:id', UserController.deleteUser); // Указание метода deleteUser
+router.put('/users/:id/password', UserController.changePassword);
 
 
 export default router;
