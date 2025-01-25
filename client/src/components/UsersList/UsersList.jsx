@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import style from './UsersList.scss';
+import style from './UsersList.scss?inline';
 import config from '../../config';
 
 export const UsersList = ({ onUserSelect }) => {
@@ -38,8 +38,8 @@ export const UsersList = ({ onUserSelect }) => {
   return (
     <>
       <h2>Users List</h2>
-      <div className="containertable">
-        <table className="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+      <div className="">
+        <table className="">
           <thead>
             <tr>
               <th>Select</th>
@@ -67,7 +67,7 @@ export const UsersList = ({ onUserSelect }) => {
                 <td>{user.role}</td>
                 <td>
                   <button
-                    className="button is-danger is-small"
+                    className=""
                     onClick={() => deleteUser(user.id)}
                   >
                     Удалить

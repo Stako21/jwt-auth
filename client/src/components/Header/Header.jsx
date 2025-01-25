@@ -1,45 +1,50 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
+import Button from "../Button/Button";
+// import "./header.scss"
 import style from "./header.module.scss"
 import cn from "classnames"
 
 
 const Header = () => {
   const { isUserLogged } = useContext(AuthContext);
+  const { userInfo, handleLogOut } = useContext(AuthContext);
+  const [isActive, setIsActive] = useState(false);
+  const [isOpen, setIsOpen] = useState(false)
+
+  const toggleMenu = () => {
+    setIsActive((prev) => !prev);
+    setIsOpen((prev) => !prev);
+  };
 
   return (
-    <header className="bd-header">
+    <header className={style.header}>
 
-      <nav className="navbar" role="navigation" aria-label="main navigation">
-        <div className="navbar-brand">
-          <a role="button" className="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
-            <span aria-hidden="true"></span>
-            <span aria-hidden="true"></span>
-            <span aria-hidden="true"></span>
-            <span aria-hidden="true"></span>
-          </a>
-        </div>
+      <div className={style.logo}>
+        <span>ST</span>
+      </div>
 
-        <div id="navbarBasicExample" className="navbar-menu">
-          {!isUserLogged && (
+      <nav className={cn(style.nav, { [style.open]: isOpen })}>
+        <ul>
+          {!isUserLogged ? (
             <>
-              <div className="navbar-end">
-                <div className="navbar-item">
-                  {/* <nav className={style.nav}> */}
-                  <div className="">
-                    <Link to="sign-in" className="navbar-in-link" >Вход</Link>
-                  </div>
-                  <div className="">
-                    <Link to="sign-up" className="navbar-up-link" >Регистрация</Link>
-                  </div>
-                  {/* <Link to="demo">Демо</Link> */}
-                </div>
-              </div>
+              <li><Link to="sign-in" className="">Вхід</Link></li>
+              <li><Link to="sign-up" className="">Реєстрація</Link></li>
             </>
+          ) : (
+            <li >
+              <a href="" onClick={handleLogOut}>Вихід</a>
+              {/* <Button onClick={handleLogOut}>Log Out</Button> */}
+            </li>
           )}
-        </div>
+        </ul>
       </nav>
+
+      <div className={cn(style.burger, { [style.active]: isActive })} onClick={toggleMenu}>
+        <span></span>
+      </div>
+
     </header>
   )
 };

@@ -1,29 +1,101 @@
 @import "../../variables.scss";
 
-// .inputField {
-//   display: flex;
-//   flex-direction: column;
-//   outline: none;
+.inputField {
+  display: flex;
+  flex-direction: column;
+  outline: none;
 
-//   & > input {
-//     outline: none;
-//     border: 0.5px solid $border-color;
-//     border-radius: 10px;
-//     padding: 10px;
-//   }
+  &>input {
+    outline: none;
+    border: 0.5px solid $border-color;
+    border-radius: 10px;
+    padding: 10px;
+  }
 
-//   &__error > input {
-//     border: 1px solid $error-color;
-//   }
-// }
-
-// .error {
-//   margin: 5px 0 0 10px !important;
-//   font-size: 10px;
-//   font-weight: bold;
-//   color: $error-color;
-// }
-.input__field {
-  width: 100%;
+  &__error>input {
+    border: 1px solid $error-color;
+  }
 }
 
+.error {
+  margin: 5px 0 0 10px !important;
+  font-size: 10px;
+  font-weight: bold;
+  color: $error-color;
+}
+
+.inputBox {}
+
+.inputBox {
+  position: relative;
+  width: 300px;
+}
+
+.inputBox input {
+  padding: 12px 10px 12px 48px;
+  border: none;
+  width: 100%;
+  background: $main-background-color;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #fff;
+  font-weight: 300;
+  border-radius: 25px;
+  font-size: 1em;
+  box-shadow: -5px -5px 15px rgba(255, 255, 255, 0.1),
+    5px 5px 15px rgba(0, 0, 0, 0.35);
+  transition: 0.5s;
+  outline: none;
+}
+
+.inputBox span {
+  position: absolute;
+  left: 0;
+  padding: 12px 10px 12px 48px;
+  pointer-events: none;
+  font-size: 1em;
+  font-weight: 300;
+  transition: 0.5s;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+// .inputBox input:valid ~ span,
+.inputBox input:focus~span,
+.inputBox input:not(:placeholder-shown)~span {
+  color: $border-clolr-light-green;
+  border: 1px solid $border-clolr-light-green;
+  background: $main-background-color;
+  transform: translateX(25px) translateY(-7px);
+  font-size: 0.6em;
+  padding: 0 8px;
+  border-radius: 10px;
+  letter-spacing: 0.1em;
+}
+
+// .inputBox input:valid,
+.inputBox input:focus,
+.inputBox input:not(:placeholder-shown) {
+  border: 1px solid $border-clolr-light-green;
+}
+
+.leftIcon {
+  position: absolute;
+  top: 15px;
+  left: 16px;
+  width: 25px;
+  padding: 2px 0;
+  padding-right: 8px;
+  color: $border-clolr-light-green;
+  border-right: 1px solid $border-clolr-light-green;
+}
+
+.rightIcon {
+  position: absolute;
+  top: 15px;
+  right: 16px;
+  width: 25px;
+  padding: 0 2px;
+  padding-left: 8px;
+  color: $border-clolr-light-green;
+  border-left: 1px solid $border-clolr-light-green;
+}

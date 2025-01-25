@@ -17,15 +17,15 @@ const defaultValues = {
 };
 
 const rolesList = [
-  { id: 1, title: "Администратор" },
+  { id: 1, title: "Адміністратор" },
   { id: 2, title: "Модератор" },
-  { id: 3, title: "Пользователь" },
+  { id: 3, title: "Користувач" },
 ];
 
 const citiesList = [
-  { id: 1, title: "Запорожье" },
-  { id: 2, title: "Днепр" },
-  { id: 3, title: "Кривой Рог" },
+  { id: 1, title: "Запоріжжя" },
+  { id: 2, title: "Дніпро" },
+  { id: 3, title: "Кривий Ріг" },
 ];
 
 export default function SignUp() {
@@ -42,45 +42,47 @@ export default function SignUp() {
   });
 
   return (
-    <div className={cn("container", style.wrapper)}>
-      <div className="box">
-        <form className={style.wrapper} onSubmit={handleSubmit(handleSignUp)}>
-          <h2 className="title is-5 has-text-centered">Создать аккаунт</h2>
-          <Field
-            name="userName"
-            register={register}
-            autoComplete="off"
-            placeholder="Имя пользователя"
-            error={Boolean(errors.userName)}
-            helperText={errors.userName?.message}
-          />
-          <Field
-            name="password"
-            register={register}
-            autoComplete="off"
-            placeholder="Пароль"
-            error={Boolean(errors.password)}
-            helperText={errors.password?.message}
-          />
-          <Controller
-            control={control}
-            name="role"
-            render={({ field: { onChange, value } }) => (
-              <Select onChange={onChange} value={value} options={rolesList} />
-            )}
-          />
-          <Controller
-            control={control}
-            name="city"
-            render={({ field: { onChange, value } }) => (
-              <Select onChange={onChange} value={value} options={citiesList} />
-            )}
-          />
-          <Button disabled={isSubmitting} type="submit">
-            Зарегистрироваться
-          </Button>
-        </form>
-      </div>
+
+    <div className={style.container}>
+      <form className={cn(style.form, style.signin)} onSubmit={handleSubmit(handleSignUp)}>
+        <h2 className="">Створити аккаунт</h2>
+        <Field
+          name="userName"
+          register={register}
+          autoComplete="off"
+          placeholder="Ім'я користувача"
+          inputType = "user"
+          error={Boolean(errors.userName)}
+          helperText={errors.userName?.message}
+        />
+        <Field
+          name="password"
+          register={register}
+          autoComplete="off"
+          placeholder="Пароль"
+          inputType = "password"
+          error={Boolean(errors.password)}
+          helperText={errors.password?.message}
+        />
+        <Controller
+          control={control}
+          name="role"
+          render={({ field: { onChange, value } }) => (
+            <Select onChange={onChange} value={value} options={rolesList} />
+          )}
+        />
+        <Controller
+          control={control}
+          name="city"
+          render={({ field: { onChange, value } }) => (
+            <Select onChange={onChange} value={value} options={citiesList} />
+          )}
+        />
+        <Button disabled={isSubmitting} type="submit">
+          Зарееструватись
+        </Button>
+      </form>
     </div>
+
   );
 }

@@ -153,17 +153,6 @@ const AuthProvider = ({ children }) => {
           userName: userName,
           role: userRole,
         })
-
-        // console.log('accessToken ::::: ');
-        // console.log(accessToken);
-        // console.log('Decode accessToken ::::: ');
-        // console.log(jwt.decode(accessToken));
-
-
-        // const decodedToken = jwt.decode(accessToken);
-        // const userRole = decodedToken.role;
-
-        // setData({ role: userRole });
       })
       .catch(() => {
         setIsAppReady(true);
@@ -202,7 +191,7 @@ const AuthProvider = ({ children }) => {
       {isAppReady ? (
         children
       ) : (
-        <div className={style.centred}>
+        <div className="">
           <Circle />
         </div>
       )}

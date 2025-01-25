@@ -1,9 +1,9 @@
 import React, { useContext, useState } from "react";
+import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import Button from "../components/Button/Button";
 import style from "./style.module.scss";
 import { UsersList } from "../components/UsersList/UsersList";
-import axios from "axios";
 import config from "../config";
 
 export default function AdminPage() {
@@ -29,16 +29,19 @@ export default function AdminPage() {
   };
 
   return (
-    <div className={style.wrapper}>
-      <h1>Administrator Page</h1>
-      <h2>Your name {userInfo.userName}</h2>
-      <h2>Your role {userInfo.role}</h2>
-      <Button onClick={handleLogOut}>Log Out</Button>
+    <div className={style.adpWrapper}>
+      <div className={style.adpWrapperTitle}>
+        <h1>Administrator Page</h1>
+        <h1>Administrator Page</h1>
+        <h2>Your name {userInfo.userName}</h2>
+        <h2>Your role {userInfo.role === 1 ? 'admin' : 'user'}</h2>
+        <Button onClick={handleLogOut}>Log Out</Button>
+      </div>
 
       <UsersList onUserSelect={setSelectedUserId} />
 
       {selectedUserId && (
-        <div className={style.changePassword}>
+        <div className="">
           <h3>Change Password for User ID: {selectedUserId}</h3>
           <input
             type="password"

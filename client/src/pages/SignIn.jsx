@@ -1,13 +1,12 @@
 import { useForm } from "react-hook-form";
-import style from "./style.module.scss";
 import { useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { AuthContext } from "../context/AuthContext";
 import { signInSchema } from "./validtionSchemas";
 import Field from "../components/Field/Field";
 import Button from "../components/Button/Button";
-import Header from "../components/Header/Header";
 import cn from "classnames";
+import style from "./style.module.scss";
 
 const defaultValues = {
   userName: "",
@@ -27,33 +26,36 @@ export default function SignIn() {
   });
 
   return (
-    <>
-    <div className={cn("container", style.wrapper)}>
-      <div className="box">
-        <form onSubmit={handleSubmit(handleSignIn)} className={style.wrapper}>
-          <h2 className="title is-5 has-text-centered">Войти в аккаунт</h2>
-          <Field
-            name="userName"
-            register={register}
-            autoComplete="off"
-            placeholder="Имя пользователя"
-            error={Boolean(errors.userName)}
-            helperText={errors.userName?.message}
-          />
-          <Field
-            name="password"
-            register={register}
-            autoComplete="off"
-            placeholder="Пароль"
-            error={Boolean(errors.password)}
-            helperText={errors.password?.message}
-          />
-          <Button disabled={isSubmitting} type="submit">
-            Войти
-          </Button>
-        </form>
-      </div>
+    <div className={style.container}>
+      <form
+        onSubmit={handleSubmit(handleSignIn)}
+        className={cn(style.form, style.signin)}
+      >
+        <h2>Увійти</h2>
+        <Field
+          name="userName"
+          type = "text"
+          register={register}
+          autoComplete="off"
+          placeholder="Ім'я користувача"
+          inputType = "user"
+          error={Boolean(errors.userName)}
+          helperText={errors.userName?.message}
+        />
+        <Field
+          name="password"
+          type = "password"
+          register={register}
+          autoComplete="off"
+          placeholder="Пароль"
+          inputType = "password"
+          error={Boolean(errors.password)}
+          helperText={errors.password?.message}
+        />
+        <Button disabled={isSubmitting} type="submit">
+          Увійти
+        </Button>
+      </form>
     </div>
-    </>
   );
 }

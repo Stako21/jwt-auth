@@ -8,11 +8,11 @@ export default function Demo() {
   const { data, userInfo, handleLogOut, handleFetchProtected } = useContext(AuthContext);
 
   console.log('uerInfo ::::::', userInfo);
-  
+
   const userRole = userInfo?.role;
 
   return (
-    <div className={style.wrapper}>
+    <div className="">
       <p>{JSON.stringify(data)}</p>
       {userRole === 1 && (
         <p>Добро пожаловать "{userInfo.userName}", Ваша роль - администратор!</p>
@@ -27,7 +27,7 @@ export default function Demo() {
       <Button onClick={handleLogOut}>
         Выйти
       </Button>
-      {/* <div className="block">
+      {/* <div className="">
         <UsersList />
       </div> */}
     </div>

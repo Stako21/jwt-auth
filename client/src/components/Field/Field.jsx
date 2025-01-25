@@ -1,15 +1,48 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import cn from "classnames";
 import style from "./field.module.scss";
 
-export default memo(
-  ({ register, name, error = false, helperText = "", ...rest }) => {
-    return (
-      // <div className={cn(style.inputField, error && style.inputField__error)}>
-      <div className={cn(style.input__field, 'field  is-fullwidth', error && 'is-danger')}>
-        <input className={cn('input  is-fullwidth', error && 'is-danger')} {...register(name)} {...rest} />
-        {error && <p className={'help is-danger'}>{helperText}</p>}
-      </div>
-    );
-  }
-);
+const Field = ({ register, name, error = false, helperText = "", ...rest }) => {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  const handleMouseDown = () => {
+    setIsPasswordVisible(true); // Меняем тип на "text"
+  };
+
+  const handleMouseUp = () => {
+    setIsPasswordVisible(false); // Возвращаем тип на "password"
+  };
+
+  return (
+    <div className={style.inputBox}>
+      <input
+        className={cn(style.input, { [style.error]: error })}
+        {...register(name)}
+        {...rest}
+        type={isPasswordVisible && rest.inputType === "password" ? "text" : rest.type || "text"} // Меняем тип динамически
+        placeholder=""
+      />
+      <i
+        className={cn(
+          style.leftIcon,
+          rest.inputType === "user" ? "fa-regular fa-user" : "fa-solid fa-lock"
+        )}
+      ></i>
+      <span>{rest.placeholder}</span>
+      {error && <p className={style.helperText}>{helperText}</p>}
+      {rest.inputType === "password" && (
+        <i
+          className={cn(
+            style.rightIcon,
+            isPasswordVisible ? "fa-regular fa-eye" : "fa-regular fa-eye-slash"
+          )}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp} // На случай, если курсор уходит с иконки
+        ></i>
+      )}
+    </div>
+  );
+};
+
+export default memo(Field);
