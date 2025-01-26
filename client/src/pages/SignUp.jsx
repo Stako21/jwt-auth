@@ -43,46 +43,50 @@ export default function SignUp() {
 
   return (
 
-    <div className={style.container}>
-      <form className={cn(style.form, style.signin)} onSubmit={handleSubmit(handleSignUp)}>
-        <h2 className="">Створити аккаунт</h2>
-        <Field
-          name="userName"
-          register={register}
-          autoComplete="off"
-          placeholder="Ім'я користувача"
-          inputType = "user"
-          error={Boolean(errors.userName)}
-          helperText={errors.userName?.message}
-        />
-        <Field
-          name="password"
-          register={register}
-          autoComplete="off"
-          placeholder="Пароль"
-          inputType = "password"
-          error={Boolean(errors.password)}
-          helperText={errors.password?.message}
-        />
-        <Controller
-          control={control}
-          name="role"
-          render={({ field: { onChange, value } }) => (
-            <Select onChange={onChange} value={value} options={rolesList} />
-          )}
-        />
-        <Controller
-          control={control}
-          name="city"
-          render={({ field: { onChange, value } }) => (
-            <Select onChange={onChange} value={value} options={citiesList} />
-          )}
-        />
-        <Button disabled={isSubmitting} type="submit">
-          Зарееструватись
-        </Button>
-      </form>
+    <div className={style.mainWrapper}>
+
+      <div className={style.container}>
+        <form className={cn(style.form, style.signin)} onSubmit={handleSubmit(handleSignUp)}>
+          <h2 className="">Створити аккаунт</h2>
+          <Field
+            name="userName"
+            register={register}
+            autoComplete="off"
+            placeholder="Ім'я користувача"
+            inputType="user"
+            error={Boolean(errors.userName)}
+            helperText={errors.userName?.message}
+          />
+          <Field
+            name="password"
+            register={register}
+            autoComplete="off"
+            placeholder="Пароль"
+            inputType="password"
+            error={Boolean(errors.password)}
+            helperText={errors.password?.message}
+          />
+          <Controller
+            control={control}
+            name="role"
+            render={({ field: { onChange, value } }) => (
+              <Select onChange={onChange} value={value} options={rolesList} />
+            )}
+          />
+          <Controller
+            control={control}
+            name="city"
+            render={({ field: { onChange, value } }) => (
+              <Select onChange={onChange} value={value} options={citiesList} />
+            )}
+          />
+          <Button disabled={isSubmitting} type="submit">
+            Зарееструватись
+          </Button>
+        </form>
+      </div>
     </div>
+
 
   );
 }

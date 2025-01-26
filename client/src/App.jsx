@@ -35,22 +35,24 @@ const App = () => {
       <BrowserRouter>
         <LogPageView />
         <Header />
-        <Routes>
-          {isUserLogged ? (
-            // <Route path="demo" element={<Demo />} />
-            userInfo.role === 1 ? (
-              <Route path="admin-page" element={<AdminPage />} />
+        <div className={style.content}>
+          <Routes>
+            {isUserLogged ? (
+              // <Route path="demo" element={<Demo />} />
+              userInfo.role === 1 ? (
+                <Route path="admin-page" element={<AdminPage />} />
+              ) : (
+                <Route path="demo" element={<Demo />} />
+              )
             ) : (
-              <Route path="demo" element={<Demo />} />
-            )
-          ) : (
-            <>
-              <Route path="sign-in" element={<SignIn />} />
-              <Route path="sign-up" element={<SignUp />} />
-            </>
-          )}
-          <Route path="*" element={<Navigate to={isUserLogged ? (userInfo.role === 1 ? "admin-page" : "demo") : "sign-in"} />} />
-        </Routes>
+              <>
+                <Route path="sign-in" element={<SignIn />} />
+                <Route path="sign-up" element={<SignUp />} />
+              </>
+            )}
+            <Route path="*" element={<Navigate to={isUserLogged ? (userInfo.role === 1 ? "admin-page" : "demo") : "sign-in"} />} />
+          </Routes>
+        </div>
       </BrowserRouter>
     </div>
   );

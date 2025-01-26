@@ -65,12 +65,20 @@ const AuthProvider = ({ children }) => {
       .catch(showErrorMessage);
   };
 
+  // const handleSignUp = (data) => {
+  //   AuthClient.post("/sign-up", data)
+  //     .then((res) => {
+  //       const { accessToken, accessTokenExpiration } = res.data;
+  //       inMemoryJWT.setToken(accessToken, accessTokenExpiration);
+  //       setIsUserLogged(true);
+  //     })
+  //     .catch(showErrorMessage);
+  // };
   const handleSignUp = (data) => {
     AuthClient.post("/sign-up", data)
-      .then((res) => {
-        const { accessToken, accessTokenExpiration } = res.data;
-        inMemoryJWT.setToken(accessToken, accessTokenExpiration);
-        setIsUserLogged(true);
+      .then(() => {
+        enqueueSnackbar("Реєстрація пройшла успішно!", { variant: "success" });
+        // Успешное сообщение о регистрации, но без логина
       })
       .catch(showErrorMessage);
   };
@@ -96,34 +104,8 @@ const AuthProvider = ({ children }) => {
           role: userRole,
         })
 
-
-        // console.log('Decode accessToken ::::: ');
-        // console.log(jwt.decode(accessToken));
-        // console.log('accessTokenExpiration ::::: ');
-        // console.log(accessTokenExpiration);
-
-
         console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&res.data");
         console.log(data);
-
-        // console.log("***********************userName");
-        // console.log(data.userName);
-
-        // const decodedToken = jwt.decode(accessToken);
-        // const userRole = decodedToken.role;
-
-        // console.log('User Role ::::');
-        // console.log(userRole);
-
-
-        // setData({
-        //   ...data,
-        //   role: userRole,
-        // });
-
-        // console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& data after Set");
-        // console.log(data);
-
 
         const message = `${data.userName} ${userInfo.role}`
         enqueueSnackbar(message, { variant: 'success' })

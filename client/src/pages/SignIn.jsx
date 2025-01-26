@@ -26,36 +26,45 @@ export default function SignIn() {
   });
 
   return (
-    <div className={style.container}>
-      <form
-        onSubmit={handleSubmit(handleSignIn)}
-        className={cn(style.form, style.signin)}
-      >
-        <h2>Увійти</h2>
-        <Field
-          name="userName"
-          type = "text"
-          register={register}
-          autoComplete="off"
-          placeholder="Ім'я користувача"
-          inputType = "user"
-          error={Boolean(errors.userName)}
-          helperText={errors.userName?.message}
-        />
-        <Field
-          name="password"
-          type = "password"
-          register={register}
-          autoComplete="off"
-          placeholder="Пароль"
-          inputType = "password"
-          error={Boolean(errors.password)}
-          helperText={errors.password?.message}
-        />
-        <Button disabled={isSubmitting} type="submit">
-          Увійти
-        </Button>
-      </form>
+    <div className={style.mainWrapper}>
+
+      <div className={style.container}>
+
+        <form
+          onSubmit={handleSubmit(handleSignIn)}
+          className={cn(style.form, style.signin)}
+        >
+
+          <h2>Увійти</h2>
+
+          <Field
+            name="userName"
+            type="text"
+            register={register}
+            autoComplete="off"
+            placeholder="Ім'я користувача"
+            inputType="user"
+            error={Boolean(errors.userName)}
+            helperText={errors.userName?.message}
+          />
+
+          <Field
+            name="password"
+            type="password"
+            register={register}
+            autoComplete="off"
+            placeholder="Пароль"
+            inputType="password"
+            error={Boolean(errors.password)}
+            helperText={errors.password?.message}
+          />
+
+          <Button disabled={isSubmitting} type="submit">
+            Увійти
+          </Button>
+          
+        </form>
+      </div>
     </div>
   );
 }

@@ -32,5 +32,5 @@ app.get("/resource/protected", TokenService.checkAccess, (req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log("Сервер успешно запущен!!!");
+  console.log("Сервер успішно запущено!!!");
 });

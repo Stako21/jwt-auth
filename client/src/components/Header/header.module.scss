@@ -12,7 +12,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 100px;
+  min-height: $header-height;
   background-color: $header-background-color;
   color: $light-text-color;
   padding: 0 40px;
@@ -94,7 +94,7 @@
   transform: rotate(45deg) translate(0, 50%);
 }
 
-@media (max-width: 100px) {
+@media (max-width: $header-height) {
   .burger {
     display: flex;
   }

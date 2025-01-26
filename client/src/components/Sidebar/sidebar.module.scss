@@ -1,0 +1,20 @@
+@import "../../variables.scss";
+
+.registration {
+  margin-left: 10px;
+  padding-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: $light-text-color;
+  border-bottom: $border-color solid 1px;
+}
+
+.registration > div {
+  display: flex;
+  flex-direction: column;
+}
+
+input, select {
+  background-color: $light-text-color;
+}

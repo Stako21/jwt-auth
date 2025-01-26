@@ -48,7 +48,7 @@ class AuthController {
       const { accessToken, refreshToken, accessTokenExpiration } =
         await AuthService.signUp({ userName, password, role, city, fingerprint });
 
-      res.cookie("refreshToken", refreshToken, COOKIE_SETTINGS.REFRESH_TOKEN);
+      // res.cookie("refreshToken", refreshToken, COOKIE_SETTINGS.REFRESH_TOKEN);
 
       return res.status(200).json({ accessToken, accessTokenExpiration });
     } catch (err) {
