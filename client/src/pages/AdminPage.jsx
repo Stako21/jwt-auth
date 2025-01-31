@@ -8,27 +8,31 @@ import { UsersList } from "../components/UsersList/UsersList";
 import { Sidebar } from "../components/Sidebar/Sidebar"
 import config from "../config";
 
-export default function AdminPage() {
+export default function AdminPage({setLoading}) {
   const { userInfo, handleLogOut } = useContext(AuthContext);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const { enqueueSnackbar } = useSnackbar();
+
+  setLoading(false);
 
   const handlePasswordChange = async () => {
     if (!selectedUserId || !newPassword) {
       enqueueSnackbar("Поле нового пароля пусте", { variant: "error" });
       return;
     }
-  
+
     try {
       await axios.put(`${config.API_URL}/auth/users/${selectedUserId}/password`, { newPassword });
       enqueueSnackbar("Пароль успішно змінено!", { variant: "success" });
-  
+
       setNewPassword("");
       setSelectedUserId(null);
     } catch (error) {
       enqueueSnackbar("Помилка під час зміни пароля", { variant: "error" });
       console.error("Error updating password:", error);
+    } finally {
+      console.log("Finally block");
     }
   };
 

@@ -7,7 +7,7 @@ import cn from "classnames"
 import logo from "../../img/ST_Wight.png"
 
 
-const Header = () => {
+const Header = ({ setLoading }) => {
   const location = useLocation();
   const { isUserLogged } = useContext(AuthContext);
   const { userInfo, handleLogOut } = useContext(AuthContext);
@@ -19,9 +19,11 @@ const Header = () => {
     setIsOpen((prev) => !prev);
   };
 
-  
-
-  
+  const handleLinkClick = (path) => {
+    setLoading(true);
+    setIsActive(false);
+    setIsOpen(false);
+  };
 
   console.log("Ререндер Header", location.pathname);
 
@@ -38,17 +40,17 @@ const Header = () => {
         <nav className={style.navPages}>
           <ul className={style.listPages}>
             <li className={location.pathname === "/zp" ? style.activePage : ""}>
-              <Link to="/zp">ЗП</Link>
+              <Link to="/zp" onClick={() => handleLinkClick("/zp")}>ЗП</Link>
             </li>
             <li className={location.pathname === "/kr" ? style.activePage : ""}>
-              <Link to="/kr">КР</Link>
+              <Link to="/kr" onClick={() => handleLinkClick("/kr")}>КР</Link>
             </li>
             <li className={location.pathname === "/dp" ? style.activePage : ""}>
-              <Link to="/dp">ДП</Link>
+              <Link to="/dp" onClick={() => handleLinkClick("/dp")}>ДП</Link>
             </li>
             {userInfo.role === 1 && (
               <li className={location.pathname === "/admin-page" ? style.activePage : ""}>
-                <Link to="/admin-page">Admin</Link>
+                <Link to="/admin-page" onClick={() => handleLinkClick("/admin-page")}>Admin</Link>
               </li>
             )}
           </ul>

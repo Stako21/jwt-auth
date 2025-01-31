@@ -28,8 +28,10 @@ const citiesList = [
   { id: 3, title: "Кривий Ріг" },
 ];
 
-export default function SignUp() {
+export default function SignUp({setLoading}) {
   const { handleSignUp } = useContext(AuthContext);
+
+  setLoading(false);
 
   const {
     register,

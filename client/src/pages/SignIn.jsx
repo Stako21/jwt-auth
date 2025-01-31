@@ -14,8 +14,10 @@ const defaultValues = {
   password: "",
 };
 
-export default function SignIn() {
+export default function SignIn({setLoading}) {
   const { handleSignIn } = useContext(AuthContext);
+
+  setLoading(false);
 
   const {
     register,

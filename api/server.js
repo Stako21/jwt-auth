@@ -12,11 +12,8 @@ const PORT = process.env.PORT || 5000;
 
 const app = express();
 
-// const cors = require('cors');
-
 app.use(cookieParser());
 app.use(express.json());
-// app.use(cors({ credentials: true, origin: process.env.CLIENT_URL }));
 app.use(cors({ credentials: true, origin: process.env.CLIENT_URL }));
 
 app.use(
@@ -29,8 +26,8 @@ app.use("/auth", AuthRootRouter);
 
 app.get("/resource/protected", TokenService.checkAccess, (req, res) => {
   return res.status(200).json("Ласкаво прошу!" + Date.now());
-})
+});
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log("Сервер успішно запущено!!!");
 });

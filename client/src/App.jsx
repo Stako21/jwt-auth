@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from "react";
+import { Circle, Planets, Zoom } from "react-preloaders";
 import { Link, Routes, Route, BrowserRouter, Navigate, useLocation } from "react-router-dom";
 import { SnackbarProvider } from "notistack";
 import SignUp from "./pages/SignUp";
@@ -9,7 +10,6 @@ import Header from "./components/Header/Header";
 import { ParseExcel } from "./components/ParseExcel/ParseExcel";
 import style from "./app.module.scss";
 import { AuthContext } from "./context/AuthContext";
-import cn from "classnames";
 
 const LogPageView = () => {
   const location = useLocation();
@@ -23,14 +23,15 @@ const LogPageView = () => {
 
 const AppContent = () => {
   const { userInfo, isUserLogged } = useContext(AuthContext);
-  const [lastUpdateTime, setLastUpdateTime] = useState(""); // Состояние для времени обновления
-  const [headerTitle, setHeaderTitle] = useState(""); // Состояние для заголовка
+  const [lastUpdateTime, setLastUpdateTime] = useState(""); // Время обновления
+  const [headerTitle, setHeaderTitle] = useState(""); // Заголовок страницы
+  const [loading, setLoading] = useState(false); // Состояние загрузки
+  const [currentPath, setCurrentPath] = useState(""); // Текущий путь
   const location = useLocation();
 
-  useEffect(() => {
-    console.log(`User logged in: ${isUserLogged}`);
-    console.log(`User info.role :::: ${userInfo}`);
-  }, [isUserLogged]);
+  console.log("########loading#########", loading);
+  console.log("!!!!Path changed:", location.pathname);
+  console.log("!!!!Current path:", currentPath);
 
   useEffect(() => {
     if (location.pathname === "/zp") {
@@ -40,25 +41,57 @@ const AppContent = () => {
     } else if (location.pathname === "/dp") {
       setHeaderTitle("Дніпро");
     } else {
-      setHeaderTitle("Your Title Here"); // Заголовок по умолчанию
+      setHeaderTitle("Your Title Here");
     }
   }, [location]);
+
+  console.log("###setLoading:", loading);
+
+  useEffect(() => {
+    if (location.pathname !== currentPath) {
+      console.log("Path changed:", location.pathname);
+      setLoading(true);
+      setCurrentPath(location.pathname);
+    }
+  }, [location.pathname, currentPath]);
+
+  console.log("!!!setLoading:", loading);
+
+  useEffect(() => {
+    if (!loading && currentPath !== location.pathname) {
+      setLoading(true);
+    }
+  }, [loading, location.pathname, currentPath]);
+
+  useEffect(() => {
+    console.log("Loading finished effect: ", !loading);
+    if (!loading) {
+      console.log("Loading finished");
+    }
+  }, [loading]);
 
   return (
     <div className={style.content}>
       <LogPageView />
-      <Header title={headerTitle} lastUpdateTime={lastUpdateTime} />
+      <Header title={headerTitle} lastUpdateTime={lastUpdateTime} setLoading={setLoading} />
+      {loading && (
+        <div className={style.centered}>
+          <Zoom />
+        </div>
+      )}
+      {console.log("!!!!!!!loading!!!!!!!!", loading)}
       <Routes>
         {isUserLogged ? (
           userInfo.role === 1 ? (
             <>
-              <Route path="admin-page" element={<AdminPage />} />
+              <Route path="/admin-page" element={<AdminPage setLoading={setLoading} />} />
               <Route
                 path="/zp"
                 element={
                   <ParseExcel
                     fileName="balanceZP.xlsx"
                     setLastUpdateTime={setLastUpdateTime}
+                    setLoading={setLoading}
                   />
                 }
               />
@@ -68,6 +101,7 @@ const AppContent = () => {
                   <ParseExcel
                     fileName="balanceKR.xlsx"
                     setLastUpdateTime={setLastUpdateTime}
+                    setLoading={setLoading}
                   />
                 }
               />
@@ -77,6 +111,7 @@ const AppContent = () => {
                   <ParseExcel
                     fileName="balanceDP.xlsx"
                     setLastUpdateTime={setLastUpdateTime}
+                    setLoading={setLoading}
                   />
                 }
               />
@@ -90,6 +125,7 @@ const AppContent = () => {
                   <ParseExcel
                     fileName="balanceZP.xlsx"
                     setLastUpdateTime={setLastUpdateTime}
+                    setLoading={setLoading}
                   />
                 }
               />
@@ -99,6 +135,7 @@ const AppContent = () => {
                   <ParseExcel
                     fileName="balanceKR.xlsx"
                     setLastUpdateTime={setLastUpdateTime}
+                    setLoading={setLoading}
                   />
                 }
               />
@@ -108,6 +145,7 @@ const AppContent = () => {
                   <ParseExcel
                     fileName="balanceDP.xlsx"
                     setLastUpdateTime={setLastUpdateTime}
+                    setLoading={setLoading}
                   />
                 }
               />
@@ -115,11 +153,16 @@ const AppContent = () => {
           )
         ) : (
           <>
-            <Route path="sign-in" element={<SignIn />} />
-            <Route path="sign-up" element={<SignUp />} />
+            <Route path="sign-in" element={<SignIn setLoading={setLoading} />} />
+            <Route path="sign-up" element={<SignUp setLoading={setLoading} />} />
           </>
         )}
-        <Route path="*" element={<Navigate to={isUserLogged ? (userInfo.role === 1 ? "admin-page" : "demo") : "sign-in"} />} />
+        <Route
+          path="*"
+          element={
+            <Navigate to={isUserLogged ? (userInfo.role === 1 ? "admin-page" : "demo") : "sign-in"} />
+          }
+        />
       </Routes>
     </div>
   );
@@ -136,4 +179,3 @@ const App = () => {
 };
 
 export default App;
-

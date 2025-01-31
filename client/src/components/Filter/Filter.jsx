@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import style from "./Filter.module.scss";
 
 export const Filter = ({ onFilterChange }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const location = useLocation();
+
+  useEffect(() => {
+    setSelectedFilter('all'); // Reset filter to 'all' when the component mounts or location changes
+    onFilterChange('all'); // Notify parent component about the reset
+  }, [location]);
 
   const handleChange = (e) => {
     const value = e.target.value;
