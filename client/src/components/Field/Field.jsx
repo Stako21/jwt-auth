@@ -14,6 +14,8 @@ const Field = ({ register, name, error = false, helperText = "", ...rest }) => {
   };
 
   return (
+
+
     <div className={style.inputBox}>
       <input
         className={cn(style.input, { [style.error]: error })}
@@ -29,7 +31,6 @@ const Field = ({ register, name, error = false, helperText = "", ...rest }) => {
         )}
       ></i>
       <span>{rest.placeholder}</span>
-      {error && <p className={style.helperText}>{helperText}</p>}
       {rest.inputType === "password" && (
         <i
           className={cn(
@@ -41,7 +42,9 @@ const Field = ({ register, name, error = false, helperText = "", ...rest }) => {
           onMouseLeave={handleMouseUp} // На случай, если курсор уходит с иконки
         ></i>
       )}
+      {error && <p className={style.helperText}>{helperText}</p>}
     </div>
+
   );
 };
 

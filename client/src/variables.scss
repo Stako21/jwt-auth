@@ -1,11 +1,24 @@
 $error-color: rgb(218, 0, 0);
 $danger-color: rgb(168, 55, 55);
 $border-color: rgb(189, 189, 189);
-$border-clolr-light-green: #00dfc4;
+$border-clolr-light-green: #0096db;
+// $border-clolr-light-green: #00dfc4;
 $button-dark: rgb(43, 43, 43);
-$button-light: #5abeb6;
+$button-light: #7cc0e0;
 $header-background-color: #16212c;
 $main-background-color: #223243;
 $light-text-color: #d3d3d3;
 
-$header-height: 100px;
+
+$header-height: 60px;
+$filter-height: 30px;
+
+$tableLevel1: #1c2733;
+$tableLevel2: #576879;
+$oddRow: #afb3b8;
+$evenRow: #dde0e4;
+$rowTextColor: #EAEAEA;
+
+$oddRowDarc: #2e4055;
+$evenRowDarc: #404e6b;
+

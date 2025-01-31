@@ -1,0 +1,126 @@
+@import "../../variables.scss";
+
+// .wraperTable {
+//   margin: 20px 20px 10px ;
+//   height: 100%;
+//   overflow: hidden; /* Убираем прокрутку */
+// }
+
+.scrollContainer {
+  // max-height: 500px; /* Устанавливаем максимальную высоту для контейнера прокрутки */
+  max-height: calc(100vh - $header-height - $filter-height - 20px - 10px);
+  /* Устанавливаем максимальную высоту для контейнера прокрутки */
+  overflow-y: auto;
+  /* Включаем вертикальную прокрутку */
+}
+
+// .table {
+//   width: 100%;
+//   border-collapse: collapse;
+//   text-align: center;
+// }
+
+// .table th, .table td {
+//   width: 100%;
+//   padding: 5px 10px;
+//   text-align: left;
+// }
+
+.wraperTable {
+  margin: 20px 20px 10px;
+  overflow-x: auto;
+}
+
+.scrollContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  /* Фиксированная ширина колонок */
+}
+
+// th,
+th {
+  // display: none;
+  background-color: $main-background-color;
+}
+
+td {
+  border: none;
+  text-align: left;
+  padding: 5px;
+  // vertical-align: top;
+}
+
+// tr td:nth-child(1) {
+//   border-right: $border-color solid 1px;
+// }
+
+tr .productCell {
+  border-right: $border-color solid 1px;
+}
+
+
+.toggleButton {
+  // margin-right: 5px;
+  width: 30px;
+  margin-right: 10px;
+  cursor: pointer;
+  border: none;
+  background: $border-color;
+  box-shadow: -5px -5px 15px rgba(255, 255, 255, 0.1),
+    5px 5px 15px rgba(0, 0, 0, 0.35),
+    inset -5px -5px 15px rgba(255, 255, 255, 0.1),
+    inset 5px 5px 15px rgba(0, 0, 0, 0.35);
+  color: #f4f4f4;
+  font-size: 14px;
+}
+
+.toggleButton:hover {
+  margin-right: 10px;
+  background: $evenRow;
+}
+
+.toggleButton:active {
+  background: $button-dark;
+}
+// tbody tr:nth-child(even) {
+//   background: $header-background-color;
+// }
+
+.negative {
+  color: $error-color;
+}
+
+// tbody tr.level3:nth-child(even) {
+//   background-color: #f9f9f9; /* Цвет для четных строк */
+// }
+
+// tbody tr.level3:nth-child(odd) {
+//   background-color: #ffffff; /* Цвет для нечетных строк */
+// }
+.level1 {
+  padding-left: 10px;
+  background: $tableLevel1;
+}
+
+.level2 {
+  background: $tableLevel2;
+}
+
+tbody tr:nth-child(1) {
+  background: $header-background-color;
+}
+
+.evenRow {
+  color: $button-dark;
+  background: $evenRow;
+}
+
+.oddRow {
+  color: $button-dark;
+  background: $oddRow;
+}

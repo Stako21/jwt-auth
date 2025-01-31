@@ -1,5 +1,10 @@
 @import "../../variables.scss";
 
+
+.wrapperInputBox {
+  position: relative;
+}
+
 .inputField {
   display: flex;
   flex-direction: column;
@@ -17,14 +22,6 @@
   }
 }
 
-.error {
-  margin: 5px 0 0 10px !important;
-  font-size: 10px;
-  font-weight: bold;
-  color: $error-color;
-}
-
-.inputBox {}
 
 .inputBox {
   position: relative;
@@ -47,6 +44,16 @@
   outline: none;
 }
 
+.helperText {
+  height: 20px;
+  color: $error-color;
+  font-size: 12px;
+  position: absolute;
+  top: 50px; // Расположение текста ошибки ниже поля ввода
+  left: 100px;
+  // min-height: 20px; // Минимальная высота текста ошибок
+}
+
 .inputBox span {
   position: absolute;
   left: 0;
@@ -61,7 +68,7 @@
 
 // .inputBox input:valid ~ span,
 .inputBox input:focus~span,
-.inputBox input:not(:placeholder-shown)~span {
+.inputBox input:not(:placeholder-shown):not(:focus) ~ span {
   color: $border-clolr-light-green;
   border: 1px solid $border-clolr-light-green;
   background: $main-background-color;
@@ -87,6 +94,7 @@
   padding-right: 8px;
   color: $border-clolr-light-green;
   border-right: 1px solid $border-clolr-light-green;
+  // margin: 0 10px
 }
 
 .rightIcon {
@@ -98,4 +106,12 @@
   padding-left: 8px;
   color: $border-clolr-light-green;
   border-left: 1px solid $border-clolr-light-green;
+  // margin: 0 10px
+}
+
+.error {
+  // margin: 5px 0 0 10px !important;
+  font-size: 10px;
+  font-weight: bold;
+  color: $error-color;
 }

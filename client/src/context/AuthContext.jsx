@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect } from "react";
 import axios from "axios";
-import { Circle } from "react-preloaders";
+import { Circle, Planets, Zoom } from "react-preloaders";
 import config from "../config";
 import style from "../app.module.scss";
 import showErrorMessage from "../utils/showErrorMessage";
@@ -173,8 +173,8 @@ const AuthProvider = ({ children }) => {
       {isAppReady ? (
         children
       ) : (
-        <div className="">
-          <Circle />
+        <div className={style.centered}>
+          <Zoom />
         </div>
       )}
     </AuthContext.Provider>

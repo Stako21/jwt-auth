@@ -1,4 +1,5 @@
-import { useForm } from "react-hook-form";
+import React from "react";
+import { useForm, Controller } from "react-hook-form";
 import { useContext } from "react";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { AuthContext } from "../context/AuthContext";
@@ -19,22 +20,25 @@ export default function SignIn() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     defaultValues,
     resolver: yupResolver(signInSchema),
   });
 
+  const userName = watch("userName");
+  const password = watch("password");
+
+  const isFormValid = userName && password;
+
   return (
     <div className={style.mainWrapper}>
-
       <div className={style.container}>
-
         <form
           onSubmit={handleSubmit(handleSignIn)}
           className={cn(style.form, style.signin)}
         >
-
           <h2>Увійти</h2>
 
           <Field
@@ -62,7 +66,6 @@ export default function SignIn() {
           <Button disabled={isSubmitting} type="submit">
             Увійти
           </Button>
-          
         </form>
       </div>
     </div>

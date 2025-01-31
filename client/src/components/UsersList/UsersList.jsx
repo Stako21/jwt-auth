@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import style from './UsersList.module.scss';
-import config from '../../config';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import style from "./UsersList.module.scss";
+import config from "../../config";
 
 export const UsersList = ({ onUserSelect }) => {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -13,20 +15,30 @@ export const UsersList = ({ onUserSelect }) => {
         const response = await axios.get(`${config.API_URL}/auth/users`);
         setUsers(response.data);
       } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error("Error fetching users:", error);
       }
     };
 
     fetchUsers();
   }, []);
 
-  const deleteUser = async (userId) => {
+  const confirmDelete = (user) => {
+    setUserToDelete(user); // Сохраняем объект пользователя
+    setIsModalOpen(true);
+  };
+
+  const deleteUser = async () => {
+    if (!userToDelete) return;
+
     try {
-      await axios.delete(`${config.API_URL}/auth/users/${userId}`);
-      setUsers(users.filter((user) => user.id !== userId));
-      console.log(`User with ID ${userId} deleted successfully.`);
+      await axios.delete(`${config.API_URL}/auth/users/${userToDelete.id}`);
+      setUsers(users.filter((user) => user.id !== userToDelete.id));
+      console.log(`User ${userToDelete.name} deleted successfully.`);
     } catch (error) {
-      console.error(`Error deleting user with ID ${userId}:`, error);
+      console.error(`Error deleting user ${userToDelete.name}:`, error);
+    } finally {
+      setIsModalOpen(false);
+      setUserToDelete(null);
     }
   };
 
@@ -51,7 +63,7 @@ export const UsersList = ({ onUserSelect }) => {
                 <th className={style.Actions}>Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className={style.tableBody}>
               {users.map((user) => (
                 <tr key={user.id}>
                   <td>
@@ -69,7 +81,7 @@ export const UsersList = ({ onUserSelect }) => {
                   <td>
                     <button
                       className={style.deleteBotton}
-                      onClick={() => deleteUser(user.id)}
+                      onClick={() => confirmDelete(user)}
                     >
                       Видалити
                     </button>
@@ -80,6 +92,22 @@ export const UsersList = ({ onUserSelect }) => {
           </table>
         </div>
       </div>
+
+      {/* Модальное окно подтверждения */}
+      {isModalOpen && userToDelete && (
+        <div className={style.modalOverlay}>
+          <div className={style.modal}>
+            <h3>Підтвердження видалення</h3>
+            <p>Ви впевнені, що хочете видалити користувача <b>{userToDelete.name}</b>?</p>
+            <div className={style.modalButtons}>
+              <button onClick={() => setIsModalOpen(false)} className={style.cancelButton}>Скасувати</button>
+              <button onClick={deleteUser} className={style.deleteButton}>
+                Видалити
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

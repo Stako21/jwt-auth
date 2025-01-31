@@ -17,7 +17,9 @@
 }
 
 .scrollContainer {
-  max-height: 500px; /* Устанавливаем максимальную высоту для контейнера прокрутки */
+  max-height: calc(100vh - $header-height - $filter-height - 20px - 60px);
+
+  // max-height: 500px; /* Устанавливаем максимальную высоту для контейнера прокрутки */
   overflow-y: auto; /* Включаем вертикальную прокрутку */
 }
 
@@ -25,14 +27,15 @@
   width: 100%;
   border-collapse: collapse;
   text-align: center;
+  font-size: 20px;
 }
 
 .tableHeader {
-  
+  text-align: left;
 }
 
 th, td {
-  border: $border-color 1px solid;
+  // border: $border-color 1px solid;
 }
 
 th {
@@ -41,6 +44,13 @@ th {
   border-top: 0;
   background-color: $header-background-color; /* Задайте фоновый цвет, чтобы шапка не сливалась с контентом */
   z-index: 1; /* Убедитесь, что з-индекс выше, чем у строк таблицы */
+}
+
+.tableBody tr:nth-child(odd) {
+  background-color: $oddRowDarc;
+}
+.tableBody tr:nth-child(even) {
+  background-color: $evenRowDarc;
 }
 
 .Select {
@@ -61,15 +71,20 @@ th {
 
 .deleteBotton {
   background-color: $danger-color ;
-  background: $border-clolr-light-green;
-  color: $main-background-color;
+  // background: $border-clolr-light-green;
+  color: $light-text-color;
   padding: 2px 0;
-  font-weight: 300;
+  // font-weight: 300;
+  font-size: 15px;
   cursor: pointer;
   box-shadow: -5px -5px 15px rgba(255, 255, 255, 0.1),
     5px 5px 15px rgba(0, 0, 0, 0.35),
     inset -5px -5px 15px rgba(255, 255, 255, 0.1),
     inset 5px 5px 15px rgba(0, 0, 0, 0.35);
+}
+
+.deleteBotton:hover {
+  background-color: $error-color;
 }
 
 /* Стили для скролла */
@@ -81,4 +96,52 @@ th {
 }
 ::-webkit-scrollbar-thumb {
   box-shadow: inset 0 0 10px rgba(150,150,150,0.8);
+}
+
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.modal {
+  background: $header-background-color;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.modalButtons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.cancelButton {
+  background: $border-clolr-light-green;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.deleteButton {
+  background: red;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.deleteButton:hover {
+  background: darkred;
 }

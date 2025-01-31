@@ -3,6 +3,7 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import Button from "../components/Button/Button";
 import style from "./style.module.scss";
+import { useSnackbar } from "notistack";
 import { UsersList } from "../components/UsersList/UsersList";
 import { Sidebar } from "../components/Sidebar/Sidebar"
 import config from "../config";
@@ -11,21 +12,23 @@ export default function AdminPage() {
   const { userInfo, handleLogOut } = useContext(AuthContext);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
+  const { enqueueSnackbar } = useSnackbar();
 
   const handlePasswordChange = async () => {
     if (!selectedUserId || !newPassword) {
-      alert("Please select a user and enter a new password.");
+      enqueueSnackbar("Поле нового пароля пусте", { variant: "error" });
       return;
     }
-
+  
     try {
       await axios.put(`${config.API_URL}/auth/users/${selectedUserId}/password`, { newPassword });
-      alert("Password updated successfully!");
+      enqueueSnackbar("Пароль успішно змінено!", { variant: "success" });
+  
       setNewPassword("");
       setSelectedUserId(null);
     } catch (error) {
+      enqueueSnackbar("Помилка під час зміни пароля", { variant: "error" });
       console.error("Error updating password:", error);
-      alert("Failed to update password.");
     }
   };
 
@@ -34,13 +37,13 @@ export default function AdminPage() {
       <div className={style.adpWrapperTitle}>
         <h1>Administrator Page</h1>
         <div className={style.adpWrapperTitleUserInfo}>
-          <p>Your name {userInfo.userName}</p>
-          <p>Your role {userInfo.role === 1 ? 'admin' : 'user'}</p>
+          <p>Your name: {userInfo.userName}</p>
+          <p>Your role: {userInfo.role === 1 ? 'admin' : 'user'}</p>
         </div>
         {/* <Button onClick={handleLogOut}>Log Out</Button> */}
       </div>
 
-      <div lassName={style.adpWrapperSidebar}>
+      <div сlassName={style.adpWrapperSidebar}>
         <Sidebar />
         {selectedUserId && (
           <div className={style.changePass}>
@@ -51,7 +54,7 @@ export default function AdminPage() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
-            <button Click={handlePasswordChange}>Change Password</button>
+            <button onClick={handlePasswordChange} className={style.adpChangePassBtn} >Change Password</button>
 
           </div>
         )}

@@ -114,7 +114,7 @@ export const Sidebar = () => {
           ))}
         </select>
       </div>
-      <button onClick={handleRegister}>SignUp</button>
+      <button className={style.sidebarBooton} onClick={handleRegister}>SignUp</button>
     </div>
   );
 };
