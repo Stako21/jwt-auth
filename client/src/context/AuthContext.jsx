@@ -10,7 +10,6 @@ import { enqueueSnackbar } from "notistack";
 console.log("config.API_URL");
 console.log(config.API_URL);
 
-
 export const AuthClient = axios.create({
   baseURL: `${config.API_URL}/auth`,
   withCredentials: true,
@@ -65,20 +64,10 @@ const AuthProvider = ({ children }) => {
       .catch(showErrorMessage);
   };
 
-  // const handleSignUp = (data) => {
-  //   AuthClient.post("/sign-up", data)
-  //     .then((res) => {
-  //       const { accessToken, accessTokenExpiration } = res.data;
-  //       inMemoryJWT.setToken(accessToken, accessTokenExpiration);
-  //       setIsUserLogged(true);
-  //     })
-  //     .catch(showErrorMessage);
-  // };
   const handleSignUp = (data) => {
     AuthClient.post("/sign-up", data)
       .then(() => {
         enqueueSnackbar("Реєстрація пройшла успішно!", { variant: "success" });
-        // Успешное сообщение о регистрации, но без логина
       })
       .catch(showErrorMessage);
   };
@@ -94,21 +83,25 @@ const AuthProvider = ({ children }) => {
         console.log(accessToken);
 
         const arrayToken = accessToken.split('.');
-        const userRole = JSON.parse(atob(arrayToken[1])).role
-        const userName = JSON.parse(atob(arrayToken[1])).userName
+        const userRole = JSON.parse(atob(arrayToken[1])).role;
+        const userName = JSON.parse(atob(arrayToken[1])).userName;
+        const userCity = JSON.parse(atob(arrayToken[1])).city;
 
+        console.log("2JSON.parse(atob(arrayToken[1]))", JSON.parse(atob(arrayToken[1])));
         console.log('Role :::: ', userRole);
+        console.log('City :::: ', userCity);
 
         setUserInfo({
           userName: userName,
           role: userRole,
-        })
+          city: userCity,
+        });
 
         console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&res.data");
         console.log(data);
 
-        const message = `${data.userName} ${userInfo.role}`
-        enqueueSnackbar(message, { variant: 'success' })
+        const message = `${data.userName} ${userRole}`;
+        enqueueSnackbar(message, { variant: 'success' });
       })
       .catch(showErrorMessage);
   };
@@ -124,17 +117,19 @@ const AuthProvider = ({ children }) => {
         console.log('accessToken !!!::::: ');
         console.log(accessToken);
 
-
         const arrayToken = accessToken.split('.');
-        const userRole = JSON.parse(atob(arrayToken[1])).role
-        const userName = JSON.parse(atob(arrayToken[1])).userName
+        const userRole = JSON.parse(atob(arrayToken[1])).role;
+        const userName = JSON.parse(atob(arrayToken[1])).userName;
+        const userCity = JSON.parse(atob(arrayToken[1])).city;
 
+        console.log("2_JSON.parse(atob(arrayToken[1]))", JSON.parse(atob(arrayToken[1])));
         console.log('Role :::: ', userRole);
 
         setUserInfo({
           userName: userName,
           role: userRole,
-        })
+          city: userCity,
+        });
       })
       .catch(() => {
         setIsAppReady(true);

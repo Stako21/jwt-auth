@@ -70,6 +70,9 @@ const AppContent = () => {
     }
   }, [loading]);
 
+  console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&userInfo.city", userInfo);
+  
+
   return (
     <div className={style.content}>
       <LogPageView />
@@ -118,7 +121,6 @@ const AppContent = () => {
             </>
           ) : (
             <>
-              <Route path="demo" element={<Demo />} />
               <Route
                 path="/zp"
                 element={
@@ -160,7 +162,7 @@ const AppContent = () => {
         <Route
           path="*"
           element={
-            <Navigate to={isUserLogged ? (userInfo.role === 1 ? "admin-page" : "demo") : "sign-in"} />
+            <Navigate to={isUserLogged ? (userInfo.role === 1 ? "admin-page" : userInfo.city === 1 ? "/zp" : userInfo.city === 2 ? "/dp" : "/kr") : "sign-in"} />
           }
         />
       </Routes>

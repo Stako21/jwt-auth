@@ -1,6 +1,14 @@
 @import "../../variables.scss";
 
 .wrapperFilter {
-  height: $filter-height;
-  margin: auto 10px;
+  // height: $filter-height;
+  margin: 5px 10px;
+  display: flex;
+  justify-content: flex-end;
+  
+  & select {
+    color: $light-text-color;
+    background: $evenRowDarc;
+
+  }
 }

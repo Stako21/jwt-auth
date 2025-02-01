@@ -20,10 +20,9 @@ class AuthService {
       throw new Unauthorized("Неправильний логін або пароль");
     }
 
-    const payload = { id: userData.id, role: userData.role, userName: userData.NAME };
+    const payload = { id: userData.id, role: userData.role, userName: userData.NAME, city: userData.city };
 
     console.log('SingIn payload ::::::: ', payload);
-    
 
     const accessToken = await TokenService.generateAccessToken(payload);
     const refreshToken = await TokenService.generateRefreshToken(payload);
@@ -50,7 +49,7 @@ class AuthService {
     const hashedPassword = bcrypt.hashSync(password, 8);
     const user = await UserRepository.createUser({ userName, hashedPassword, role, city }); // Added city here
 
-    const payload = { id: user.id, userName, role };
+    const payload = { id: user.id, userName, role, city }; // Added city here
     const accessToken = await TokenService.generateAccessToken(payload);
     const refreshToken = await TokenService.generateRefreshToken(payload);
 
@@ -100,7 +99,6 @@ class AuthService {
 
     console.log('refresh payload ::::::: ', payload);
 
-
     if (!payload || !payload.userName) {
       throw new Unauthorized();
     }
@@ -111,8 +109,8 @@ class AuthService {
       throw new Unauthorized();
     }
 
-    const { id, role, NAME: userName } = userData;
-    const actualPayload = { id, userName, role };
+    const { id, role, NAME: userName, city } = userData; // Added city here
+    const actualPayload = { id, userName, role, city }; // Added city here
 
     const accessToken = await TokenService.generateAccessToken(actualPayload);
     const refreshToken = await TokenService.generateRefreshToken(actualPayload);

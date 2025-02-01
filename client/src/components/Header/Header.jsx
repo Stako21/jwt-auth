@@ -2,17 +2,16 @@ import { useContext, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import Button from "../Button/Button";
-import style from "./header.module.scss"
-import cn from "classnames"
-import logo from "../../img/ST_Wight.png"
+import style from "./header.module.scss";
+import cn from "classnames";
+import logo from "../../img/ST_Wight.png";
 
-
-const Header = ({ setLoading }) => {
+const Header = ({ setLoading, lastUpdateTime }) => {
   const location = useLocation();
   const { isUserLogged } = useContext(AuthContext);
   const { userInfo, handleLogOut } = useContext(AuthContext);
   const [isActive, setIsActive] = useState(false);
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => {
     setIsActive((prev) => !prev);
@@ -27,17 +26,14 @@ const Header = ({ setLoading }) => {
 
   console.log("Ререндер Header", location.pathname);
 
-
   return (
     <header className={style.header}>
-
       <div className={style.logo}>
-        {/* <span>ST</span> */}
         <img src={logo} alt="img" />
       </div>
 
       {isUserLogged && (
-        <nav className={style.navPages}>
+        <nav className={cn(style.navPages, { [style.open]: isOpen })}>
           <ul className={style.listPages}>
             <li className={location.pathname === "/zp" ? style.activePage : ""}>
               <Link to="/zp" onClick={() => handleLinkClick("/zp")}>ЗП</Link>
@@ -56,6 +52,10 @@ const Header = ({ setLoading }) => {
           </ul>
         </nav>
       )}
+      <div className={style.info}>
+        <h1 className={style.infoTitle}>{location.pathname === "/zp" ? "Запоріжжя" : location.pathname === "/kr" ? "Кривий Ріг" : location.pathname === "/dp" ? "Дніпро" : "Admin Page"}</h1>
+        <p className={style.infoUpdate}>Оновлено: {lastUpdateTime}</p>
+      </div>
 
       <nav className={cn(style.nav, { [style.open]: isOpen })}>
         <ul className={style.listMenu}>
@@ -66,21 +66,20 @@ const Header = ({ setLoading }) => {
             </>
           ) : (
             <>
-              <li >
+              <li>
                 <a href="" onClick={handleLogOut}>Вихід</a>
-                {/* <Button onClick={handleLogOut}>Log Out</Button> */}
               </li>
             </>
           )}
         </ul>
       </nav>
 
+
       <div className={cn(style.burger, { [style.active]: isActive })} onClick={toggleMenu}>
         <span></span>
       </div>
-
     </header>
-  )
+  );
 };
 
 export default Header;

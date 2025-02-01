@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import style from "./Filter.module.scss";
 
-export const Filter = ({ onFilterChange }) => {
+export const Filter = ({ onFilterChange, setLastUpdateTime }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const location = useLocation();
 
@@ -18,13 +18,16 @@ export const Filter = ({ onFilterChange }) => {
   };
 
   return (
+    <>
+    {/* <p>{setLastUpdateTime}</p> */}
     <div className={style.wrapperFilter}>
-      <label htmlFor="filter">Фильтр товаров: </label>
+      <label htmlFor="filter"></label>
       <select id="filter" value={selectedFilter} onChange={handleChange}>
         <option value="all">Весь товар</option>
         <option value="vip">ВІП</option>
         <option value="opt">ОПТ</option>
       </select>
     </div>
+    </>
   );
 };

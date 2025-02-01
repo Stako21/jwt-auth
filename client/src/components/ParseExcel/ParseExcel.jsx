@@ -135,6 +135,9 @@ export const ParseExcel = ({ fileName, setLastUpdateTime, setLoading }) => {
     console.log("Keyword changed to:", keyword);
   }, [keyword]);
 
+  console.log("setLastUpdateTime", setLastUpdateTime);
+  
+
   return (
     <div>
       <Filter onFilterChange={handleFilterChange} />
