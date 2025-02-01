@@ -114,16 +114,10 @@ const AuthProvider = ({ children }) => {
         setIsAppReady(true);
         setIsUserLogged(true);
 
-        console.log('accessToken !!!::::: ');
-        console.log(accessToken);
-
         const arrayToken = accessToken.split('.');
         const userRole = JSON.parse(atob(arrayToken[1])).role;
         const userName = JSON.parse(atob(arrayToken[1])).userName;
         const userCity = JSON.parse(atob(arrayToken[1])).city;
-
-        console.log("2_JSON.parse(atob(arrayToken[1]))", JSON.parse(atob(arrayToken[1])));
-        console.log('Role :::: ', userRole);
 
         setUserInfo({
           userName: userName,

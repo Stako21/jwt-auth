@@ -46,7 +46,7 @@ export default function AdminPage() {
         {/* <Button onClick={handleLogOut}>Log Out</Button> */}
       </div>
 
-      <div сlassName={style.adpWrapperSidebar}>
+      <div className={style.adpWrapperSidebar}>
         <Sidebar />
         {selectedUserId && (
           <div className={style.changePass}>

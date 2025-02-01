@@ -163,6 +163,10 @@ li:hover {
   }
 }
 
+.hiddenElement {
+  display: none;
+}
+
 @keyframes burgerAnimation {
   from {
     opacity: 0;

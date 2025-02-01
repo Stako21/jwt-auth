@@ -51,7 +51,7 @@ const Header = ({lastUpdateTime }) => {
           </ul>
         </nav>
       )}
-      <div className={style.info}>
+      <div className={cn(style.info, {[style.hiddenElement]: !isUserLogged})}>
         <h1 className={style.infoTitle}>{location.pathname === "/zp" ? "Запоріжжя" : location.pathname === "/kr" ? "Кривий Ріг" : location.pathname === "/dp" ? "Дніпро" : "Admin Page"}</h1>
         <p className={style.infoUpdate}>Оновлено: {lastUpdateTime}</p>
       </div>
@@ -60,8 +60,8 @@ const Header = ({lastUpdateTime }) => {
         <ul className={style.listMenu}>
           {!isUserLogged ? (
             <>
-              <li><Link to="sign-in" className="">Вхід</Link></li>
-              <li><Link to="sign-up" className="">Реєстрація</Link></li>
+              {/* <li><Link to="sign-in" className="">Вхід</Link></li> */}
+              {/* <li><Link to="sign-up" className="">Реєстрація</Link></li> */}
             </>
           ) : (
             <>
@@ -74,7 +74,7 @@ const Header = ({lastUpdateTime }) => {
       </nav>
 
 
-      <div className={cn(style.burger, { [style.active]: isActive })} onClick={toggleMenu}>
+      <div className={cn(style.burger, { [style.active]: isActive }, {[style.hiddenElement]: !isUserLogged})} onClick={toggleMenu}>
         <span></span>
       </div>
     </header>
