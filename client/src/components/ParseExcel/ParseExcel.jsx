@@ -3,11 +3,10 @@ import * as XLSX from "xlsx";
 import { Filter } from "../Filter/Filter";
 import { Table } from "../Table/Table";
 
-export const ParseExcel = ({ fileName, setLastUpdateTime, setLoading }) => {
+export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
   const [parsedData, setParsedData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [keyword, setKeyword] = useState("all");
-  const [loadingLocal, setLoadingLocal] = useState(true);
   const [isRendered, setIsRendered] = useState(false);
 
   console.log("keyword", keyword);
@@ -50,8 +49,6 @@ export const ParseExcel = ({ fileName, setLastUpdateTime, setLoading }) => {
   };
 
   const loadFile = useCallback(async () => {
-    setLoading(true);
-    setLoadingLocal(true);
     try {
       const response = await fetch(`/Sorce/${fileName}`);
       if (!response.ok) throw new Error("Failed to fetch the file");
@@ -72,10 +69,8 @@ export const ParseExcel = ({ fileName, setLastUpdateTime, setLoading }) => {
     } catch (error) {
       console.error("Error loading file:", error);
     } finally {
-      setLoading(false); // Убедимся, что загрузка завершится в любом случае
-      setLoadingLocal(false);
     }
-  }, [fileName, setLastUpdateTime, setLoading]);
+  }, [fileName, setLastUpdateTime]);
 
   useEffect(() => {
     loadFile();
@@ -91,10 +86,8 @@ export const ParseExcel = ({ fileName, setLastUpdateTime, setLoading }) => {
     console.log("Parsed data length:", parsedData.length);
     
     if (parsedData.length > 0) {
-      setLoading(false); // Сброс состояния загрузки после успешной загрузки данных
-      setLoadingLocal(false);
       setIsRendered(true); // Устанавливаем isRendered в true после загрузки данных
-      console.log("@@@@@@loading@@@@@@@", loadingLocal);
+      console.log("@@@@@@loading@@@@@@@");
     }
   }, [parsedData]);
 
@@ -142,7 +135,7 @@ export const ParseExcel = ({ fileName, setLastUpdateTime, setLoading }) => {
     <div>
       <Filter onFilterChange={handleFilterChange} />
       <hr />
-      {loadingLocal || !isRendered ? <p>Загрузка...</p> : filteredData.length > 0 ? <Table data={filteredData} /> : <p>Нет данных для отображения</p>}
+      {!isRendered ? <p>Загрузка...</p> : filteredData.length > 0 ? <Table data={filteredData} /> : <p>Нет данных для отображения</p>}
     </div>
   );
 };

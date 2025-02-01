@@ -6,7 +6,7 @@ import style from "./header.module.scss";
 import cn from "classnames";
 import logo from "../../img/ST_Wight.png";
 
-const Header = ({ setLoading, lastUpdateTime }) => {
+const Header = ({lastUpdateTime }) => {
   const location = useLocation();
   const { isUserLogged } = useContext(AuthContext);
   const { userInfo, handleLogOut } = useContext(AuthContext);
@@ -19,7 +19,6 @@ const Header = ({ setLoading, lastUpdateTime }) => {
   };
 
   const handleLinkClick = (path) => {
-    setLoading(true);
     setIsActive(false);
     setIsOpen(false);
   };

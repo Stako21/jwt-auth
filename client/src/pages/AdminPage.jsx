@@ -8,13 +8,12 @@ import { UsersList } from "../components/UsersList/UsersList";
 import { Sidebar } from "../components/Sidebar/Sidebar"
 import config from "../config";
 
-export default function AdminPage({setLoading}) {
+export default function AdminPage() {
   const { userInfo, handleLogOut } = useContext(AuthContext);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const { enqueueSnackbar } = useSnackbar();
 
-  setLoading(false);
 
   const handlePasswordChange = async () => {
     if (!selectedUserId || !newPassword) {
