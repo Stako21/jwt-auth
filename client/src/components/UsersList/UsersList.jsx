@@ -33,7 +33,6 @@ export const UsersList = ({ onUserSelect }) => {
     try {
       await axios.delete(`${config.API_URL}/auth/users/${userToDelete.id}`);
       setUsers(users.filter((user) => user.id !== userToDelete.id));
-      console.log(`User ${userToDelete.name} deleted successfully.`);
     } catch (error) {
       console.error(`Error deleting user ${userToDelete.name}:`, error);
     } finally {

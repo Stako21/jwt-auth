@@ -7,9 +7,6 @@ import showErrorMessage from "../utils/showErrorMessage";
 import inMemoryJWT from "../services/inMemoryJWT";
 import { enqueueSnackbar } from "notistack";
 
-console.log("config.API_URL");
-console.log(config.API_URL);
-
 export const AuthClient = axios.create({
   baseURL: `${config.API_URL}/auth`,
   withCredentials: true,
@@ -26,9 +23,6 @@ ResourceClient.interceptors.request.use(
 
     if (accessToken) {
       config.headers["Authorization"] = `Bearer ${accessToken}`;
-      console.log("Authorization header:", config.headers["Authorization"]);
-    } else {
-      console.log("No access token found");
     }
 
     return config;
@@ -49,7 +43,6 @@ const AuthProvider = ({ children }) => {
   const handleFetchProtected = () => {
     ResourceClient.get("/protected")
       .then((res) => {
-        console.log('Response data:', res.data);
         setData(res.data);
       })
       .catch((error) => showErrorMessage(enqueueSnackbar, error));
@@ -61,7 +54,7 @@ const AuthProvider = ({ children }) => {
         inMemoryJWT.deleteToken();
         setIsUserLogged(false);
       })
-      .catch(showErrorMessage);
+      .catch((error) => showErrorMessage(enqueueSnackbar, error));
   };
 
   const handleSignUp = (data) => {
@@ -69,7 +62,7 @@ const AuthProvider = ({ children }) => {
       .then(() => {
         enqueueSnackbar("Реєстрація пройшла успішно!", { variant: "success" });
       })
-      .catch(showErrorMessage);
+      .catch((error) => showErrorMessage(enqueueSnackbar, error));
   };
 
   const handleSignIn = (data) => {
@@ -79,31 +72,21 @@ const AuthProvider = ({ children }) => {
         inMemoryJWT.setToken(accessToken, accessTokenExpiration);
         setIsUserLogged(true);
 
-        console.log('accessToken ::::: ');
-        console.log(accessToken);
-
         const arrayToken = accessToken.split('.');
         const userRole = JSON.parse(atob(arrayToken[1])).role;
         const userName = JSON.parse(atob(arrayToken[1])).userName;
         const userCity = JSON.parse(atob(arrayToken[1])).city;
-
-        console.log("2JSON.parse(atob(arrayToken[1]))", JSON.parse(atob(arrayToken[1])));
-        console.log('Role :::: ', userRole);
-        console.log('City :::: ', userCity);
 
         setUserInfo({
           userName: userName,
           role: userRole,
           city: userCity,
         });
-
-        console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&res.data");
-        console.log(data);
-
+        
         const message = `${data.userName} ${userRole}`;
         enqueueSnackbar(message, { variant: 'success' });
       })
-      .catch(showErrorMessage);
+      .catch((error) => showErrorMessage(enqueueSnackbar, error));
   };
 
   useEffect(() => {

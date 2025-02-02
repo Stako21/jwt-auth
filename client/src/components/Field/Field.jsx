@@ -21,17 +21,17 @@ const Field = ({ register, name, error = false, helperText = "", ...rest }) => {
         className={cn(style.input, { [style.error]: error })}
         {...register(name)}
         {...rest}
-        type={isPasswordVisible && rest.inputType === "password" ? "text" : rest.type || "text"} // Меняем тип динамически
+        type={isPasswordVisible && rest.inputtype === "password" ? "text" : rest.type || "text"} // Меняем тип динамически
         placeholder=""
       />
       <i
         className={cn(
           style.leftIcon,
-          rest.inputType === "user" ? "fa-regular fa-user" : "fa-solid fa-lock"
+          rest.inputtype === "user" ? "fa-regular fa-user" : "fa-solid fa-lock"
         )}
       ></i>
       <span>{rest.placeholder}</span>
-      {rest.inputType === "password" && (
+      {rest.inputtype === "password" && (
         <i
           className={cn(
             style.rightIcon,

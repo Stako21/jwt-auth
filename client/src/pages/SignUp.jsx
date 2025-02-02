@@ -53,7 +53,7 @@ export default function SignUp() {
             register={register}
             autoComplete="off"
             placeholder="Ім'я користувача"
-            inputType="user"
+            inputtype="user"
             error={Boolean(errors.userName)}
             helperText={errors.userName?.message}
           />
@@ -62,7 +62,7 @@ export default function SignUp() {
             register={register}
             autoComplete="off"
             placeholder="Пароль"
-            inputType="password"
+            inputtype="password"
             error={Boolean(errors.password)}
             helperText={errors.password?.message}
           />

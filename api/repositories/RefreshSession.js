@@ -8,16 +8,9 @@ class RefreshSessionRepository {
       [refreshToken]
     )
 
-    // console.log("!!!!!!!!!!!!response!!!!!!!!!!!");
-    // console.log(response);
-
     if (!response.length) {
       return null;
     }
-
-    // console.log("!!!!!!!!!!!!response[0]!!!!!!!!!!!");
-    // console.log(response[0]);
-
     return response[0]
   }
 
@@ -25,12 +18,7 @@ class RefreshSessionRepository {
     try {
       const result = await pool.query("INSERT INTO refresh_sessions (user_id, refresh_token, finger_print) VALUES (?, ?, ?)",
         [id, refreshToken, fingerprint.hash]);
-      // console.log("Refresh session inserted:", result.rows[0]);
-      // console.log("Refresh session inserted:", result);
-      console.log("Refresh session inserted:", result[0]);
-    } catch (error) {
-      console.error("Error inserting refresh session:", error);
-    }
+    } catch (error) {}
   }
 
   static async deleteRefreshSession(refreshToken) { 

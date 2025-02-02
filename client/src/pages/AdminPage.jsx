@@ -30,8 +30,6 @@ export default function AdminPage() {
     } catch (error) {
       enqueueSnackbar("Помилка під час зміни пароля", { variant: "error" });
       console.error("Error updating password:", error);
-    } finally {
-      console.log("Finally block");
     }
   };
 

@@ -8,8 +8,6 @@ import { Link } from 'react-router-dom';
 export default function Demo() {
   const { data, userInfo, handleLogOut, handleFetchProtected } = useContext(AuthContext);
 
-  console.log('uerInfo ::::::', userInfo);
-
   const userRole = userInfo?.role;
 
   return (

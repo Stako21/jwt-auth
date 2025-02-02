@@ -44,7 +44,6 @@ export const Sidebar = () => {
 
     // Формирование данных для запроса
     const data = { userName, password, role, city };
-    console.log("Данные для отправки:", data);
 
     AuthClient.post("/sign-up", data)
       .then(() => {

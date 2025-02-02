@@ -18,48 +18,22 @@ class TokenService {
   }
 
   static async checkAccess(req, _, next) {
-    // const authHeader = req.headers.authorization;
     const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+    const token = authHeader && authHeader.split(" ")[1];
 
-    // const token = authHeader?.split(" ")?.[1];
 
     if (!token) {
       return next(new Unauthorized());
     }
 
-    // if (error) {
-    //   return next(new Forbidden(error));
-    // }
-
     try {
       req.user = await TokenService.verifyAccessToken(token);
-      console.log(req.user);
     } catch (error) {
-      console.log(error);
       return next(new Forbidden(error));
     }
 
     next();
   }
-  // jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, user) => {
-  //   console.log(error, user);
-
-  //   if (error) {
-  //     return next(new Forbidden(error));
-  //   }
-
-  //   try {
-  //     req.user = await TokenService.verifyAccessToken(token);
-  //     console.log(req.user);
-  //   } catch (error) {
-  //     console.log(error);
-  //     return next(new Forbidden(error));
-  //   }
-
-  //   next();
-  // })
-
 
   static async verifyAccessToken(accessToken) {
     return await jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);

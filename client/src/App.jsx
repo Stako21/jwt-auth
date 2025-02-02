@@ -15,7 +15,6 @@ const LogPageView = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.log(`Visited page: ${location.pathname}`);
   }, [location]);
 
   return null;
@@ -27,9 +26,6 @@ const AppContent = () => {
   const [headerTitle, setHeaderTitle] = useState(""); // Заголовок страницы
   const [currentPath, setCurrentPath] = useState(""); // Текущий путь
   const location = useLocation();
-
-  console.log("!!!!Path changed:", location.pathname);
-  console.log("!!!!Current path:", currentPath);
 
   useEffect(() => {
     if (location.pathname === "/zp") {
@@ -46,7 +42,6 @@ const AppContent = () => {
 
   useEffect(() => {
     if (location.pathname !== currentPath) {
-      console.log("Path changed:", location.pathname);
       setCurrentPath(location.pathname);
     }
   }, [location.pathname, currentPath]);
@@ -56,10 +51,6 @@ const AppContent = () => {
     if (currentPath !== location.pathname) {
     }
   }, [location.pathname, currentPath]);
-
-
-  console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&userInfo.city", userInfo);
-  
 
   return (
     <div className={style.content}>

@@ -21,9 +21,6 @@ class AuthService {
     }
 
     const payload = { id: userData.id, role: userData.role, userName: userData.NAME, city: userData.city };
-
-    console.log('SingIn payload ::::::: ', payload);
-
     const accessToken = await TokenService.generateAccessToken(payload);
     const refreshToken = await TokenService.generateRefreshToken(payload);
 
@@ -53,8 +50,6 @@ class AuthService {
     const accessToken = await TokenService.generateAccessToken(payload);
     const refreshToken = await TokenService.generateRefreshToken(payload);
 
-    console.log('signUp payload ::::::: ', payload);
-
     await RefreshSessionsRepository.createRefreshSession({
       id: user.id,
       refreshToken,
@@ -70,7 +65,6 @@ class AuthService {
 
   static async logOut(refreshToken) {
     await RefreshSessionsRepository.deleteRefreshSession(refreshToken);
-    console.log('Log out, refreshToken deleted:', refreshToken);
   }
 
   static async refresh({ fingerprint, currentRefreshToken }) {
@@ -96,8 +90,6 @@ class AuthService {
     } catch (error) {
       throw new Forbidden(error);
     }
-
-    console.log('refresh payload ::::::: ', payload);
 
     if (!payload || !payload.userName) {
       throw new Unauthorized();

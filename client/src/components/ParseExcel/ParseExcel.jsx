@@ -9,9 +9,6 @@ export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
   const [keyword, setKeyword] = useState("all");
   const [isRendered, setIsRendered] = useState(false);
 
-  console.log("keyword", keyword);
-  
-
   const level1 = ["ТОВАР"];
   const level2 = ["МРІЯ", "РОШЕН"];
   const level3 = [
@@ -79,21 +76,16 @@ export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
   }, [loadFile]);
 
   useEffect(() => {
-    console.log("Parsed data:", parsedData);
   }, [parsedData]);
 
   useEffect(() => {
-    console.log("Parsed data length:", parsedData.length);
-    
     if (parsedData.length > 0) {
       setIsRendered(true); // Устанавливаем isRendered в true после загрузки данных
-      console.log("@@@@@@loading@@@@@@@");
     }
   }, [parsedData]);
 
   // Filtering function starts here
   const handleFilterChange = (selectedFilter) => {
-    console.log("Filter changed to:", selectedFilter); // Add this log
     setKeyword(selectedFilter);
     if (selectedFilter === "all") {
       setFilteredData(parsedData);
@@ -106,7 +98,6 @@ export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
           const filteredChildren = filterHierarchy(item.children);
           return filteredChildren.length ? { ...item, children: filteredChildren } : null;
         }
-        console.log("%%%%%%%%%item%%%%%%%%%", item);
         
         const matchesFilter = selectedFilter === "vip" ? item.productNameCell.includes("ВІП") : item.productNameCell.includes("ОПТ");
         return matchesFilter ? item : null;
@@ -117,19 +108,11 @@ export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
     setFilteredData(filtered);
   };
 
-  // Filtering function ends here
-  console.log("Filtered data:", filteredData);
-
   useEffect(() => {
-    console.log("Filtered data:", filteredData);
   }, [filteredData]);
 
   useEffect(() => {
-    console.log("Keyword changed to:", keyword);
   }, [keyword]);
-
-  console.log("setLastUpdateTime", setLastUpdateTime);
-  
 
   return (
     <div>

@@ -23,8 +23,6 @@ const Header = ({lastUpdateTime }) => {
     setIsOpen(false);
   };
 
-  console.log("Ререндер Header", location.pathname);
-
   return (
     <header className={style.header}>
       <div className={style.logo}>

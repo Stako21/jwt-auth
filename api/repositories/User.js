@@ -34,10 +34,6 @@ class UserRepository {
       const [rows] = await pool.query("SELECT * FROM users WHERE name = ?", [userName]);
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
-      console.log('@@@@@@@@@@@@@@@@@@@@getUserData@@@@@@@@@@@@@@@');
-      console.log(error);
-      console.log('@@@@@@@@@@@@@@@@@@@@getUserData@@@@@@@@@@@@@@@');
-
       throw error;
     }
   }
