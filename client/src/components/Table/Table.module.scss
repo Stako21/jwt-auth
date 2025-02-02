@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss";
 
 // .wraperTable {
 //   margin: 20px 20px 10px ;
@@ -8,7 +8,7 @@
 
 .scrollContainer {
   // max-height: 500px; /* Устанавливаем максимальную высоту для контейнера прокрутки */
-  max-height: calc(100vh - $header-height - $filter-height - 20px - 10px);
+  max-height: calc(100vh - $header-height - $filter-height - 20px - 30px);
   /* Устанавливаем максимальную высоту для контейнера прокрутки */
   overflow-y: auto;
   /* Включаем вертикальную прокрутку */
@@ -87,6 +87,7 @@ tr .productCell {
 .toggleButton:active {
   background: $button-dark;
 }
+
 // tbody tr:nth-child(even) {
 //   background: $header-background-color;
 // }
@@ -128,6 +129,7 @@ tbody tr:nth-child(1) {
 @media (max-width: 768px) {
   .wraperTable {
     margin: 0;
+    margin-bottom: 10px;
   }
 
   .scrollContainer {

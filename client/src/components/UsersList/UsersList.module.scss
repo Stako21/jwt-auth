@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss";
 
 .wrapperUserList {
   width: 100%;
@@ -13,14 +13,16 @@
 
 .wraperTable {
   height: 100%;
-  overflow: hidden; /* Убираем прокрутку */
+  overflow: hidden;
+  /* Убираем прокрутку */
 }
 
 .scrollContainer {
   max-height: calc(100vh - $header-height - $filter-height - 20px - 60px);
 
   // max-height: 500px; /* Устанавливаем максимальную высоту для контейнера прокрутки */
-  overflow-y: auto; /* Включаем вертикальную прокрутку */
+  overflow-y: auto;
+  /* Включаем вертикальную прокрутку */
 }
 
 .table {
@@ -34,7 +36,8 @@
   text-align: left;
 }
 
-th, td {
+th,
+td {
   // border: $border-color 1px solid;
 }
 
@@ -42,13 +45,16 @@ th {
   position: sticky;
   top: 0;
   border-top: 0;
-  background-color: $header-background-color; /* Задайте фоновый цвет, чтобы шапка не сливалась с контентом */
-  z-index: 1; /* Убедитесь, что з-индекс выше, чем у строк таблицы */
+  background-color: $header-background-color;
+  /* Задайте фоновый цвет, чтобы шапка не сливалась с контентом */
+  z-index: 1;
+  /* Убедитесь, что з-индекс выше, чем у строк таблицы */
 }
 
 .tableBody tr:nth-child(odd) {
   background-color: $oddRowDarc;
 }
+
 .tableBody tr:nth-child(even) {
   background-color: $evenRowDarc;
 }
@@ -91,11 +97,13 @@ th {
 ::-webkit-scrollbar {
   width: 10px;
 }
+
 ::-webkit-scrollbar-track {
   box-shadow: inset 0 0 10px rgba(150, 150, 150, 0.8);
 }
+
 ::-webkit-scrollbar-thumb {
-  box-shadow: inset 0 0 10px rgba(150,150,150,0.8);
+  box-shadow: inset 0 0 10px rgba(150, 150, 150, 0.8);
 }
 
 

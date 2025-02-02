@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss";
 
 
 .wrapperInputBox {
@@ -68,7 +68,7 @@
 
 // .inputBox input:valid ~ span,
 .inputBox input:focus~span,
-.inputBox input:not(:placeholder-shown):not(:focus) ~ span {
+.inputBox input:not(:placeholder-shown):not(:focus)~span {
   color: $border-clolr-light-green;
   border: 1px solid $border-clolr-light-green;
   background: $main-background-color;

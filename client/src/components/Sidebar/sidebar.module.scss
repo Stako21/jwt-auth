@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss";
 
 .registration {
   margin-left: 10px;
@@ -16,13 +16,14 @@ h3 {
   text-align: center;
 }
 
-.registration > div {
+.registration>div {
   display: flex;
   flex-direction: column;
-  
+
 }
 
-input, select {
+input,
+select {
   background-color: $light-text-color;
   font-size: 20px;
   // height: 50px;

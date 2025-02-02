@@ -1,4 +1,4 @@
-@import "../variables.scss";
+@use "../variables.scss";
 
 .mainWrapper {
   height: calc(100vh - $header-height);
@@ -125,5 +125,3 @@ button:hover {
     padding: 20px;
   }
 }
-
-

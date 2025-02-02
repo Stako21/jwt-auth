@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss";
 
 .open {
   display: flex !important;
@@ -140,6 +140,7 @@ li:hover {
     background-color: $header-background-color;
     animation: burgerAnimation 0.4s;
   }
+
   .nav {
     display: none;
     flex-direction: column;
@@ -157,7 +158,8 @@ li:hover {
     animation: burgerAnimation 0.4s;
   }
 
-  .nav .listMenu, .navPages .listPages {
+  .nav .listMenu,
+  .navPages .listPages {
     flex-direction: column;
     // row-gap: 10px;
   }
