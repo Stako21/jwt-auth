@@ -80,7 +80,7 @@ export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
 
   useEffect(() => {
     if (parsedData.length > 0) {
-      setIsRendered(true); // Устанавливаем isRendered в true после загрузки данных
+      setIsRendered(true);
     }
   }, [parsedData]);
 

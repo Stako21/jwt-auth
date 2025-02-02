@@ -1,6 +1,5 @@
 import { memo } from "react";
 import style from "./select.module.scss";
-import cn from "classnames"
 
 export default memo(({ options = [], ...rest }) => (
   <div className={style.inputBox}>

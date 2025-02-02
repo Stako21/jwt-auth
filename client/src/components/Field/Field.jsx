@@ -15,7 +15,6 @@ const Field = ({ register, name, error = false, helperText = "", ...rest }) => {
 
   return (
 
-
     <div className={style.inputBox}>
       <input
         className={cn(style.input, { [style.error]: error })}

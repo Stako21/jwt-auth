@@ -1,8 +1,6 @@
 import { useContext } from "react";
-import style from "./style.module.scss";
 import { AuthContext } from "../context/AuthContext";
 import Button from "../components/Button/Button";
-import { UsersList } from "../components/UsersList/UsersList";
 import { Link } from 'react-router-dom';
 
 export default function Demo() {
@@ -31,9 +29,6 @@ export default function Demo() {
         <li><Link to="/kr">КР</Link></li>
         <li><Link to="/dp">ДП</Link></li>
       </ul>
-      {/* <div className="">
-        <UsersList />
-      </div> */}
     </div>
   );
 }

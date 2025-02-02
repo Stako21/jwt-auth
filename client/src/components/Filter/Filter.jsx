@@ -19,15 +19,14 @@ export const Filter = ({ onFilterChange, setLastUpdateTime }) => {
 
   return (
     <>
-    {/* <p>{setLastUpdateTime}</p> */}
-    <div className={style.wrapperFilter}>
-      <label htmlFor="filter"></label>
-      <select id="filter" value={selectedFilter} onChange={handleChange}>
-        <option value="all">Весь товар</option>
-        <option value="vip">ВІП</option>
-        <option value="opt">ОПТ</option>
-      </select>
-    </div>
+      <div className={style.wrapperFilter}>
+        <label htmlFor="filter"></label>
+        <select id="filter" value={selectedFilter} onChange={handleChange}>
+          <option value="all">Весь товар</option>
+          <option value="vip">ВІП</option>
+          <option value="opt">ОПТ</option>
+        </select>
+      </div>
     </>
   );
 };

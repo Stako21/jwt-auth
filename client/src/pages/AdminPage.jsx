@@ -1,7 +1,6 @@
 import React, { useContext, useState } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
-import Button from "../components/Button/Button";
 import style from "./style.module.scss";
 import { useSnackbar } from "notistack";
 import { UsersList } from "../components/UsersList/UsersList";
@@ -41,7 +40,6 @@ export default function AdminPage() {
           <p>Your name: {userInfo.userName}</p>
           <p>Your role: {userInfo.role === 1 ? 'admin' : 'user'}</p>
         </div>
-        {/* <Button onClick={handleLogOut}>Log Out</Button> */}
       </div>
 
       <div className={style.adpWrapperSidebar}>
@@ -61,12 +59,9 @@ export default function AdminPage() {
         )}
       </div>
 
-
       <div className={style.adpWrapperList}>
         <UsersList onUserSelect={setSelectedUserId} />
       </div>
-
-
     </div>
   );
 }

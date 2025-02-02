@@ -13,7 +13,7 @@ const defaultValues = {
   userName: "",
   password: "",
   role: 1,
-  city: 1, // default city value
+  city: 1,
 };
 
 const rolesList = [
@@ -86,7 +86,5 @@ export default function SignUp() {
         </form>
       </div>
     </div>
-
-
   );
 }

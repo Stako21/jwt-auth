@@ -36,7 +36,6 @@ export const Sidebar = () => {
   const handleRegister = () => {
     const { userName, password, role, city } = formValues;
 
-    // Проверка на заполнение обязательных полей
     if (!userName || !password) {
       enqueueSnackbar("Будь ласка, заповніть всі поля", { variant: "error" });
       return;

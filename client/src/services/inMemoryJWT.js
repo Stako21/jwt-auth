@@ -5,7 +5,7 @@ const inMemoryJWTService = () => {
   let refreshTimeoutId = null;
 
   const refreshToken = (expiration) => {
-    const timeoutTrigger = expiration * 1000 - 10000; // Преобразуем время истечения в миллисекунды и вычитаем 10 секунд
+    const timeoutTrigger = expiration * 1000 - 10000; // Преобразуем время истечения в миллисекунды и вычитаем 10 секунд.
 
     refreshTimeoutId = setTimeout(() => {
       AuthClient.post("/refresh").then((res) => {
@@ -38,7 +38,6 @@ const inMemoryJWTService = () => {
     abortRefreshToken();
     localStorage.setItem(config.LOGOUT_STORAGE_KEY, Date.now());
   };
-
   return { getToken, setToken, deleteToken };
 };
 

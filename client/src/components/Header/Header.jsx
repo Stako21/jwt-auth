@@ -1,7 +1,6 @@
 import { useContext, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
-import Button from "../Button/Button";
 import style from "./header.module.scss";
 import cn from "classnames";
 import logo from "../../img/ST_Wight.png";

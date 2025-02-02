@@ -43,7 +43,7 @@ export const UsersList = ({ onUserSelect }) => {
 
   const handleSelectUser = (userId) => {
     setSelectedUserId(userId);
-    onUserSelect(userId); // Передача выбранного пользователя в родительский компонент
+    onUserSelect(userId);
   };
 
   return (

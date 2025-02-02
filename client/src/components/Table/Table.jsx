@@ -37,7 +37,6 @@ export const Table = ({ data }) => {
 
   const flatData = flattenData(data);
 
-  // Предварительно определяем массив всех level3 строк
   const level3Rows = flatData.filter((row) => row.level === 3);
 
   return (

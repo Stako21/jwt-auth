@@ -69,6 +69,7 @@ const AuthProvider = ({ children }) => {
     AuthClient.post("/sign-in", data)
       .then((res) => {
         const { accessToken, accessTokenExpiration } = res.data;
+        
         inMemoryJWT.setToken(accessToken, accessTokenExpiration);
         setIsUserLogged(true);
 
@@ -82,7 +83,7 @@ const AuthProvider = ({ children }) => {
           role: userRole,
           city: userCity,
         });
-        
+
         const message = `${data.userName} ${userRole}`;
         enqueueSnackbar(message, { variant: 'success' });
       })

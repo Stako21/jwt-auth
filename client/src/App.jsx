@@ -4,7 +4,6 @@ import { Link, Routes, Route, BrowserRouter, Navigate, useLocation } from "react
 import { SnackbarProvider } from "notistack";
 import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
-import Demo from "./pages/Demo";
 import AdminPage from "./pages/AdminPage";
 import Header from "./components/Header/Header";
 import { ParseExcel } from "./components/ParseExcel/ParseExcel";
@@ -38,7 +37,6 @@ const AppContent = () => {
       setHeaderTitle("Your Title Here");
     }
   }, [location]);
-
 
   useEffect(() => {
     if (location.pathname !== currentPath) {
@@ -124,7 +122,7 @@ const AppContent = () => {
         ) : (
           <>
             <Route path="sign-in" element={<SignIn />} />
-            <Route path="sign-up" element={<SignUp />} />
+            {/* <Route path="sign-up" element={<SignUp />} /> */}
           </>
         )}
         <Route
