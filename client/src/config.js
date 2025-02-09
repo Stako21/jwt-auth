@@ -4,6 +4,6 @@
 // };
 
 export default {
-  API_URL: "http://balance.roshen.zp.ua",
+  API_URL: "https://balance.roshen.zp.ua",
   LOGOUT_STORAGE_KEY: "logout",
 };
