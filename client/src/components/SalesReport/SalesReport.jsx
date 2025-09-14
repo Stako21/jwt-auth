@@ -1,21 +1,29 @@
-import axios from "axios";
 import { useContext, useEffect, useState } from "react";
 import "./SalesReport.scss";
-import config from "../../config";
 import { AuthContext } from "../../context/AuthContext";
-import SalesAgent from "../../../public/Sorce/SalesAgent.json";
-import SalesReports from "../../../public/Sorce/SalesReport.json";
 import cn from "classnames";
 
 export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   const { userInfo } = useContext(AuthContext);
 
-  const actualAgent = SalesAgent.find(
+  const [salesAgents, setSalesAgents] = useState([]);
+  const [salesReports, setSalesReports] = useState([]);
+
+  useEffect(() => {
+    fetch("/Sorce/SalesAgent.json")
+      .then((res) => res.json())
+      .then((data) => setSalesAgents(data));
+    fetch("/Sorce/SalesReport.json")
+      .then((res) => res.json())
+      .then((data) => setSalesReports(data));
+  }, []);
+
+  const actualAgent = salesAgents.find(
     (agent) => agent.login === userInfo.userName
   );
 
-  const filteredReports = [...SalesReports].filter(
-    (report) => report.salesAgent === actualAgent.currentAgent
+  const filteredReports = salesReports.filter(
+    (report) => actualAgent && report.salesAgent === actualAgent.currentAgent
   );
 
   function formatedCurrency(amount) {
@@ -26,20 +34,22 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   }
 
   useEffect(() => {
-    setLastUpdateTime(filteredReports[0].currentDate);
-  }), [setLastUpdateTime, filteredReports];
+    if (filteredReports.length > 0) {
+      setLastUpdateTime(filteredReports[0].currentDate);
+    }
+  }, [setLastUpdateTime, filteredReports]);
+
+  if (!actualAgent) return null;
 
   return (
     <div className={cn("salesReportWrapper", { ["open"]: isOpen })}>
       <h2>{actualAgent.currentAgent}</h2>
-      {/* <p>Оновлено: {filteredReports[0].currentDate}</p> */}
       <div className="wrapperTable">
         <div className="scrollContainer">
           <table className="table">
             <thead className="tableHeader">
               <tr>
                 <th>№</th>
-                {/* <th>Дата</th> */}
                 <th>Номер</th>
                 <th>Торгівельна точка</th>
                 <th>Коментар</th>
@@ -51,7 +61,6 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
               {filteredReports.map((report, index) => (
                 <tr key={report.id}>
                   <td>{index + 1}</td>
-                  {/* <td>{new Date(report.date).toLocaleString()}</td> */}
                   <td>{report.number}</td>
                   <td>{report.pointOfSale}</td>
                   <td>{report.comment}</td>
