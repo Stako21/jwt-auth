@@ -41,10 +41,24 @@ export const UsersList = ({ onUserSelect }) => {
     }
   };
 
+  const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name));
+
   const handleSelectUser = (userId) => {
     setSelectedUserId(userId);
     onUserSelect(userId);
   };
+
+  const roleLabel = {
+    1: "Admin",
+    2: "Moderator",
+    3: "User",
+  }
+
+  const cityLabel = {
+    1: "ZP",
+    2: "DP",
+    3: "KR",
+  }
 
   return (
     <div className={style.wrapperUserList}>
@@ -63,7 +77,7 @@ export const UsersList = ({ onUserSelect }) => {
               </tr>
             </thead>
             <tbody className={style.tableBody}>
-              {users.map((user) => (
+              {sortedUsers.map((user) => (
                 <tr key={user.id}>
                   <td>
                     <input
@@ -75,8 +89,8 @@ export const UsersList = ({ onUserSelect }) => {
                   </td>
                   <td>{user.id}</td>
                   <td>{user.name}</td>
-                  <td>{user.city}</td>
-                  <td>{user.role}</td>
+                  <td>{cityLabel[user.city]}</td>
+                  <td>{roleLabel[user.role]}</td>
                   <td>
                     <button
                       className={style.deleteBotton}

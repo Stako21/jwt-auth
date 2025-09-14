@@ -5,12 +5,12 @@ import style from "./header.module.scss";
 import cn from "classnames";
 import logo from "../../img/ST_Wight.png";
 
-const Header = ({lastUpdateTime }) => {
+const Header = ({lastUpdateTime, isOpen, setIsOpen}) => {
   const location = useLocation();
   const { isUserLogged } = useContext(AuthContext);
   const { userInfo, handleLogOut } = useContext(AuthContext);
   const [isActive, setIsActive] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  // const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => {
     setIsActive((prev) => !prev);
@@ -39,6 +39,9 @@ const Header = ({lastUpdateTime }) => {
             </li>
             <li className={location.pathname === "/dp" ? style.activePage : ""}>
               <Link to="/dp" onClick={() => handleLinkClick("/dp")}>ДП</Link>
+            </li>
+            <li className={location.pathname === "/sales-report" ? style.activePage : ""}>
+              <Link to="/sales-report" onClick={() => handleLinkClick("/sales-report")}>Продажі</Link>
             </li>
             {userInfo.role === 1 && (
               <li className={location.pathname === "/admin-page" ? style.activePage : ""}>

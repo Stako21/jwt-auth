@@ -77,15 +77,21 @@ tr .productCell {
     inset 5px 5px 15px rgba(0, 0, 0, 0.35);
   color: #f4f4f4;
   font-size: 14px;
+  border-radius: 10%;
 }
 
 .toggleButton:hover {
   margin-right: 10px;
   background: $evenRow;
+  
 }
 
 .toggleButton:active {
   background: $button-dark;
+}
+
+.toggleIcon {
+  color: #000;
 }
 
 // tbody tr:nth-child(even) {

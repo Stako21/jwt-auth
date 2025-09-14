@@ -48,7 +48,7 @@ export default function AdminPage() {
           <div className={style.changePass}>
             <h3>Change Password for User ID: {selectedUserId}</h3>
             <input
-              type="password"
+              type="text"
               placeholder="Enter new password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}

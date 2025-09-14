@@ -1,6 +1,13 @@
 import { useContext, useEffect, useState } from "react";
 // import { Circle, Planets, Zoom } from "react-preloaders";
-import { Link, Routes, Route, BrowserRouter, Navigate, useLocation } from "react-router-dom";
+import {
+  Link,
+  Routes,
+  Route,
+  BrowserRouter,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import { SnackbarProvider } from "notistack";
 import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
@@ -9,12 +16,12 @@ import Header from "./components/Header/Header";
 import { ParseExcel } from "./components/ParseExcel/ParseExcel";
 import style from "./app.module.scss";
 import { AuthContext } from "./context/AuthContext";
+import { SalesReport } from "./components/SalesReport/SalesReport";
 
 const LogPageView = () => {
   const location = useLocation();
 
-  useEffect(() => {
-  }, [location]);
+  useEffect(() => {}, [location]);
 
   return null;
 };
@@ -24,6 +31,7 @@ const AppContent = () => {
   const [lastUpdateTime, setLastUpdateTime] = useState(""); // Время обновления
   const [headerTitle, setHeaderTitle] = useState(""); // Заголовок страницы
   const [currentPath, setCurrentPath] = useState(""); // Текущий путь
+  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -44,7 +52,6 @@ const AppContent = () => {
     }
   }, [location.pathname, currentPath]);
 
-
   useEffect(() => {
     if (currentPath !== location.pathname) {
     }
@@ -53,12 +60,18 @@ const AppContent = () => {
   return (
     <div className={style.content}>
       <LogPageView />
-      <Header title={headerTitle} lastUpdateTime={lastUpdateTime} />
-      
+      <Header
+        title={headerTitle}
+        lastUpdateTime={lastUpdateTime}
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+      />
+
       <Routes>
         {isUserLogged ? (
           userInfo.role === 1 ? (
             <>
+              <Route path="/sales-report" element={<SalesReport />} />
               <Route path="/admin-page" element={<AdminPage />} />
               <Route
                 path="/zp"
@@ -90,6 +103,15 @@ const AppContent = () => {
             </>
           ) : (
             <>
+              <Route
+                path="/sales-report"
+                element={
+                  <SalesReport
+                    isOpen={isOpen}
+                    setLastUpdateTime={setLastUpdateTime}
+                  />
+                }
+              />
               <Route
                 path="/zp"
                 element={
@@ -128,7 +150,19 @@ const AppContent = () => {
         <Route
           path="*"
           element={
-            <Navigate to={isUserLogged ? (userInfo.role === 1 ? "admin-page" : userInfo.city === 1 ? "/zp" : userInfo.city === 2 ? "/dp" : "/kr") : "sign-in"} />
+            <Navigate
+              to={
+                isUserLogged
+                  ? userInfo.role === 1
+                    ? "admin-page"
+                    : userInfo.city === 1
+                    ? "/zp"
+                    : userInfo.city === 2
+                    ? "/dp"
+                    : "/kr"
+                  : "sign-in"
+              }
+            />
           }
         />
       </Routes>
