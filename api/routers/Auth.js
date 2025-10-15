@@ -11,12 +11,12 @@ router.post("/logout", AuthValidator.logOut, AuthController.logOut);
 router.post("/refresh", AuthValidator.refresh, AuthController.refresh);
 
 // Новый маршрут для получения всех пользователей
-router.get("/users", UserController.getAllUsers);  // Добавляем маршрут для получения всех пользователей
-router.get("/adminPage");  // Добавляем маршрут для получения всех пользователей
+router.get("/users", UserController.getAllUsers); // Добавляем маршрут для получения всех пользователей
+router.get("/adminPage"); // Добавляем маршрут для получения всех пользователей
 
 // Маршрут для удаления пользователя
-router.delete('/users/:id', UserController.deleteUser); // Указание метода deleteUser
-router.put('/users/:id/password', UserController.changePassword);
-
+router.delete("/users/:id", UserController.deleteUser); // Указание метода deleteUser
+router.put("/users/:id/password", UserController.changePassword);
+router.put("/users/:id", UserController.updateUser);
 
 export default router;

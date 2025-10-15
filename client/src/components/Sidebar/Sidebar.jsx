@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { AuthClient } from "../../context/AuthContext";
 import { enqueueSnackbar } from "notistack";
-import style from "./sidebar.module.scss"
+import style from "./sidebar.module.scss";
 
 const defaultValues = {
   userName: "",
@@ -22,8 +22,31 @@ const citiesList = [
   { id: 3, title: "Кривий Ріг" },
 ];
 
-export const Sidebar = () => {
-  const [formValues, setFormValues] = useState(defaultValues);
+export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
+  const [formValues, setFormValues] = useState(
+    user
+      ? {
+          userName: user.name || "",
+          password: "",
+          role: user.role || 1,
+          city: user.city || 1,
+        }
+      : defaultValues
+  );
+
+  // keep form values in sync when 'user' prop changes
+  React.useEffect(() => {
+    if (user) {
+      setFormValues({
+        userName: user.name || "",
+        password: "",
+        role: user.role || 1,
+        city: user.city || 1,
+      });
+    } else {
+      setFormValues(defaultValues);
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -63,6 +86,27 @@ export const Sidebar = () => {
       });
   };
 
+  const handleUpdate = () => {
+    if (!user) return;
+
+    const { userName, role, city } = formValues;
+
+    if (!userName) {
+      enqueueSnackbar("Ім'я користувача обов'язкове", { variant: "error" });
+      return;
+    }
+
+    AuthClient.put(`/users/${user.id}`, { userName, role, city })
+      .then(() => {
+        enqueueSnackbar("Користувача оновлено", { variant: "success" });
+        if (onSaved) onSaved();
+      })
+      .catch((error) => {
+        console.error("Update error:", error);
+        enqueueSnackbar("Помилка оновлення", { variant: "error" });
+      });
+  };
+
   return (
     <div className={style.registration}>
       <h3>Реєстрація</h3>
@@ -86,11 +130,7 @@ export const Sidebar = () => {
       </div>
       <div>
         <label>Role:</label>
-        <select
-          name="role"
-          value={formValues.role}
-          onChange={handleChange}
-        >
+        <select name="role" value={formValues.role} onChange={handleChange}>
           {rolesList.map((role) => (
             <option key={role.id} value={role.id}>
               {role.title}
@@ -100,11 +140,7 @@ export const Sidebar = () => {
       </div>
       <div>
         <label>City:</label>
-        <select
-          name="city"
-          value={formValues.city}
-          onChange={handleChange}
-        >
+        <select name="city" value={formValues.city} onChange={handleChange}>
           {citiesList.map((city) => (
             <option key={city.id} value={city.id}>
               {city.title}
@@ -112,8 +148,25 @@ export const Sidebar = () => {
           ))}
         </select>
       </div>
-      <button className={style.sidebarBooton} onClick={handleRegister}>SignUp</button>
+      <div style={{ marginTop: 10 }}>
+        {user ? (
+          <>
+            <button className={style.sidebarBooton} onClick={handleUpdate}>
+              Update
+            </button>
+            <button
+              style={{ marginLeft: 8 }}
+              onClick={() => onCancel && onCancel()}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button className={style.sidebarBooton} onClick={handleRegister}>
+            SignUp
+          </button>
+        )}
+      </div>
     </div>
   );
 };
-

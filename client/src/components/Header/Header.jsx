@@ -5,7 +5,7 @@ import style from "./header.module.scss";
 import cn from "classnames";
 import logo from "../../img/ST_Wight.png";
 
-const Header = ({lastUpdateTime, isOpen, setIsOpen}) => {
+const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   const location = useLocation();
   const { isUserLogged } = useContext(AuthContext);
   const { userInfo, handleLogOut } = useContext(AuthContext);
@@ -32,27 +32,80 @@ const Header = ({lastUpdateTime, isOpen, setIsOpen}) => {
         <nav className={cn(style.navPages, { [style.open]: isOpen })}>
           <ul className={style.listPages}>
             <li className={location.pathname === "/zp" ? style.activePage : ""}>
-              <Link to="/zp" onClick={() => handleLinkClick("/zp")}>ЗП</Link>
+              <Link to="/zp" onClick={() => handleLinkClick("/zp")}>
+                ЗП
+              </Link>
             </li>
             <li className={location.pathname === "/kr" ? style.activePage : ""}>
-              <Link to="/kr" onClick={() => handleLinkClick("/kr")}>КР</Link>
+              <Link to="/kr" onClick={() => handleLinkClick("/kr")}>
+                КР
+              </Link>
             </li>
             <li className={location.pathname === "/dp" ? style.activePage : ""}>
-              <Link to="/dp" onClick={() => handleLinkClick("/dp")}>ДП</Link>
+              <Link to="/dp" onClick={() => handleLinkClick("/dp")}>
+                ДП
+              </Link>
             </li>
-            <li className={location.pathname === "/sales-report" ? style.activePage : ""}>
-              <Link to="/sales-report" onClick={() => handleLinkClick("/sales-report")}>Продажі</Link>
+            <li
+              className={
+                location.pathname === "/sales-report" ? style.activePage : ""
+              }
+            >
+              <Link
+                to="/sales-report"
+                onClick={() => handleLinkClick("/sales-report")}
+              >
+                Продажі
+              </Link>
             </li>
-            {userInfo.role === 1 && (
-              <li className={location.pathname === "/admin-page" ? style.activePage : ""}>
-                <Link to="/admin-page" onClick={() => handleLinkClick("/admin-page")}>Admin</Link>
-              </li>
+
+            {userInfo && (userInfo.role === 1 || userInfo.role === 2) && (
+              <>
+                {userInfo.role === 1 && (
+                  <li
+                    className={
+                      location.pathname === "/admin-page"
+                        ? style.activePage
+                        : ""
+                    }
+                  >
+                    <Link
+                      to="/admin-page"
+                      onClick={() => handleLinkClick("/admin-page")}
+                    >
+                      Admin
+                    </Link>
+                  </li>
+                )}
+                <li
+                  className={
+                    location.pathname === "/report-romashka"
+                      ? style.activePage
+                      : ""
+                  }
+                >
+                  <Link
+                    to="/report-romashka"
+                    onClick={() => handleLinkClick("/report-romashka")}
+                  >
+                    Звіт Ромашка
+                  </Link>
+                </li>
+              </>
             )}
           </ul>
         </nav>
       )}
-      <div className={cn(style.info, {[style.hiddenElement]: !isUserLogged})}>
-        <h1 className={style.infoTitle}>{location.pathname === "/zp" ? "Запоріжжя" : location.pathname === "/kr" ? "Кривий Ріг" : location.pathname === "/dp" ? "Дніпро" : "Admin Page"}</h1>
+      <div className={cn(style.info, { [style.hiddenElement]: !isUserLogged })}>
+        <h1 className={style.infoTitle}>
+          {location.pathname === "/zp"
+            ? "Запоріжжя"
+            : location.pathname === "/kr"
+            ? "Кривий Ріг"
+            : location.pathname === "/dp"
+            ? "Дніпро"
+            : "Admin Page"}
+        </h1>
         <p className={style.infoUpdate}>Оновлено: {lastUpdateTime}</p>
       </div>
 
@@ -66,15 +119,23 @@ const Header = ({lastUpdateTime, isOpen, setIsOpen}) => {
           ) : (
             <>
               <li>
-                <a href="" onClick={handleLogOut}>Вихід</a>
+                <a href="" onClick={handleLogOut}>
+                  Вихід
+                </a>
               </li>
             </>
           )}
         </ul>
       </nav>
 
-
-      <div className={cn(style.burger, { [style.active]: isActive }, {[style.hiddenElement]: !isUserLogged})} onClick={toggleMenu}>
+      <div
+        className={cn(
+          style.burger,
+          { [style.active]: isActive },
+          { [style.hiddenElement]: !isUserLogged }
+        )}
+        onClick={toggleMenu}
+      >
         <span></span>
       </div>
     </header>

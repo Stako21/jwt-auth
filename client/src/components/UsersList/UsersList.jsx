@@ -3,7 +3,7 @@ import axios from "axios";
 import style from "./UsersList.module.scss";
 import config from "../../config";
 
-export const UsersList = ({ onUserSelect }) => {
+export const UsersList = ({ onUserSelect, onEditUser, reloadKey = 0 }) => {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,7 +20,7 @@ export const UsersList = ({ onUserSelect }) => {
     };
 
     fetchUsers();
-  }, []);
+  }, [reloadKey]);
 
   const confirmDelete = (user) => {
     setUserToDelete(user); // Сохраняем объект пользователя
@@ -52,13 +52,13 @@ export const UsersList = ({ onUserSelect }) => {
     1: "Admin",
     2: "Moderator",
     3: "User",
-  }
+  };
 
   const cityLabel = {
     1: "ZP",
     2: "DP",
     3: "KR",
-  }
+  };
 
   return (
     <div className={style.wrapperUserList}>
@@ -93,10 +93,22 @@ export const UsersList = ({ onUserSelect }) => {
                   <td>{roleLabel[user.role]}</td>
                   <td>
                     <button
+                      type="button"
+                      className={style.editButton}
+                      onClick={() => onEditUser && onEditUser(user)}
+                      title="Змінити"
+                      aria-label={`edit-${user.id}`}
+                    >
+                      <i className="fa-solid fa-pen"></i>
+                    </button>
+                    <button
+                      type="button"
                       className={style.deleteBotton}
                       onClick={() => confirmDelete(user)}
+                      title="Видалити"
+                      aria-label={`delete-${user.id}`}
                     >
-                      Видалити
+                      <i className="fa-solid fa-trash"></i>
                     </button>
                   </td>
                 </tr>
@@ -111,9 +123,17 @@ export const UsersList = ({ onUserSelect }) => {
         <div className={style.modalOverlay}>
           <div className={style.modal}>
             <h3>Підтвердження видалення</h3>
-            <p>Ви впевнені, що хочете видалити користувача <b>{userToDelete.name}</b>?</p>
+            <p>
+              Ви впевнені, що хочете видалити користувача{" "}
+              <b>{userToDelete.name}</b>?
+            </p>
             <div className={style.modalButtons}>
-              <button onClick={() => setIsModalOpen(false)} className={style.cancelButton}>Скасувати</button>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className={style.cancelButton}
+              >
+                Скасувати
+              </button>
               <button onClick={deleteUser} className={style.deleteButton}>
                 Видалити
               </button>

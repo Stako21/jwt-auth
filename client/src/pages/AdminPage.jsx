@@ -4,15 +4,16 @@ import { AuthContext } from "../context/AuthContext";
 import style from "./style.module.scss";
 import { useSnackbar } from "notistack";
 import { UsersList } from "../components/UsersList/UsersList";
-import { Sidebar } from "../components/Sidebar/Sidebar"
+import { Sidebar } from "../components/Sidebar/Sidebar";
 import config from "../config";
 
 export default function AdminPage() {
   const { userInfo, handleLogOut } = useContext(AuthContext);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
+  const [editUser, setEditUser] = useState(null);
+  const [usersReloadKey, setUsersReloadKey] = useState(0);
   const { enqueueSnackbar } = useSnackbar();
-
 
   const handlePasswordChange = async () => {
     if (!selectedUserId || !newPassword) {
@@ -21,7 +22,10 @@ export default function AdminPage() {
     }
 
     try {
-      await axios.put(`${config.API_URL}/auth/users/${selectedUserId}/password`, { newPassword });
+      await axios.put(
+        `${config.API_URL}/auth/users/${selectedUserId}/password`,
+        { newPassword }
+      );
       enqueueSnackbar("Пароль успішно змінено!", { variant: "success" });
 
       setNewPassword("");
@@ -38,12 +42,19 @@ export default function AdminPage() {
         <h1>Administrator Page</h1>
         <div className={style.adpWrapperTitleUserInfo}>
           <p>Your name: {userInfo.userName}</p>
-          <p>Your role: {userInfo.role === 1 ? 'admin' : 'user'}</p>
+          <p>Your role: {userInfo.role === 1 ? "admin" : "user"}</p>
         </div>
       </div>
 
       <div className={style.adpWrapperSidebar}>
-        <Sidebar />
+        <Sidebar
+          user={editUser}
+          onSaved={() => {
+            setEditUser(null);
+            setUsersReloadKey((k) => k + 1);
+          }}
+          onCancel={() => setEditUser(null)}
+        />
         {selectedUserId && (
           <div className={style.changePass}>
             <h3>Change Password for User ID: {selectedUserId}</h3>
@@ -53,14 +64,22 @@ export default function AdminPage() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
-            <button onClick={handlePasswordChange} className={style.adpChangePassBtn} >Change Password</button>
-
+            <button
+              onClick={handlePasswordChange}
+              className={style.adpChangePassBtn}
+            >
+              Change Password
+            </button>
           </div>
         )}
       </div>
 
       <div className={style.adpWrapperList}>
-        <UsersList onUserSelect={setSelectedUserId} />
+        <UsersList
+          onUserSelect={setSelectedUserId}
+          onEditUser={(u) => setEditUser(u)}
+          key={usersReloadKey}
+        />
       </div>
     </div>
   );

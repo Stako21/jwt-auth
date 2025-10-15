@@ -28,10 +28,11 @@ class UserRepository {
     }
   }
 
-
   static async getUserData(userName) {
     try {
-      const [rows] = await pool.query("SELECT * FROM users WHERE name = ?", [userName]);
+      const [rows] = await pool.query("SELECT * FROM users WHERE name = ?", [
+        userName,
+      ]);
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
       throw error;
@@ -47,7 +48,10 @@ class UserRepository {
   static async deleteUserById(userId) {
     const connection = await pool.getConnection();
     try {
-      const [result] = await connection.query("DELETE FROM users WHERE id = ?", [userId]);
+      const [result] = await connection.query(
+        "DELETE FROM users WHERE id = ?",
+        [userId]
+      );
       return result.affectedRows > 0; // Вернет true, если пользователь удален
     } catch (error) {
       throw error;
@@ -60,6 +64,16 @@ class UserRepository {
     const query = "UPDATE users SET password = ? WHERE id = ?";
     try {
       const [result] = await pool.query(query, [hashedPassword, userId]);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async updateUserById(userId, { userName, role, city }) {
+    const query = "UPDATE users SET name = ?, role = ?, city = ? WHERE id = ?";
+    try {
+      const [result] = await pool.query(query, [userName, role, city, userId]);
       return result;
     } catch (error) {
       throw error;

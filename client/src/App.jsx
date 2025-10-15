@@ -17,6 +17,7 @@ import { ParseExcel } from "./components/ParseExcel/ParseExcel";
 import style from "./app.module.scss";
 import { AuthContext } from "./context/AuthContext";
 import { SalesReport } from "./components/SalesReport/SalesReport";
+import { ReportRomashka } from "./components/Reports/ReportRomashka";
 
 const LogPageView = () => {
   const location = useLocation();
@@ -72,6 +73,12 @@ const AppContent = () => {
           userInfo.role === 1 ? (
             <>
               <Route path="/sales-report" element={<SalesReport />} />
+              <Route
+                path="/report-romashka"
+                element={
+                  <ReportRomashka setLastUpdateTime={setLastUpdateTime} />
+                }
+              />
               <Route path="/admin-page" element={<AdminPage />} />
               <Route
                 path="/zp"
@@ -103,6 +110,14 @@ const AppContent = () => {
             </>
           ) : (
             <>
+              {userInfo.role === 2 && (
+                <Route
+                  path="/report-romashka"
+                  element={
+                    <ReportRomashka setLastUpdateTime={setLastUpdateTime} />
+                  }
+                />
+              )}
               <Route
                 path="/sales-report"
                 element={
