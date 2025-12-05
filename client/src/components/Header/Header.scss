@@ -1,23 +1,2 @@
-@import "../../variables.scss";
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: $header-height;
-  background-color: #3E424B;
-  color: #FAF6F2;
-  padding: 0 40px;
-}
-
-.logo {
-  display: flex;
-  justify-content: center;
-  flex-direction: column;
-  align-items: center;
-  border-radius: 50%;
-  border: 1px solid #FAF6F2;
-  width: 90px;
-  height: 90px;
-
-}
+/* Deprecated: global Header.scss replaced by CSS module `header.module.scss`.
+   Keep this file empty to avoid global style leakage. */

@@ -1,0 +1,63 @@
+@import "../../variables.scss";
+
+/* Scoped styles for SalesReport component to avoid overriding global Bulma table styles */
+
+.agentName {
+  margin: 10px auto;
+  text-align: center;
+}
+
+.wrapperTable {
+  /* let wrapper expand with content so page height grows */
+  height: auto;
+  overflow: visible;
+}
+
+.scrollContainer {
+  /* allow page to grow vertically; allow horizontal scroll if needed */
+  overflow-y: visible;
+  overflow-x: auto;
+}
+
+.salesTable {
+  width: 100%;
+  border-collapse: collapse;
+  // text-align: center;
+  font-size: 11px;
+  color: $darc-text-color;
+}
+
+.tableHeader {
+  color: $light-text-color;
+}
+
+.salesTable th,
+.salesTable td {
+  border-right: 1px solid $border-color;
+}
+
+.tableBody tr td {
+  color: $darc-text-color;
+}
+
+.tableBody tr:nth-child(odd) {
+  background-color: $oddRow;
+}
+
+.tableBody tr:nth-child(even) {
+  background-color: $evenRow;
+}
+
+.tableFooter {
+  /* footer scrolls with the page */
+  background-color: $header-background-color;
+  color: $light-text-color;
+}
+
+.checkIcon {
+  color: rgb(8, 156, 8);
+}
+
+.open {
+  display: none !important;
+}

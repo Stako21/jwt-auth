@@ -9,23 +9,23 @@ import {
   useLocation,
 } from "react-router-dom";
 import { SnackbarProvider } from "notistack";
-import SignUp from "./pages/SignUp";
+// import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import AdminPage from "./pages/AdminPage";
 import Header from "./components/Header/Header";
 import { ParseExcel } from "./components/ParseExcel/ParseExcel";
-import style from "./app.module.scss";
+// import style from "./app.module.scss";
 import { AuthContext } from "./context/AuthContext";
 import { SalesReport } from "./components/SalesReport/SalesReport";
 import { ReportRomashka } from "./components/Reports/ReportRomashka";
 
-const LogPageView = () => {
-  const location = useLocation();
+// const LogPageView = () => {
+//   const location = useLocation();
 
-  useEffect(() => {}, [location]);
+//   useEffect(() => {}, [location]);
 
-  return null;
-};
+//   return null;
+// };
 
 const AppContent = () => {
   const { userInfo, isUserLogged } = useContext(AuthContext);
@@ -59,8 +59,8 @@ const AppContent = () => {
   }, [location.pathname, currentPath]);
 
   return (
-    <div className={style.content}>
-      <LogPageView />
+    // <div className={style.content}>
+    <>
       <Header
         title={headerTitle}
         lastUpdateTime={lastUpdateTime}
@@ -181,7 +181,8 @@ const AppContent = () => {
           }
         />
       </Routes>
-    </div>
+    </>
+    // </div>
   );
 };
 

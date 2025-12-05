@@ -5,7 +5,7 @@ import config from "../config";
 import style from "../app.module.scss";
 import showErrorMessage from "../utils/showErrorMessage";
 import inMemoryJWT from "../services/inMemoryJWT";
-import { enqueueSnackbar } from "notistack";
+import { useSnackbar } from "notistack";
 
 export const AuthClient = axios.create({
   baseURL: `${config.API_URL}/auth`,
@@ -39,6 +39,7 @@ const AuthProvider = ({ children }) => {
   const [isUserLogged, setIsUserLogged] = useState(false);
   const [data, setData] = useState();
   const [userInfo, setUserInfo] = useState();
+  const { enqueueSnackbar } = useSnackbar();
 
   const handleFetchProtected = () => {
     ResourceClient.get("/protected")
@@ -69,11 +70,11 @@ const AuthProvider = ({ children }) => {
     AuthClient.post("/sign-in", data)
       .then((res) => {
         const { accessToken, accessTokenExpiration } = res.data;
-        
+
         inMemoryJWT.setToken(accessToken, accessTokenExpiration);
         setIsUserLogged(true);
 
-        const arrayToken = accessToken.split('.');
+        const arrayToken = accessToken.split(".");
         const userRole = JSON.parse(atob(arrayToken[1])).role;
         const userName = JSON.parse(atob(arrayToken[1])).userName;
         const userCity = JSON.parse(atob(arrayToken[1])).city;
@@ -85,9 +86,13 @@ const AuthProvider = ({ children }) => {
         });
 
         const message = `${data.userName} ${userRole}`;
-        enqueueSnackbar(message, { variant: 'success' });
+        enqueueSnackbar(message, { variant: "success" });
       })
-      .catch((error) => showErrorMessage(enqueueSnackbar, error));
+      .catch((error) => {
+        console.log(error);
+
+        showErrorMessage(enqueueSnackbar, error);
+      });
   };
 
   useEffect(() => {
@@ -98,7 +103,7 @@ const AuthProvider = ({ children }) => {
         setIsAppReady(true);
         setIsUserLogged(true);
 
-        const arrayToken = accessToken.split('.');
+        const arrayToken = accessToken.split(".");
         const userRole = JSON.parse(atob(arrayToken[1])).role;
         const userName = JSON.parse(atob(arrayToken[1])).userName;
         const userCity = JSON.parse(atob(arrayToken[1])).city;
@@ -115,6 +120,31 @@ const AuthProvider = ({ children }) => {
       });
   }, []);
 
+  // Clean up any inline body styles that a preloader may have injected
+  // (some preloader libraries set document.body.style.overflow/height/position)
+  useEffect(() => {
+    if (isAppReady) {
+      try {
+        document.body.style.overflow = null;
+        document.body.style.height = null;
+        document.body.style.width = null;
+        document.body.style.position = null;
+      } catch (e) {
+        // ignore (server-side rendering or restricted environment)
+      }
+    }
+
+    // also ensure cleanup on unmount
+    return () => {
+      try {
+        document.body.style.overflow = null;
+        document.body.style.height = null;
+        document.body.style.width = null;
+        document.body.style.position = null;
+      } catch (e) {}
+    };
+  }, [isAppReady]);
+
   useEffect(() => {
     const handlePersistentLogOut = (event) => {
       if (event.key === config.LOGOUT_STORAGE_KEY) {
@@ -127,7 +157,7 @@ const AuthProvider = ({ children }) => {
 
     return () => {
       window.removeEventListener("storage", handlePersistentLogOut);
-    }
+    };
   }, []);
 
   return (

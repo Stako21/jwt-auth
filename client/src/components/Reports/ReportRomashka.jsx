@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import cn from "classnames";
-import "./ReportRomashka.scss";
+import style from "./ReportRomashka.module.scss";
 
 export const ReportRomashka = ({ isOpen, setLastUpdateTime }) => {
   const [romashkaReports, setRomashkaReports] = useState([]);
@@ -61,19 +61,21 @@ export const ReportRomashka = ({ isOpen, setLastUpdateTime }) => {
     <div>
       {/* Кнопка для мобильных устройств */}
 
-      <h2>Продажі Ромашка</h2>
+      <h2 className={style.title}>Продажі Ромашка</h2>
 
-      <div className={`wrapperTable ${isFullscreen ? "fullscreen" : ""}`}>
-        <button className="fullscreen-toggle" onClick={toggleFullscreen}>
+      <div
+        className={cn(style.wrapperTable, { [style.fullscreen]: isFullscreen })}
+      >
+        <button className={style.fullscreenToggle} onClick={toggleFullscreen}>
           <i
             className={
               isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"
             }
           ></i>
         </button>
-        <div className="scrollContainer">
-          <table className="table">
-            <thead className="tableHeader">
+        <div className={style.scrollContainer}>
+          <table className={style.table}>
+            <thead className={style.tableHeader}>
               <tr>
                 <th>Супервайзер / Торговий агент</th>
                 <th>Учет с НДС</th>
@@ -86,12 +88,15 @@ export const ReportRomashka = ({ isOpen, setLastUpdateTime }) => {
               </tr>
             </thead>
 
-            <tbody className="tableBody">
+            <tbody className={style.tableBody}>
               {Object.entries(grouped).map(
                 ([supervisor, { agents, total }]) => (
                   <React.Fragment key={supervisor}>
                     {/* строка супервайзера с итогами */}
-                    <tr className="groupRow" style={{ ontWeight: "bold" }}>
+                    <tr
+                      className={style.groupRow}
+                      style={{ ontWeight: "bold" }}
+                    >
                       <td>{supervisor}</td>
                       <td>{total.accounting}</td>
                       <td>{total.tt}</td>

@@ -6,12 +6,14 @@ import { useSnackbar } from "notistack";
 import { UsersList } from "../components/UsersList/UsersList";
 import { Sidebar } from "../components/Sidebar/Sidebar";
 import config from "../config";
+import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton";
 
 export default function AdminPage() {
   const { userInfo, handleLogOut } = useContext(AuthContext);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [editUser, setEditUser] = useState(null);
+  const [newUserModalOpen, setNewUserModalOpen] = useState(false);
   const [usersReloadKey, setUsersReloadKey] = useState(0);
   const { enqueueSnackbar } = useSnackbar();
 
@@ -36,51 +38,96 @@ export default function AdminPage() {
     }
   };
 
+  const onCancel = () => {
+    setSelectedUserId(null);
+    setEditUser(null);
+    setNewPassword("");
+  };
+
+  const closeSidebar = () => {
+    setEditUser(null);
+    setNewUserModalOpen(false);
+  };
+
   return (
-    <div className={style.adpWrapper}>
-      <div className={style.adpWrapperTitle}>
+    <div className="container" style={{ minHeight: '100vh' }}>
+      <div style={{ margin: 10 }}>
+        <button
+          className="button is-success is-dark is-fullwidth"
+          onClick={() => setNewUserModalOpen(true)}
+        >
+          Create NEW User
+        </button>
+      </div>
+      {/* <div className={style.adpWrapperTitle}>
         <h1>Administrator Page</h1>
         <div className={style.adpWrapperTitleUserInfo}>
           <p>Your name: {userInfo.userName}</p>
           <p>Your role: {userInfo.role === 1 ? "admin" : "user"}</p>
         </div>
-      </div>
+      </div> */}
 
-      <div className={style.adpWrapperSidebar}>
+      {/* <div className={style.adpWrapperSidebar}> */}
+      {(editUser || newUserModalOpen) && (
         <Sidebar
           user={editUser}
           onSaved={() => {
-            setEditUser(null);
+            closeSidebar();
             setUsersReloadKey((k) => k + 1);
           }}
-          onCancel={() => setEditUser(null)}
+          onCancel={closeSidebar}
         />
-        {selectedUserId && (
-          <div className={style.changePass}>
-            <h3>Change Password for User ID: {selectedUserId}</h3>
-            <input
-              type="text"
-              placeholder="Enter new password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-            <button
-              onClick={handlePasswordChange}
-              className={style.adpChangePassBtn}
-            >
-              Change Password
-            </button>
+      )}
+      {selectedUserId && (
+        <div className="modal is-active">
+          <div class="modal-background"></div>
+          <div className="modal-card">
+            <header className="modal-card-head">
+              <p className="modal-card-title has-text-weight-medium">
+                Change Password for User ID: {selectedUserId}
+              </p>
+            </header>
+            <div className="modal-card-body">
+              <div className="field">
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <div className="buttons">
+                  <button
+                    onClick={handlePasswordChange}
+                    className="button is-primary is-dark is-fullwidth"
+                  >
+                    Change Password
+                  </button>
+                  <button
+                    className="button is-danger is-dark is-fullwidth"
+                    // style={{ marginLeft: 8 }}
+                    onClick={() => onCancel && onCancel()}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+      {/* </div> */}
 
-      <div className={style.adpWrapperList}>
-        <UsersList
-          onUserSelect={setSelectedUserId}
-          onEditUser={(u) => setEditUser(u)}
-          key={usersReloadKey}
-        />
-      </div>
+      {/* <div className={style.adpWrapperList}>
+      </div> */}
+      <UsersList
+        onUserSelect={setSelectedUserId}
+        onEditUser={(u) => setEditUser(u)}
+        key={usersReloadKey}
+      />
+      <ScrollToTopButton />
     </div>
   );
 }

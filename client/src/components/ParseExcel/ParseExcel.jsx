@@ -117,7 +117,7 @@ export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
   return (
     <div>
       <Filter onFilterChange={handleFilterChange} />
-      <hr />
+      
       {!isRendered ? <p>Загрузка...</p> : filteredData.length > 0 ? <Table data={filteredData} /> : <p>Нет данных для отображения</p>}
     </div>
   );

@@ -7,11 +7,9 @@
 // }
 
 .scrollContainer {
-  // max-height: 500px; /* Устанавливаем максимальную высоту для контейнера прокрутки */
-  max-height: calc(100vh - $header-height - $filter-height - 20px - 30px);
-  /* Устанавливаем максимальную высоту для контейнера прокрутки */
-  overflow-y: auto;
-  /* Включаем вертикальную прокрутку */
+  /* allow page to grow vertically; allow horizontal scroll if needed */
+  overflow-y: visible;
+  overflow-x: auto;
 }
 
 // .table {
@@ -35,18 +33,18 @@
   overflow-x: auto;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: auto;
-  /* Фиксированная ширина колонок */
-}
+// .table {
+//   width: 100%;
+//   border-collapse: collapse;
+//   table-layout: auto;
+//   /* Фиксированная ширина колонок */
+// }
 
 // th,
-th {
-  // display: none;
-  background-color: $main-background-color;
-}
+// th {
+//   // display: none;
+//   background-color: $main-background-color;
+// }
 
 td {
   border: none;
@@ -62,7 +60,6 @@ td {
 tr .productCell {
   border-right: $border-color solid 1px;
 }
-
 
 .toggleButton {
   // margin-right: 5px;
@@ -83,7 +80,6 @@ tr .productCell {
 .toggleButton:hover {
   margin-right: 10px;
   background: $evenRow;
-  
 }
 
 .toggleButton:active {

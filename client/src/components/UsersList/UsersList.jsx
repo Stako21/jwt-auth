@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import style from "./UsersList.module.scss";
 import config from "../../config";
+import { use } from "react";
 
 export const UsersList = ({ onUserSelect, onEditUser, reloadKey = 0 }) => {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -48,6 +50,16 @@ export const UsersList = ({ onUserSelect, onEditUser, reloadKey = 0 }) => {
     onUserSelect(userId);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const filteredUsers = sortedUsers.filter((user) =>
+    user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+
+
   const roleLabel = {
     1: "Admin",
     2: "Moderator",
@@ -62,30 +74,48 @@ export const UsersList = ({ onUserSelect, onEditUser, reloadKey = 0 }) => {
 
   return (
     <div className={style.wrapperUserList}>
-      <h2>Users List</h2>
+      {/* <h2>Users List</h2> */}
+      <div className="field" style={{ margin: 10 }}>
+        <p className="control has-icons-left">
+          <input
+            className="input is-small"
+            type="search"
+            placeholder="Search user name..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+          <span className="icon is-small is-left">
+            <i className="fas fa-search"></i>
+          </span>
+        </p>
+      </div>
       <div className={style.wraperTable}>
         <div className={style.scrollContainer}>
-          <table className={style.table}>
-            <thead className={style.tableHeader}>
+          <table className="table is-bordered is-striped is-narrow is-hoverable">
+            <thead>
               <tr>
-                <th className={style.Select}>Select</th>
-                <th className={style.ID}>ID</th>
-                <th className={style.Name}>Name</th>
-                <th className={style.City}>City</th>
-                <th className={style.Role}>Role</th>
-                <th className={style.Actions}>Actions</th>
+                <th className="has-text-centered">Ch PWD</th>
+                <th className="has-text-centered">ID</th>
+                <th className="has-text-centered">Name</th>
+                <th className="has-text-centered">City</th>
+                <th className="has-text-centered">Role</th>
+                <th className="has-text-centered">Edit</th>
+                <th className="has-text-centered">Delete</th>
               </tr>
             </thead>
-            <tbody className={style.tableBody}>
-              {sortedUsers.map((user) => (
+            <tbody>
+              {filteredUsers.map((user) => (
                 <tr key={user.id}>
                   <td>
-                    <input
-                      type="radio"
+                    <button
+                      className="button is-warning is-dark is-small"
+                      type="button"
                       name="selectedUser"
                       checked={selectedUserId === user.id}
-                      onChange={() => handleSelectUser(user.id)}
-                    />
+                      onClick={() => handleSelectUser(user.id)}
+                    >
+                      <i className="fa-solid fa-wrench"></i>
+                    </button>
                   </td>
                   <td>{user.id}</td>
                   <td>{user.name}</td>
@@ -94,16 +124,18 @@ export const UsersList = ({ onUserSelect, onEditUser, reloadKey = 0 }) => {
                   <td>
                     <button
                       type="button"
-                      className={style.editButton}
+                      className="button is-info is-dark is-small"
                       onClick={() => onEditUser && onEditUser(user)}
                       title="Змінити"
                       aria-label={`edit-${user.id}`}
                     >
                       <i className="fa-solid fa-pen"></i>
                     </button>
+                  </td>
+                  <td>
                     <button
                       type="button"
-                      className={style.deleteBotton}
+                      className="button is-danger is-dark is-small"
                       onClick={() => confirmDelete(user)}
                       title="Видалити"
                       aria-label={`delete-${user.id}`}
@@ -120,23 +152,37 @@ export const UsersList = ({ onUserSelect, onEditUser, reloadKey = 0 }) => {
 
       {/* Модальное окно подтверждения */}
       {isModalOpen && userToDelete && (
-        <div className={style.modalOverlay}>
-          <div className={style.modal}>
-            <h3>Підтвердження видалення</h3>
-            <p>
-              Ви впевнені, що хочете видалити користувача{" "}
-              <b>{userToDelete.name}</b>?
-            </p>
-            <div className={style.modalButtons}>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className={style.cancelButton}
+        <div className="modal is-active">
+          <div class="modal-background"></div>
+          <div className="modal-card">
+            <header className="modal-card-head">
+              <div
+                className="modal-card-title has-text-weight-medium"
+                data-cy="modal-header"
               >
-                Скасувати
-              </button>
-              <button onClick={deleteUser} className={style.deleteButton}>
-                Видалити
-              </button>
+                Підтвердження видалення
+              </div>
+            </header>
+
+            <div className="modal-card-body">
+              <p>
+                Ви впевнені, що хочете видалити користувача{" "}
+                <b>{userToDelete.name}</b>
+              </p>
+              <div className="buttons">
+                <button
+                  onClick={deleteUser}
+                  className="button is-danger is-dark is-fullwidth"
+                >
+                  Delete User
+                </button>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="button is-success is-dark is-fullwidth"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

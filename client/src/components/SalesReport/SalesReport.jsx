@@ -1,7 +1,8 @@
 import { useContext, useEffect, useState } from "react";
-import "./SalesReport.scss";
+import style from "./SalesReport.module.scss";
 import { AuthContext } from "../../context/AuthContext";
 import cn from "classnames";
+import ScrollToTopButton from "../ScrollToTopButton/ScrollToTopButton";
 
 export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   const { userInfo } = useContext(AuthContext);
@@ -33,6 +34,13 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
     }).format(amount);
   }
 
+  function formatNumber(num) {
+  const prefix = num.slice(0, 2);
+  const digits = num.slice(2).replace(/^0+/, "");
+  
+    return `${prefix}...${digits}`;
+}
+
   useEffect(() => {
     if (filteredReports.length > 0) {
       setLastUpdateTime(filteredReports[0].currentDate);
@@ -43,11 +51,11 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
 
   return (
     <div className={cn("salesReportWrapper", { ["open"]: isOpen })}>
-      <h2>{actualAgent.currentAgent}</h2>
-      <div className="wrapperTable">
-        <div className="scrollContainer">
-          <table className="table">
-            <thead className="tableHeader">
+      <h2 className={style.agentName}>{actualAgent.currentAgent}</h2>
+      <div className={style.wrapperTable}>
+        <div className={style.scrollContainer}>
+          <table className={`table ${style.salesTable}`}>
+            <thead className={style.tableHeader}>
               <tr>
                 <th>№</th>
                 <th>Номер</th>
@@ -57,17 +65,17 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                 <th>Сума</th>
               </tr>
             </thead>
-            <tbody className="tableBody">
+            <tbody className={style.tableBody}>
               {filteredReports.map((report, index) => (
                 <tr key={report.id}>
                   <td>{index + 1}</td>
-                  <td>{report.number}</td>
+                  <td>{formatNumber(report.number)}</td>
                   <td>{report.pointOfSale}</td>
                   <td>{report.comment}</td>
                   <td>
                     <i
                       className={cn(
-                        "checkIcon",
+                        style.checkIcon,
                         report.form2 ? "fa-regular fa-check-circle" : ""
                       )}
                     ></i>
@@ -77,7 +85,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                 </tr>
               ))}
             </tbody>
-            <tfoot className="tableFooter">
+            <tfoot className={style.tableFooter}>
               <tr>
                 <td colSpan="5">Всього:</td>
                 <td>
@@ -93,6 +101,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
           </table>
         </div>
       </div>
+      <ScrollToTopButton />
     </div>
   );
 };

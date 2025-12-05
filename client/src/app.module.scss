@@ -1,9 +1,10 @@
 @import "./variables.scss";
 
 .content {
-  padding-top: $header-height;
+  // margin: 0 auto;
+  // padding-top: $header-height;
   // height: calc(100vh - $header-height);
-  height: 100vh;
+  // height: 100vh;
 }
 
 .centered {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import cn from "classnames";
 import style from "./Table.module.scss";
+import ScrollToTopButton from "../ScrollToTopButton/ScrollToTopButton";
 
 export const Table = ({ data }) => {
   // Инициализируем состояние с видимыми элементами
@@ -137,6 +138,7 @@ export const Table = ({ data }) => {
           </tbody>
         </table>
       </div>
+      <ScrollToTopButton />
     </div>
   );
 };

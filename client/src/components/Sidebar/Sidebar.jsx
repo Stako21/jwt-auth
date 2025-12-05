@@ -72,7 +72,9 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
         enqueueSnackbar("Користувач успішно зареєстрований", {
           variant: "success",
         });
-        setFormValues(defaultValues); // Сброс формы после успешной регистрации
+        setFormValues(defaultValues); // Сброс формы после успешної реєстрації
+        if (onSaved) onSaved();
+        onCancel();
       })
       .catch((error) => {
         console.error("Помилка реєстрації:", error);
@@ -100,6 +102,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
       .then(() => {
         enqueueSnackbar("Користувача оновлено", { variant: "success" });
         if (onSaved) onSaved();
+        onCancel();
       })
       .catch((error) => {
         console.error("Update error:", error);
@@ -108,64 +111,130 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
   };
 
   return (
-    <div className={style.registration}>
-      <h3>Реєстрація</h3>
-      <div>
-        <label>User name:</label>
-        <input
-          type="text"
-          name="userName"
-          value={formValues.userName}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <label>Password:</label>
-        <input
-          type="text"
-          name="password"
-          value={formValues.password}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <label>Role:</label>
-        <select name="role" value={formValues.role} onChange={handleChange}>
-          {rolesList.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.title}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label>City:</label>
-        <select name="city" value={formValues.city} onChange={handleChange}>
-          {citiesList.map((city) => (
-            <option key={city.id} value={city.id}>
-              {city.title}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div style={{ marginTop: 10 }}>
-        {user ? (
-          <>
-            <button className={style.sidebarBooton} onClick={handleUpdate}>
-              Update
-            </button>
-            <button
-              style={{ marginLeft: 8 }}
-              onClick={() => onCancel && onCancel()}
+    <div className="modal is-active">
+      <div class="modal-background"></div>
+      <div className="modal-card">
+        <header className="modal-card-head">
+          {user ? (
+            <div
+              className="modal-card-title has-text-weight-medium"
+              data-cy="modal-header"
             >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button className={style.sidebarBooton} onClick={handleRegister}>
-            SignUp
-          </button>
-        )}
+              Змінити данні користувача: {formValues.userName}
+            </div>
+          ) : (
+            <div
+              className="modal-card-title has-text-weight-medium"
+              data-cy="modal-header"
+            >
+              Реєстрація
+            </div>
+          )}
+        </header>
+
+        <div className="modal-card-body">
+          <div className="field">
+            <label className="label">User name:</label>
+            <div className="control">
+              <input
+                className="input"
+                type="text"
+                name="userName"
+                value={formValues.userName}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {!user && (
+            <div className="field">
+              <label className="label">Password:</label>
+              <div className="control">
+                <input
+                  className="input"
+                  type="text"
+                  name="password"
+                  value={formValues.password}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="field">
+            <label className="label">Role:</label>
+            <div className="control">
+              <div className="select is-fullwidth">
+                <select
+                  name="role"
+                  value={formValues.role}
+                  onChange={handleChange}
+                >
+                  {rolesList.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="field">
+            <label className="label">City:</label>
+            <div className="control is-expanded">
+              <div className="select is-fullwidth">
+                <select
+                  name="city"
+                  value={formValues.city}
+                  onChange={handleChange}
+                >
+                  {citiesList.map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {city.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="field">
+            {user ? (
+              <div className="buttons ">
+                <button
+                  className="button is-success is-dark is-fullwidth"
+                  onClick={handleUpdate}
+                >
+                  Update
+                </button>
+                <button
+                  className="button is-danger is-dark is-fullwidth"
+                  // style={{ marginLeft: 8 }}
+                  onClick={() => onCancel && onCancel()}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="buttons">
+                <button
+                  className="button is-success is-fullwidth"
+                  onClick={handleRegister}
+                >
+                  SignUp
+                </button>
+                <button
+                  className="button is-danger is-dark is-fullwidth"
+                  // style={{ marginLeft: 8 }}
+                  onClick={() => onCancel && onCancel()}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
