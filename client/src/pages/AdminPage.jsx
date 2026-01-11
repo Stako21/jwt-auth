@@ -7,6 +7,7 @@ import { UsersList } from "../components/UsersList/UsersList";
 import { Sidebar } from "../components/Sidebar/Sidebar";
 import config from "../config";
 import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton";
+import { ROLE_LABELS } from "../utils/roles";
 
 export default function AdminPage() {
   const { userInfo, handleLogOut } = useContext(AuthContext);
@@ -15,6 +16,17 @@ export default function AdminPage() {
   const [editUser, setEditUser] = useState(null);
   const [newUserModalOpen, setNewUserModalOpen] = useState(false);
   const [usersReloadKey, setUsersReloadKey] = useState(0);
+  const [activeTab, setActiveTab] = useState("users");
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab !== "users") {
+      setSelectedUserId(null);
+      setEditUser(null);
+      setNewUserModalOpen(false);
+    }
+  };
+
   const { enqueueSnackbar } = useSnackbar();
 
   const handlePasswordChange = async () => {
@@ -50,16 +62,8 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="container" style={{ minHeight: '100vh' }}>
-      <div style={{ margin: 10 }}>
-        <button
-          className="button is-success is-dark is-fullwidth"
-          onClick={() => setNewUserModalOpen(true)}
-        >
-          Create NEW User
-        </button>
-      </div>
-      {/* <div className={style.adpWrapperTitle}>
+    <div className="container" style={{ minHeight: "100vh" }}>
+      {/* <div className={style.adpWrapperTitle}>"
         <h1>Administrator Page</h1>
         <div className={style.adpWrapperTitleUserInfo}>
           <p>Your name: {userInfo.userName}</p>
@@ -67,66 +71,90 @@ export default function AdminPage() {
         </div>
       </div> */}
 
-      {/* <div className={style.adpWrapperSidebar}> */}
-      {(editUser || newUserModalOpen) && (
-        <Sidebar
-          user={editUser}
-          onSaved={() => {
-            closeSidebar();
-            setUsersReloadKey((k) => k + 1);
-          }}
-          onCancel={closeSidebar}
-        />
-      )}
-      {selectedUserId && (
-        <div className="modal is-active">
-          <div class="modal-background"></div>
-          <div className="modal-card">
-            <header className="modal-card-head">
-              <p className="modal-card-title has-text-weight-medium">
-                Change Password for User ID: {selectedUserId}
-              </p>
-            </header>
-            <div className="modal-card-body">
-              <div className="field">
-                <input
-                  className="input"
-                  type="text"
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-              <div className="field">
-                <div className="buttons">
-                  <button
-                    onClick={handlePasswordChange}
-                    className="button is-primary is-dark is-fullwidth"
-                  >
-                    Change Password
-                  </button>
-                  <button
-                    className="button is-danger is-dark is-fullwidth"
-                    // style={{ marginLeft: 8 }}
-                    onClick={() => onCancel && onCancel()}
-                  >
-                    Cancel
-                  </button>
+      <div
+        className="tabs is-centered is-boxed"
+        style={{ marginTop: 10, marginBottom: 0 }}
+      >
+        <ul>
+          <li className={activeTab === "users" ? "is-active" : ""}>
+            <a onClick={() => handleTabChange("users")}>Users</a>
+          </li>
+          <li className={activeTab === "teams" ? "is-active" : ""}>
+            <a onClick={() => handleTabChange("teams")}>Teams</a>
+          </li>
+        </ul>
+      </div>
+
+      {activeTab === "users" && (
+        <>
+          {(editUser || newUserModalOpen) && (
+            <Sidebar
+              user={editUser}
+              onSaved={() => {
+                closeSidebar();
+                setUsersReloadKey((k) => k + 1);
+              }}
+              onCancel={closeSidebar}
+            />
+          )}
+
+          {selectedUserId && (
+            <div className="modal is-active">
+              <div className="modal-background"></div>
+              <div className="modal-card">
+                <header className="modal-card-head">
+                  <p className="modal-card-title has-text-weight-medium">
+                    Change Password for User ID: {selectedUserId}
+                  </p>
+                </header>
+                <div className="modal-card-body">
+                  <div className="field">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <div className="buttons">
+                      <button
+                        onClick={handlePasswordChange}
+                        className="button is-primary is-dark is-fullwidth"
+                      >
+                        Change Password
+                      </button>
+                      <button
+                        className="button is-danger is-dark is-fullwidth"
+                        // style={{ marginLeft: 8 }}
+                        onClick={() => onCancel && onCancel()}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          <UsersList
+            onUserSelect={setSelectedUserId}
+            onEditUser={(u) => setEditUser(u)}
+            onCreateUser={() => setNewUserModalOpen(true)}
+            key={usersReloadKey}
+          />
+        </>
+      )}
+
+      {activeTab === "teams" && (
+        <div style={{ padding: 16 }}>
+          <h2 className="title is-4">Teams</h2>
+          <p>Teams content coming soon.</p>
         </div>
       )}
-      {/* </div> */}
 
-      {/* <div className={style.adpWrapperList}>
-      </div> */}
-      <UsersList
-        onUserSelect={setSelectedUserId}
-        onEditUser={(u) => setEditUser(u)}
-        key={usersReloadKey}
-      />
       <ScrollToTopButton />
     </div>
   );

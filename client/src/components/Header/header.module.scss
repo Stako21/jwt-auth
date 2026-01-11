@@ -49,10 +49,13 @@
   display: flex;
 }
 
-li {
+.headerList {
   cursor: pointer;
   padding: 20px;
+
 }
+
+
 
 li:hover {
   background-color: $main-background-color;

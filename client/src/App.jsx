@@ -18,6 +18,8 @@ import { ParseExcel } from "./components/ParseExcel/ParseExcel";
 import { AuthContext } from "./context/AuthContext";
 import { SalesReport } from "./components/SalesReport/SalesReport";
 import { ReportRomashka } from "./components/Reports/ReportRomashka";
+import React from "react";
+import { ROLE_IDS, ROLE_LABELS } from "./utils/roles";
 
 // const LogPageView = () => {
 //   const location = useLocation();
@@ -70,7 +72,7 @@ const AppContent = () => {
 
       <Routes>
         {isUserLogged ? (
-          userInfo.role === 1 ? (
+          userInfo?.role === ROLE_IDS.Admin ? (
             <>
               <Route path="/sales-report" element={<SalesReport />} />
               <Route
@@ -110,7 +112,7 @@ const AppContent = () => {
             </>
           ) : (
             <>
-              {userInfo.role === 2 && (
+              {userInfo?.role === ROLE_IDS.Director && (
                 <Route
                   path="/report-romashka"
                   element={
@@ -168,11 +170,11 @@ const AppContent = () => {
             <Navigate
               to={
                 isUserLogged
-                  ? userInfo.role === 1
+                  ? userInfo?.role === ROLE_IDS.Admin
                     ? "admin-page"
-                    : userInfo.city === 1
+                    : userInfo?.city === 1
                     ? "/zp"
-                    : userInfo.city === 2
+                    : userInfo?.city === 2
                     ? "/dp"
                     : "/kr"
                   : "sign-in"

@@ -76,7 +76,7 @@ export const Table = ({ data }) => {
   return (
     <div className={style.wraperTable}>
       <div className={style.scrollContainer}>
-        <table className={style.table}>
+        <table className={style.balanceTable}>
           <thead>
             <tr>
               <th className={style.productCell}></th>

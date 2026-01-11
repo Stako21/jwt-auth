@@ -8,19 +8,20 @@ import Select from "../components/Select/Select";
 import Field from "../components/Field/Field";
 import Button from "../components/Button/Button";
 import cn from "classnames";
+import { ROLE_OPTIONS } from "../utils/roles";
 
 const defaultValues = {
   userName: "",
+  user_name: "",
   password: "",
   role: 1,
   city: 1,
 };
 
-const rolesList = [
-  { id: 1, title: "Адміністратор" },
-  { id: 2, title: "Модератор" },
-  { id: 3, title: "Користувач" },
-];
+const rolesList = ROLE_OPTIONS.map(({ value, label }) => ({
+  id: value,
+  title: label,
+}));
 
 const citiesList = [
   { id: 1, title: "Запоріжжя" },
@@ -42,20 +43,30 @@ export default function SignUp() {
   });
 
   return (
-
     <div className={style.mainWrapper}>
-
       <div className={style.container}>
-        <form className={cn(style.form, style.signin)} onSubmit={handleSubmit(handleSignUp)}>
+        <form
+          className={cn(style.form, style.signin)}
+          onSubmit={handleSubmit(handleSignUp)}
+        >
           <h2 className="">Створити аккаунт</h2>
           <Field
             name="userName"
             register={register}
             autoComplete="off"
-            placeholder="Ім'я користувача"
+            placeholder="Ім'я користувача (логін)"
             inputtype="user"
             error={Boolean(errors.userName)}
             helperText={errors.userName?.message}
+          />
+          <Field
+            name="user_name"
+            register={register}
+            autoComplete="off"
+            placeholder="Отображаемое имя (user_name) - необязательно"
+            inputtype="user"
+            error={Boolean(errors.user_name)}
+            helperText={errors.user_name?.message}
           />
           <Field
             name="password"

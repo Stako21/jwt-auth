@@ -1,107 +1,259 @@
 import { useContext, useEffect, useState } from "react";
-import style from "./SalesReport.module.scss";
-import { AuthContext } from "../../context/AuthContext";
 import cn from "classnames";
+import style from "./SalesReport.module.scss";
+import { AuthContext, AuthClient } from "../../context/AuthContext";
 import ScrollToTopButton from "../ScrollToTopButton/ScrollToTopButton";
+import { ROLE_IDS } from "../../utils/roles";
+
+/**
+ * Группировка:
+ * Supervisor -> Agent -> Rows
+ */
+function groupSales(rows) {
+  const map = new Map();
+
+  for (const r of rows) {
+    const svId = r.supervisor_id || "NO_SV";
+    const svName = r.supervisor_name || "Без керівника";
+
+    if (!map.has(svId)) {
+      map.set(svId, {
+        id: svId,
+        name: svName,
+        total: 0,
+        agents: new Map(),
+      });
+    }
+
+    const sv = map.get(svId);
+
+    const agentId = r.agent_id;
+    if (!sv.agents.has(agentId)) {
+      sv.agents.set(agentId, {
+        id: agentId,
+        name: r.agent_name || r.agent_login,
+        login: r.agent_login,
+        total: 0,
+        rows: [],
+      });
+    }
+
+    const agent = sv.agents.get(agentId);
+
+    agent.rows.push(r);
+    agent.total += Number(r.amount);
+    sv.total += Number(r.amount);
+  }
+
+  return Array.from(map.values()).map((sv) => ({
+    ...sv,
+    agents: Array.from(sv.agents.values()),
+  }));
+}
+
+/* helpers */
+function money(v) {
+  return new Intl.NumberFormat("uk-UA", {
+    style: "currency",
+    currency: "UAH",
+  }).format(v || 0);
+}
+
+function shortDoc(num) {
+  if (!num) return "";
+  return `${num.slice(0, 2)}…${num.slice(-5)}`;
+}
 
 export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   const { userInfo } = useContext(AuthContext);
 
-  const [salesAgents, setSalesAgents] = useState([]);
-  const [salesReports, setSalesReports] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [openSV, setOpenSV] = useState({});
+  const [openAgent, setOpenAgent] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  });
+
+  const role = userInfo?.role;
+
+  function formatDateTime(dateTimeStr) {
+    return new Date(dateTimeStr).toLocaleString("uk-UA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+   }
 
   useEffect(() => {
-    fetch("/Sorce/SalesAgent.json")
-      .then((res) => res.json())
-      .then((data) => setSalesAgents(data));
-    fetch("/Sorce/SalesReport.json")
-      .then((res) => res.json())
-      .then((data) => setSalesReports(data));
-  }, []);
+    if (!userInfo) return;
 
-  const actualAgent = salesAgents.find(
-    (agent) => agent.login === userInfo.userName
-  );
+    setLoading(true);
 
-  const filteredReports = salesReports.filter(
-    (report) => actualAgent && report.salesAgent === actualAgent.currentAgent
-  );
+    AuthClient.get("/reports/sales", {
+      params: { date },
+    })
+      .then((res) => {
+        const rows = res.data?.data || [];
+        const grouped = groupSales(rows);
 
-  function formatedCurrency(amount) {
-    return new Intl.NumberFormat("uk-UA", {
-      style: "currency",
-      currency: "UAH",
-    }).format(amount);
-  }
+        setGroups(grouped);
 
-  function formatNumber(num) {
-  const prefix = num.slice(0, 2);
-  const digits = num.slice(2).replace(/^0+/, "");
-  
-    return `${prefix}...${digits}`;
-}
+        const svState = {};
+        const agentState = {};
 
-  useEffect(() => {
-    if (filteredReports.length > 0) {
-      setLastUpdateTime(filteredReports[0].currentDate);
-    }
-  }, [setLastUpdateTime, filteredReports]);
+        // всегда раскрываем верхний уровень (SV)
+        for (const sv of grouped) {
+          svState[sv.id] = true;
 
-  if (!actualAgent) return null;
+          // SV и TA — раскрываем агентов
+          if (role === ROLE_IDS.TA || role === ROLE_IDS.SV) {
+            for (const ag of sv.agents) {
+              agentState[ag.id] = false;
+            }
+          }
+
+          // TA — раскрываем ВСЁ (строки)
+          if (role === ROLE_IDS.TA) {
+            for (const ag of sv.agents) {
+              agentState[ag.id] = true;
+            }
+          }
+        }
+
+        setOpenSV(svState);
+        setOpenAgent(agentState);
+
+        if (res.data?.meta?.lastUpdate) {
+          setLastUpdateTime(formatDateTime(res.data.meta.lastUpdate));
+          
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [userInfo, date, setLastUpdateTime]);
+
+  const grandTotal = groups.reduce((sum, sv) => sum + (sv.total || 0), 0);
+
+  const showGrandTotal =
+    role === ROLE_IDS.NTO ||
+    role === ROLE_IDS.Director ||
+    role === ROLE_IDS.Admin;
+
+  if (!userInfo) return null;
 
   return (
-    <div className={cn("salesReportWrapper", { ["open"]: isOpen })}>
-      <h2 className={style.agentName}>{actualAgent.currentAgent}</h2>
-      <div className={style.wrapperTable}>
-        <div className={style.scrollContainer}>
-          <table className={`table ${style.salesTable}`}>
-            <thead className={style.tableHeader}>
-              <tr>
-                <th>№</th>
-                <th>Номер</th>
-                <th>Торгівельна точка</th>
-                <th>Коментар</th>
-                <th>Ф 2</th>
-                <th>Сума</th>
-              </tr>
-            </thead>
-            <tbody className={style.tableBody}>
-              {filteredReports.map((report, index) => (
-                <tr key={report.id}>
-                  <td>{index + 1}</td>
-                  <td>{formatNumber(report.number)}</td>
-                  <td>{report.pointOfSale}</td>
-                  <td>{report.comment}</td>
-                  <td>
-                    <i
-                      className={cn(
-                        style.checkIcon,
-                        report.form2 ? "fa-regular fa-check-circle" : ""
-                      )}
-                    ></i>
-                    {report.form2}
-                  </td>
-                  <td>{formatedCurrency(report.amount)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className={style.tableFooter}>
-              <tr>
-                <td colSpan="5">Всього:</td>
-                <td>
-                  {formatedCurrency(
-                    filteredReports.reduce(
-                      (sum, report) => sum + report.amount,
-                      0
-                    )
-                  )}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+    <div className={cn(style.salesReportWrapper, { open: isOpen })}>
+      <div className={style.header}>
+        <h2 className={style.title}>Звіт з продажів за </h2>
+        <input
+          type="date"
+          className={style.dateInput}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
       </div>
+
+      {loading && <p>Завантаження…</p>}
+
+      {showGrandTotal && (
+        <div className={style.grandTotal}>
+          <span>Загальна сума:   </span>
+          <strong>{money(grandTotal)}</strong>
+        </div>
+      )}
+
+      {!loading &&
+        groups.map((sv) => {
+          const svOpened = openSV[sv.id];
+
+          return (
+            <div key={sv.id} className={style.supervisorBlock}>
+              {/* SV header */}
+              <div
+                className={style.supervisorHeader}
+                onClick={() => setOpenSV((p) => ({ ...p, [sv.id]: !svOpened }))}
+              >
+                <span>{svOpened ? "▼" : "▶"}</span>
+                <strong>{sv.name}</strong>
+                <span>{money(sv.total)}</span>
+              </div>
+
+              {/* SV body */}
+              {svOpened &&
+                sv.agents.map((ag) => {
+                  const agOpened = openAgent[ag.id];
+
+                  return (
+                    <div key={ag.id} className={style.agentBlock}>
+                      {/* Agent header */}
+                      <div
+                        className={style.agentHeader}
+                        onClick={() =>
+                          setOpenAgent((p) => ({
+                            ...p,
+                            [ag.id]: !agOpened,
+                          }))
+                        }
+                      >
+                        <span>{agOpened ? "▼" : "▶"}</span>
+                        <span>{ag.name}</span>
+                        <span>{money(ag.total)}</span>
+                      </div>
+
+                      {/* Agent table */}
+                      {agOpened && (
+                        <table
+                          className={cn(
+                            "table is-light is-bordered is-striped is-narrow is-fullwidth",
+                            style.salesTable
+                          )}
+                        >
+                          <thead className={style.tableHeader}>
+                            <tr>
+                              <th>№</th>
+                              <th>Документ</th>
+                              <th>ТТ</th>
+                              <th>Коментар</th>
+                              <th>Ф2</th>
+                              <th>Сума</th>
+                            </tr>
+                          </thead>
+                          <tbody className={style.salesTableBody}>
+                            {ag.rows.map((r, i) => (
+                              <tr key={r.id}>
+                                <td>{i + 1}</td>
+                                <td>{shortDoc(r.document_number)}</td>
+                                <td>{r.point_of_sale}</td>
+                                <td>{r.comment}</td>
+                                <td>{r.form2 ? "✔" : ""}</td>
+                                <td>{money(r.amount)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot className={style.tableFooter}>
+                            <tr>
+                              <td colSpan={5}>Всього:</td>
+                              <td>{money(ag.total)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          );
+        })}
+
       <ScrollToTopButton />
     </div>
   );
 };
+
+export default SalesReport;

@@ -5,6 +5,7 @@ import Fingerprint from "express-fingerprint";
 import AuthRootRouter from "./routers/Auth.js";
 import TokenService from "./services/Token.js";
 import cookieParser from "cookie-parser";
+import './services/scheduler.js';
 
 dotenv.config();
 

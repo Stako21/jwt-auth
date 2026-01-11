@@ -3,13 +3,37 @@ import UserRepository from "../repositories/User.js";
 import { catchError } from "../utils/Errors.js";
 
 export const signUp = catchError(async (req, res, next) => {
-  const { userName, password, fingerprint, role, city } = req.body;  // Added city here
-  const userData = await UserRepository.getUserData(userName);
+  const { userName, user_name, password, fingerprint, role, city } = req.body; // Added city and user_name
 
-  if (userData) {
-    return res.status(409).json({ error: "Користувач з таким ім'ям вже існує" });
+  // Check uniqueness for login name (name) if provided
+  if (userName) {
+    const existingByName = await UserRepository.getUserData(userName);
+    if (existingByName) {
+      return res
+        .status(409)
+        .json({ error: "Користувач з таким ім'ям вже існує" });
+    }
   }
 
-  const tokens = await AuthService.signUp({ userName, password, fingerprint, role, city }); // Added city here
+  // Check uniqueness for user_name (display name) if provided
+  if (user_name) {
+    const existingByUserName = await UserRepository.getUserByUserName(
+      user_name
+    );
+    if (existingByUserName) {
+      return res
+        .status(409)
+        .json({ error: "Користувач з таким user_name вже існує" });
+    }
+  }
+
+  const tokens = await AuthService.signUp({
+    userName,
+    user_name,
+    password,
+    fingerprint,
+    role,
+    city,
+  }); // Added user_name and city here
   return res.json(tokens);
 });

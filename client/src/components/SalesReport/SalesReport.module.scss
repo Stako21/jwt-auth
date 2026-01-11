@@ -1,10 +1,74 @@
 @import "../../variables.scss";
 
 /* Scoped styles for SalesReport component to avoid overriding global Bulma table styles */
+.salesReportWrapper {
+  margin: 0 20px;
+  // height: 100vh;
+}
 
-.agentName {
-  margin: 10px auto;
-  text-align: center;
+@media screen and (max-width: 720px) {
+  .salesReportWrapper {
+    margin: 0;
+  }
+}
+
+.header {
+  margin: 5px 0;
+  display: flex;
+  gap: 10px;
+  justify-content: end;
+  align-items: center;
+}
+
+.dateInput {
+  background: #1f2937; // тёмный фон
+  color: #f9fafb;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #2a75d8;
+    box-shadow: 0 0 0 1px #2a75d8;
+  }
+
+  &::-webkit-calendar-picker-indicator {
+    filter: invert(1); // делает иконку светлой
+    cursor: pointer;
+  }
+}
+
+.grandTotal {
+  margin: 10px 0;
+  padding: 4px;
+  display: flex;
+  justify-content: space-between;
+  background-color: #adb2c585;
+}
+
+.supervisorHeader {
+  // padding-left: 10px;
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #6f717c85;
+}
+
+.agentHeader {
+  margin-top: 4px;
+  padding-left: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #797b91a4;
+}
+
+.agentTitle {
+  margin-top: 10px;
 }
 
 .wrapperTable {
@@ -24,11 +88,16 @@
   border-collapse: collapse;
   // text-align: center;
   font-size: 11px;
+  font-weight: 500;
   color: $darc-text-color;
 }
 
-.tableHeader {
+.tableHeader tr th,
+.tableFooter tr td {
   color: $light-text-color;
+  background-color: #3a3b4e;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .salesTable th,
@@ -36,23 +105,26 @@
   border-right: 1px solid $border-color;
 }
 
-.tableBody tr td {
-  color: $darc-text-color;
+.table.is-striped .salesTable .salesTableBody > tr > td,
+.salesTable .salesTableBody > tr > td {
+  color: $darc-text-color !important;
 }
 
-.tableBody tr:nth-child(odd) {
-  background-color: $oddRow;
+.table.is-striped .salesTable .salesTableBody > tr:nth-child(odd),
+.salesTable .salesTableBody > tr:nth-child(odd) {
+  background-color: $oddRow !important;
 }
 
-.tableBody tr:nth-child(even) {
-  background-color: $evenRow;
+.table.is-striped .salesTable .salesTableBody > tr:nth-child(even),
+.salesTable .salesTableBody > tr:nth-child(even) {
+  background-color: $evenRow !important;
 }
 
-.tableFooter {
-  /* footer scrolls with the page */
-  background-color: $header-background-color;
-  color: $light-text-color;
-}
+// .tableFooter {
+//   /* footer scrolls with the page */
+//   background-color: $header-background-color;
+//   color: $light-text-color;
+// }
 
 .checkIcon {
   color: rgb(8, 156, 8);

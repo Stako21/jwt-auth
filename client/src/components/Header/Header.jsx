@@ -1,9 +1,11 @@
+import React from "react";
 import { useContext, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import style from "./header.module.scss";
 import cn from "classnames";
 import logo from "../../img/ST_Wight.png";
+import { ROLE_IDS, ROLE_LABELS } from "../../utils/roles";
 
 const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   const location = useLocation();
@@ -31,25 +33,23 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
       {isUserLogged && (
         <nav className={cn(style.navPages, { [style.open]: isOpen })}>
           <ul className={style.listPages}>
-            <li className={location.pathname === "/zp" ? style.activePage : ""}>
+            <li className={cn(style.headerList,{[style.activePage]: location.pathname === "/zp"})}>
               <Link to="/zp" onClick={() => handleLinkClick("/zp")}>
                 ЗП
               </Link>
             </li>
-            <li className={location.pathname === "/kr" ? style.activePage : ""}>
+            <li className={cn(style.headerList,{[style.activePage]: location.pathname === "/kr"})}>
               <Link to="/kr" onClick={() => handleLinkClick("/kr")}>
                 КР
               </Link>
             </li>
-            <li className={location.pathname === "/dp" ? style.activePage : ""}>
+            <li className={cn(style.headerList,{[style.activePage]: location.pathname === "/dp"})}>
               <Link to="/dp" onClick={() => handleLinkClick("/dp")}>
                 ДП
               </Link>
             </li>
             <li
-              className={
-                location.pathname === "/sales-report" ? style.activePage : ""
-              }
+              className={cn(style.headerList,{[style.activePage]: location.pathname === "/sales-report"})}
             >
               <Link
                 to="/sales-report"
@@ -59,40 +59,38 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
               </Link>
             </li>
 
-            {userInfo && (userInfo.role === 1 || userInfo.role === 2) && (
-              <>
-                {userInfo.role === 1 && (
+            {userInfo &&
+              (userInfo.role === ROLE_IDS.Admin ||
+                userInfo.role === ROLE_IDS.Director) && (
+                <>
+                  {userInfo.role === ROLE_IDS.Admin && (
                   <li
-                    className={
-                      location.pathname === "/admin-page"
-                        ? style.activePage
-                        : ""
-                    }
+                    className={cn(style.headerList, {
+                      [style.activePage]: location.pathname === "/admin-page",
+                    })}
                   >
+                      <Link
+                        to="/admin-page"
+                        onClick={() => handleLinkClick("/admin-page")}
+                      >
+                        Admin
+                      </Link>
+                    </li>
+                  )}
+                <li
+                  className={cn(style.headerList, {
+                    [style.activePage]: location.pathname === "/report-romashka",
+                  })}
+                >
                     <Link
-                      to="/admin-page"
-                      onClick={() => handleLinkClick("/admin-page")}
+                      to="/report-romashka"
+                      onClick={() => handleLinkClick("/report-romashka")}
                     >
-                      Admin
+                      Звіт Ромашка
                     </Link>
                   </li>
-                )}
-                <li
-                  className={
-                    location.pathname === "/report-romashka"
-                      ? style.activePage
-                      : ""
-                  }
-                >
-                  <Link
-                    to="/report-romashka"
-                    onClick={() => handleLinkClick("/report-romashka")}
-                  >
-                    Звіт Ромашка
-                  </Link>
-                </li>
-              </>
-            )}
+                </>
+              )}
           </ul>
         </nav>
       )}
@@ -106,6 +104,7 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
             ? "Дніпро"
             : "Admin Page"}
         </h1>
+        <p className={style.infoUserName}>{userInfo?.displayName || userInfo?.userName}</p>
         <p className={style.infoUpdate}>Оновлено: {lastUpdateTime}</p>
       </div>
 
