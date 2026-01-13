@@ -39,9 +39,9 @@ class UserController {
       if (userDeleted) {
         return res
           .status(200)
-          .json({ message: "Пользователь успешно удален." });
+          .json({ message: "Користувач деактивований" });
       } else {
-        return res.status(404).json({ error: "Пользователь не найден." });
+        return res.status(404).json({ error: "Користувача не знайдено" });
       }
     } catch (err) {
       return ErrorsUtils.catchError(res, err);

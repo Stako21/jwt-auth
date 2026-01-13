@@ -89,7 +89,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
       minute: "2-digit",
       second: "2-digit",
     });
-   }
+  }
 
   useEffect(() => {
     if (!userInfo) return;
@@ -130,9 +130,11 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
         setOpenSV(svState);
         setOpenAgent(agentState);
 
-        if (res.data?.meta?.lastUpdate) {
+        if (
+          res.data?.meta?.lastUpdate &&
+          typeof setLastUpdateTime === "function"
+        ) {
           setLastUpdateTime(formatDateTime(res.data.meta.lastUpdate));
-          
         }
       })
       .finally(() => setLoading(false));
@@ -163,7 +165,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
 
       {showGrandTotal && (
         <div className={style.grandTotal}>
-          <span>Загальна сума:   </span>
+          <span>Загальна сума: </span>
           <strong>{money(grandTotal)}</strong>
         </div>
       )}

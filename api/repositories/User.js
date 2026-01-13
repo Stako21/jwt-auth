@@ -31,9 +31,10 @@ class UserRepository {
   static async getUserData(userName) {
     if (!userName) return null;
     try {
-      const [rows] = await pool.query("SELECT * FROM users WHERE name = ?", [
-        userName,
-      ]);
+      const [rows] = await pool.query(
+        "SELECT * FROM users WHERE name = ? AND is_active = 1",
+        [userName]
+      );
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
       throw error;
@@ -41,10 +42,13 @@ class UserRepository {
   }
 
   static async getUserById(id) {
-    const [rows] = await pool.query("SELECT * FROM users WHERE id = ?", [id]);
+    const [rows] = await pool.query(
+      "SELECT * FROM users WHERE id = ? AND is_active = 1",
+      [id]
+    );
     return rows[0] || null;
   }
-  
+
   static async getUserByUserName(user_name) {
     if (!user_name) return null;
     try {
@@ -60,7 +64,7 @@ class UserRepository {
 
   static async getAllUsers() {
     const [rows] = await pool.query(
-      "SELECT id, name, user_name, role, city FROM users"
+      "SELECT id, name, user_name, role, city, is_active FROM users WHERE is_active = 1"
     );
 
     return rows;
@@ -78,7 +82,8 @@ class UserRepository {
     const connection = await pool.getConnection();
     try {
       const [result] = await connection.query(
-        "DELETE FROM users WHERE id = ?",
+        // "DELETE FROM users WHERE id = ?",
+        "UPDATE users SET is_active = 0, deleted_at = NOW() WHERE id = ?",
         [userId]
       );
       return result.affectedRows > 0; // Вернет true, если пользователь удален
@@ -119,12 +124,17 @@ class UserRepository {
   static async setParent(childId, parentId) {
     const query = `
       INSERT INTO user_hierarchy (parent_user_id, child_user_id)
-      VALUES (?, ?)
-      ON DUPLICATE KEY UPDATE parent_user_id = VALUES(parent_user_id)
+    SELECT ?, ?
+    FROM users p, users c
+    WHERE p.id = ?
+      AND c.id = ?
+      AND p.is_active = 1
+      AND c.is_active = 1
+    ON DUPLICATE KEY UPDATE parent_user_id = VALUES(parent_user_id)
     `;
 
     try {
-      const [result] = await pool.query(query, [parentId, childId]);
+      const [result] = await pool.query(query, [parentId, childId , parentId, childId]);
       return result;
     } catch (error) {
       throw error;
@@ -157,7 +167,8 @@ class UserRepository {
         p.user_name AS parent_name
       FROM users u
       LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
-      LEFT JOIN users p ON p.id = h.parent_user_id
+      LEFT JOIN users p ON p.id = h.parent_user_id AND p.is_active = 1
+      WHERE u.is_active = 1
       ORDER BY u.role, u.user_name
     `;
 
@@ -168,7 +179,6 @@ class UserRepository {
       throw error;
     }
   }
-
 }
 
 export default UserRepository;

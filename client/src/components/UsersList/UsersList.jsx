@@ -122,6 +122,12 @@ export const UsersList = ({
     displayName(user).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  filteredUsers.map((user) => {
+    console.log(user.id, user.is_active);
+    
+  });
+  
+
   const cityLabel = {
     1: "ZP",
     2: "DP",
