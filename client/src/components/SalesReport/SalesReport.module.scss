@@ -133,3 +133,14 @@
 .open {
   display: none !important;
 }
+
+.cancelledRow {
+  background-color: #fa0101 !important;
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+.movedRow {
+  opacity: 0.8;
+  font-style: italic;
+}

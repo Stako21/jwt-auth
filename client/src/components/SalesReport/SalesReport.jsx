@@ -5,6 +5,7 @@ import { AuthContext, AuthClient } from "../../context/AuthContext";
 import ScrollToTopButton from "../ScrollToTopButton/ScrollToTopButton";
 import { ROLE_IDS } from "../../utils/roles";
 
+
 /**
  * Группировка:
  * Supervisor -> Agent -> Rows
@@ -41,8 +42,11 @@ function groupSales(rows) {
     const agent = sv.agents.get(agentId);
 
     agent.rows.push(r);
-    agent.total += Number(r.amount);
-    sv.total += Number(r.amount);
+
+    if (r.status === "ACTIVE") {
+      agent.total += Number(r.amount);
+      sv.total += Number(r.amount);
+    }
   }
 
   return Array.from(map.values()).map((sv) => ({
@@ -62,6 +66,14 @@ function money(v) {
 function shortDoc(num) {
   if (!num) return "";
   return `${num.slice(0, 2)}…${num.slice(-5)}`;
+}
+
+function statusIcon(status) {
+  // if (status === "CANCELLED") return "❌";
+  if (status === "CANCELLED") return <i class="fa-solid fa-xmark" style={{ color: "#ED0202" }}></i>;
+  // if (status === "MOVED") return "🔄";
+  if (status === "MOVED") return <i className="fa fa-refresh" aria-hidden="true" style={{ color: "#2402ED" }}></i>;
+  return "";
 }
 
 export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
@@ -228,12 +240,20 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                           </thead>
                           <tbody className={style.salesTableBody}>
                             {ag.rows.map((r, i) => (
-                              <tr key={r.id}>
+                              <tr
+                                key={r.id}
+                                className={cn({
+                                  [style.cancelledRow]:
+                                    r.status === "CANCELLED",
+                                  [style.movedRow]: r.status === "MOVED",
+                                })}
+                                title={r.status !== "ACTIVE" ? r.change_comment : ""}
+                              >
                                 <td>{i + 1}</td>
-                                <td>{shortDoc(r.document_number)}</td>
+                                <td>{statusIcon(r.status)} {shortDoc(r.document_number)}</td>
                                 <td>{r.point_of_sale}</td>
                                 <td>{r.comment}</td>
-                                <td>{r.form2 ? "✔" : ""}</td>
+                                <td>{r.form2 ? <i className="fa-solid fa-check" style={{ color: "#14C700"}}></i> : ""}</td>
                                 <td>{money(r.amount)}</td>
                               </tr>
                             ))}

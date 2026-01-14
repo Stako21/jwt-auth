@@ -20,6 +20,8 @@ class ReportsRepository {
           sr.form2,
           sr.login_agent,
           sr.sales_agent_name,
+          sr.status,
+          sr.change_comment,
 
           u.id        AS agent_id,
           u.NAME      AS agent_login,
@@ -56,6 +58,8 @@ class ReportsRepository {
           sr.form2,
           sr.login_agent,
           sr.sales_agent_name,
+          sr.status,
+          sr.change_comment,
 
           u.id        AS agent_id,
           u.NAME      AS agent_login,
@@ -107,6 +111,8 @@ class ReportsRepository {
           sr.form2,
           sr.login_agent,
           sr.sales_agent_name,
+          sr.status,
+          sr.change_comment,
 
           u.id        AS agent_id,
           u.NAME      AS agent_login,
@@ -143,6 +149,8 @@ class ReportsRepository {
           sr.form2,
           sr.login_agent,
           sr.sales_agent_name,
+          sr.status,
+          sr.change_comment,
 
           u.id        AS agent_id,
           u.NAME      AS agent_login,
