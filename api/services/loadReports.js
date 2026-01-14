@@ -34,8 +34,10 @@ export async function loadSalesReports() {
     const reports = JSON.parse(raw);
     if (!Array.isArray(reports) || reports.length === 0) return;
 
+    // const reportDate =
+    //   reports[0]?.date?.split("T")[0] ??
+    //   new Date().toISOString().split("T")[0];
     const reportDate =
-      reports[0]?.date?.split("T")[0] ??
       new Date().toISOString().split("T")[0];
 
     await connection.beginTransaction();
@@ -215,15 +217,17 @@ export async function loadSalesReports() {
     );
 
     /* 6. Чистка старше 5 дней */
-    await connection.query(
+    const [delRes] = await connection.query(
       `
-      DELETE sr, ri
-      FROM sales_reports sr
-      JOIN report_imports ri ON sr.import_id = ri.id
-      WHERE ri.report_date < DATE_SUB(?, INTERVAL 5 DAY)
+      DELETE
+        FROM sales_reports
+        WHERE report_date < DATE_SUB(?, INTERVAL 5 DAY)
       `,
       [reportDate]
     );
+    console.log('reportDate', reportDate);
+    
+    console.log(`Очистка старых записей: удалено ${delRes.affectedRows} строк.`);
 
     await connection.commit();
     await fs.unlink(salesFile);

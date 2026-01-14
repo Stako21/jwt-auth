@@ -74,7 +74,10 @@ const AppContent = () => {
         {isUserLogged ? (
           userInfo?.role === ROLE_IDS.Admin ? (
             <>
-              <Route path="/sales-report" element={<SalesReport />} />
+              <Route
+                path="/sales-report"
+                element={<SalesReport setLastUpdateTime={setLastUpdateTime} />}
+              />
               <Route
                 path="/report-romashka"
                 element={

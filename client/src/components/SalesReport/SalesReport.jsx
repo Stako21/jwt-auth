@@ -75,7 +75,7 @@ function shortDoc(num) {
 function statusIcon(status) {
   // if (status === "CANCELLED") return "❌";
   if (status === "CANCELLED")
-    return <i class="fa-solid fa-xmark" style={{ color: "#ED0202" }}></i>;
+    return <i className="fa-solid fa-xmark" style={{ color: "#ED0202" }}></i>;
   // if (status === "MOVED") return "🔄";
   if (status === "MOVED")
     return (
@@ -170,12 +170,22 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
         setOpenSV(svState);
         setOpenAgent(agentState);
 
-        if (
-          res.data?.meta?.lastUpdate &&
-          typeof setLastUpdateTime === "function"
-        ) {
-          setLastUpdateTime(formatDateTime(res.data.meta.lastUpdate));
+        const lastUpdate = res.data?.meta?.lastUpdate
+          ? formatDateTime(res.data.meta.lastUpdate)
+          : null;
+
+        if (lastUpdate && typeof setLastUpdateTime === "function") {
+          console.log("lastUpdate", lastUpdate);
+          setLastUpdateTime(lastUpdate);
         }
+
+        // if (
+        //   res.data?.meta?.lastUpdate &&
+        //   typeof setLastUpdateTime === "function"
+        // ) {
+
+        //   setLastUpdateTime(formatDateTime(res.data.meta.lastUpdate));
+        // }
       })
       .finally(() => setLoading(false));
   }, [userInfo, date, setLastUpdateTime]);
@@ -206,7 +216,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
           dateFormat="dd.MM.yyyy"
           className={style.dateInput}
           minDate={minDate ? new Date(minDate) : null}
-          maxDate={maxDate ? new Date(maxDate) : null}          
+          maxDate={maxDate ? new Date(maxDate) : null}
         ></DatePicker>
       </div>
 
@@ -317,11 +327,13 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                                 {openComment === r.id && r.change_comment && (
                                   <tr
                                     key={`${r.id}-comment`}
-                                    className={style.commentRow}                                  
+                                    className={style.commentRow}
                                   >
                                     <td colSpan={6}>
-                                      <strong>Причина зміни статусу: {r.change_comment}</strong>{" "}
-                                      
+                                      <strong>
+                                        Причина зміни статусу:{" "}
+                                        {r.change_comment}
+                                      </strong>{" "}
                                     </td>
                                   </tr>
                                 )}
