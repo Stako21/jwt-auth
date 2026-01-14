@@ -184,6 +184,17 @@ class ReportsRepository {
     `);
     return rows[0]?.lastUpdate || null;
   }
+
+  static async getReportDateRange() {
+    const [rows] = await pool.query(`
+      SELECT
+        MIN(report_date) AS minDate,
+        MAX(report_date) AS maxDate
+      FROM sales_reports
+    `);
+    
+    return rows[0] || { minDate: null, maxDate: null };
+  }
 }
 
 export default ReportsRepository;

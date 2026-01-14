@@ -1,10 +1,14 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, Fragment } from "react";
 import cn from "classnames";
 import style from "./SalesReport.module.scss";
 import { AuthContext, AuthClient } from "../../context/AuthContext";
 import ScrollToTopButton from "../ScrollToTopButton/ScrollToTopButton";
 import { ROLE_IDS } from "../../utils/roles";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { uk } from "date-fns/locale/uk";
+import "react-datepicker/dist/react-datepicker.css";
 
+registerLocale("uk", uk);
 
 /**
  * Группировка:
@@ -70,9 +74,17 @@ function shortDoc(num) {
 
 function statusIcon(status) {
   // if (status === "CANCELLED") return "❌";
-  if (status === "CANCELLED") return <i class="fa-solid fa-xmark" style={{ color: "#ED0202" }}></i>;
+  if (status === "CANCELLED")
+    return <i class="fa-solid fa-xmark" style={{ color: "#ED0202" }}></i>;
   // if (status === "MOVED") return "🔄";
-  if (status === "MOVED") return <i className="fa fa-refresh" aria-hidden="true" style={{ color: "#2402ED" }}></i>;
+  if (status === "MOVED")
+    return (
+      <i
+        className="fa fa-refresh"
+        aria-hidden="true"
+        style={{ color: "#2402ED" }}
+      ></i>
+    );
   return "";
 }
 
@@ -83,6 +95,22 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   const [openSV, setOpenSV] = useState({});
   const [openAgent, setOpenAgent] = useState({});
   const [loading, setLoading] = useState(false);
+
+  const [minDate, setMinDate] = useState(null);
+  const [maxDate, setMaxDate] = useState(null);
+
+  const [openComment, setOpenComment] = useState(
+    /** @type {number|null} */ (null)
+  );
+
+  useEffect(() => {
+    AuthClient.get("/reports/date-range").then((res) => {
+      const { minDate, maxDate } = res.data.data;
+
+      setMinDate(minDate ? new Date(minDate) : null);
+      setMaxDate(maxDate ? new Date(maxDate) : null);
+    });
+  }, []);
 
   const [date, setDate] = useState(() => {
     const d = new Date();
@@ -165,12 +193,21 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
     <div className={cn(style.salesReportWrapper, { open: isOpen })}>
       <div className={style.header}>
         <h2 className={style.title}>Звіт з продажів за </h2>
-        <input
+        {/* <input
           type="date"
           className={style.dateInput}
           value={date}
           onChange={(e) => setDate(e.target.value)}
-        />
+        /> */}
+        <DatePicker
+          locale="uk"
+          selected={new Date(date)}
+          onChange={(date) => setDate(date.toISOString().split("T")[0])}
+          dateFormat="dd.MM.yyyy"
+          className={style.dateInput}
+          minDate={minDate ? new Date(minDate) : null}
+          maxDate={maxDate ? new Date(maxDate) : null}          
+        ></DatePicker>
       </div>
 
       {loading && <p>Завантаження…</p>}
@@ -240,22 +277,55 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                           </thead>
                           <tbody className={style.salesTableBody}>
                             {ag.rows.map((r, i) => (
-                              <tr
-                                key={r.id}
-                                className={cn({
-                                  [style.cancelledRow]:
-                                    r.status === "CANCELLED",
-                                  [style.movedRow]: r.status === "MOVED",
-                                })}
-                                title={r.status !== "ACTIVE" ? r.change_comment : ""}
-                              >
-                                <td>{i + 1}</td>
-                                <td>{statusIcon(r.status)} {shortDoc(r.document_number)}</td>
-                                <td>{r.point_of_sale}</td>
-                                <td>{r.comment}</td>
-                                <td>{r.form2 ? <i className="fa-solid fa-check" style={{ color: "#14C700"}}></i> : ""}</td>
-                                <td>{money(r.amount)}</td>
-                              </tr>
+                              <Fragment key={r.id}>
+                                <tr
+                                  className={cn({
+                                    [style.cancelledRow]:
+                                      r.status === "CANCELLED",
+                                    [style.movedRow]: r.status === "MOVED",
+                                  })}
+                                  title={
+                                    r.status !== "ACTIVE"
+                                      ? r.change_comment
+                                      : ""
+                                  }
+                                  onClick={() =>
+                                    setOpenComment((prev) =>
+                                      prev === r.id ? null : r.id
+                                    )
+                                  }
+                                >
+                                  <td>{i + 1}</td>
+                                  <td>
+                                    {statusIcon(r.status)}{" "}
+                                    {shortDoc(r.document_number)}
+                                  </td>
+                                  <td>{r.point_of_sale}</td>
+                                  <td>{r.comment}</td>
+                                  <td>
+                                    {r.form2 ? (
+                                      <i
+                                        className="fa-solid fa-check"
+                                        style={{ color: "#14C700" }}
+                                      ></i>
+                                    ) : (
+                                      ""
+                                    )}
+                                  </td>
+                                  <td>{money(r.amount)}</td>
+                                </tr>
+                                {openComment === r.id && r.change_comment && (
+                                  <tr
+                                    key={`${r.id}-comment`}
+                                    className={style.commentRow}                                  
+                                  >
+                                    <td colSpan={6}>
+                                      <strong>Причина зміни статусу: {r.change_comment}</strong>{" "}
+                                      
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
                             ))}
                           </tbody>
                           <tfoot className={style.tableFooter}>

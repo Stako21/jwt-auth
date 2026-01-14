@@ -206,7 +206,7 @@ export async function loadSalesReports() {
       `
       UPDATE sales_reports
       SET status = 'CANCELLED',
-          change_comment = 'Відсутня у новій вигрузці'
+          change_comment = 'Реалізація відмінена (відсутня в останньому звіті)'
       WHERE status = 'ACTIVE'
         AND report_date >= DATE_SUB(?, INTERVAL 5 DAY)
         AND CONCAT(document_number, '||', login_agent) NOT IN (?)

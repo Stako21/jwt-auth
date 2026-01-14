@@ -144,3 +144,12 @@
   opacity: 0.8;
   font-style: italic;
 }
+
+.commentRow td {
+  background-color: #bad3d6 !important;
+  font-style: italic;
+
+  strong {
+    color: #374151 !important;
+  }
+}

@@ -31,6 +31,12 @@ class ReportsController {
       return ErrorsUtils.catchError(res, err);
     }
   }
+
+  static async getReportDateRange(req, res) {
+    const range = await ReportsRepository.getReportDateRange();
+    
+    return res.json({ data: range });
+  }
 }
 
 export default ReportsController;
