@@ -11,7 +11,7 @@ import { loadSalesReports } from './LoadReports.js';
 setInterval(() => {
   console.log('Запуск обновления SalesAgent.json');
   loadSalesAgents();
-}, 40 * 1000)
+}, 2 * 60 * 60 * 1000)
 
 
 // 2️⃣ Проверка SalesReport.json каждые 30 секунд
