@@ -1,5 +1,5 @@
 import pool from "../db.cjs";
-import { ROLE_IDS } from "../../client/src/utils/roles.js"; 
+import { ROLE_IDS } from "../utils/roles.js";
 // если не хочешь тянуть с фронта — просто захардкодь роли
 
 class ReportsRepository {
@@ -192,7 +192,7 @@ class ReportsRepository {
         MAX(report_date) AS maxDate
       FROM sales_reports
     `);
-    
+
     return rows[0] || { minDate: null, maxDate: null };
   }
 }

@@ -7,6 +7,7 @@ import { ROLE_IDS } from "../../utils/roles";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { uk } from "date-fns/locale/uk";
 import "react-datepicker/dist/react-datepicker.css";
+import DocumentPdfViewer from "../DocumentPdfViwer/DocumentPdfViewer";
 
 registerLocale("uk", uk);
 
@@ -201,6 +202,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
 
   return (
     <div className={cn(style.salesReportWrapper, { open: isOpen })}>
+      <DocumentPdfViewer />
       <div className={style.header}>
         <h2 className={style.title}>Звіт з продажів за </h2>
         {/* <input

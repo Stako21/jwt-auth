@@ -4,6 +4,8 @@ export const ROLE_LABELS = {
   3: "NTO",
   4: "SV",
   5: "TA",
+  6: "Accountant",
+  7: "Warehouse",
 };
 
 export const ROLE_IDS = {
@@ -12,11 +14,13 @@ export const ROLE_IDS = {
   NTO: 3,
   SV: 4,
   TA: 5,
+  Accountant: 6,
+  Warehouse: 7,
 };
 
 export const ROLE_OPTIONS = Object.entries(ROLE_LABELS).map(
   ([value, label]) => ({
     value: Number(value),
     label,
-  })
+  }),
 );

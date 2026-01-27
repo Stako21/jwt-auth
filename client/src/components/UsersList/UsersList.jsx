@@ -186,7 +186,7 @@ export const UsersList = ({
                 <th className="has-text-centered">Role</th>
                 <th className="has-text-centered">Edit</th>
                 <th className="has-text-centered">Delete</th>
-                <th className="has-text-centered">Info</th>
+                {/* <th className="has-text-centered">Info</th> */}
               </tr>
             </thead>
             <tbody>
@@ -231,7 +231,7 @@ export const UsersList = ({
                         <i className="fa-solid fa-trash"></i>
                       </button>
                     </td>
-                    <td>
+                    {/* <td>
                       <button
                         type="button"
                         className="button is-link is-dark is-small"
@@ -241,7 +241,7 @@ export const UsersList = ({
                       >
                         <i className="fa-solid fa-info"></i>
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                   {(ROLE_LABELS[user.role] === "SV" ||
                     ROLE_LABELS[user.role] === "NTO") && (
