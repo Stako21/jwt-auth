@@ -6,6 +6,7 @@ import AuthRootRouter from "./routers/Auth.js";
 import TokenService from "./services/Token.js";
 import cookieParser from "cookie-parser";
 import documentRoutes from "./routes/documents.js";
+import directoryRoutes from "./routes/directoryes.js";
 import "./services/scheduler.js";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -40,6 +41,7 @@ app.get("/resource/protected", TokenService.checkAccess, (req, res) => {
 });
 
 app.use("/documents", documentRoutes);
+app.use("/directories", directoryRoutes);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log("Сервер успішно запущено!!!");

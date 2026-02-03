@@ -4,6 +4,8 @@ import AuthValidator from "../validators/Auth.js";
 import UserController from "../controllers/User.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import reportRoutes from "../routes/reports.js";
+import documentsRoutes from "../routes/documents.js";
+import directoriesRoutes from "../routes/directoryes.js";
 
 const router = Router();
 
@@ -27,6 +29,7 @@ router.put("/users/:id/password", UserController.changePassword);
 router.put("/users/:id", UserController.updateUser);
 
 router.use("/reports", reportRoutes);
+router.use("/documents", authMiddleware, documentsRoutes);
 
-
+router.use("/directories", authMiddleware, directoriesRoutes);
 export default router;

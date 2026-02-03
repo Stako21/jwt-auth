@@ -12,6 +12,7 @@ import { SnackbarProvider } from "notistack";
 // import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import AdminPage from "./pages/AdminPage";
+import DocumentsPage from "./pages/DocumentsPage";
 import Header from "./components/Header/Header";
 import { ParseExcel } from "./components/ParseExcel/ParseExcel";
 // import style from "./app.module.scss";
@@ -74,7 +75,8 @@ const AppContent = () => {
       <Routes>
         {isUserLogged ? (
           userInfo?.role === ROLE_IDS.Admin ? (
-            <>
+              <>
+              <Route path="/documents" element={<DocumentsPage />} />
               <Route
                 path="/sales-report"
                 element={<SalesReport setLastUpdateTime={setLastUpdateTime} />}
@@ -158,8 +160,10 @@ const AppContent = () => {
                     fileName="balanceDP.xlsx"
                     setLastUpdateTime={setLastUpdateTime}
                   />
+
                 }
               />
+                <Route path="/documents" element={<DocumentsPage />} />
             </>
           )
         ) : (
@@ -186,6 +190,7 @@ const AppContent = () => {
             />
           }
         />
+        <Route path="/documents" element={<DocumentsPage />} />
       </Routes>
     </>
     // </div>

@@ -3,6 +3,7 @@ import { loadSalesAgents } from './loadAgents.js';
 import { loadSalesReports } from './LoadReports.js';
 import { loadProducts } from './loadProducts.js';
 import { loadTradePoints } from './loadTradePoints.js';
+import { retryFailedNotifications } from './notify.retry.service.js';
 
 // 1️⃣ Обновление SalesAgent раз в сутки в 8:00
 // cron.schedule('0 8 * * *', () => {
@@ -34,3 +35,8 @@ setInterval(() => {
   console.log('Проверка TradePoint.json');
   loadTradePoints();
 }, 60 * 1000);
+
+cron.schedule('*/5 * * * *', async () => {
+  console.log('Запуск повторных попыток уведомлений');
+  retryFailedNotifications();
+});
