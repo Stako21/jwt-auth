@@ -22,7 +22,6 @@ import { ReportRomashka } from "./components/Reports/ReportRomashka";
 import React from "react";
 import { ROLE_IDS, ROLE_LABELS } from "./utils/roles";
 
-
 // const LogPageView = () => {
 //   const location = useLocation();
 
@@ -75,7 +74,7 @@ const AppContent = () => {
       <Routes>
         {isUserLogged ? (
           userInfo?.role === ROLE_IDS.Admin ? (
-              <>
+            <>
               <Route path="/documents" element={<DocumentsPage />} />
               <Route
                 path="/sales-report"
@@ -160,10 +159,9 @@ const AppContent = () => {
                     fileName="balanceDP.xlsx"
                     setLastUpdateTime={setLastUpdateTime}
                   />
-
                 }
               />
-                <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
             </>
           )
         ) : (
@@ -181,16 +179,15 @@ const AppContent = () => {
                   ? userInfo?.role === ROLE_IDS.Admin
                     ? "admin-page"
                     : userInfo?.city === 1
-                    ? "/zp"
-                    : userInfo?.city === 2
-                    ? "/dp"
-                    : "/kr"
+                      ? "/zp"
+                      : userInfo?.city === 2
+                        ? "/dp"
+                        : "/kr"
                   : "sign-in"
               }
             />
           }
         />
-        <Route path="/documents" element={<DocumentsPage />} />
       </Routes>
     </>
     // </div>
