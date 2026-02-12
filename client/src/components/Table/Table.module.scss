@@ -50,7 +50,7 @@ td {
   border: none;
   text-align: left;
   padding: 5px;
-  // vertical-align: top;
+  vertical-align: middle !important;
 }
 
 // tr td:nth-child(1) {
@@ -87,7 +87,7 @@ tr .productCell {
 }
 
 .toggleIcon {
-  color: #000;
+  color: $light-text-color;
 }
 
 // tbody tr:nth-child(even) {
@@ -112,6 +112,7 @@ tr .productCell {
 
 .level2 {
   background: $tableLevel2;
+  border-bottom: 1px solid $border-color;
 }
 
 .balanceTable tbody tr:nth-child(1) {

@@ -108,7 +108,7 @@ export const Table = ({ data }) => {
                     {row.hasChildren && (
                       <button
                         onClick={() => toggleVisibility(row.id)}
-                        className={style.toggleButton}
+                        className={`${style.toggleButton}`}
                       >
                         <i
                           className={cn(

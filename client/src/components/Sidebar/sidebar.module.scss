@@ -8,7 +8,7 @@
   flex-direction: column;
   gap: 10px;
   color: $light-text-color;
-  border-bottom: $border-clolr-light-green solid 1px;
+  border-bottom: $border-color-light-green solid 1px;
   font-size: 20px;
 }
 
@@ -16,10 +16,9 @@ h3 {
   text-align: center;
 }
 
-.registration>div {
+.registration > div {
   display: flex;
   flex-direction: column;
-
 }
 
 input,
@@ -30,6 +29,6 @@ select {
 }
 
 .sidebarBooton {
-  background: $border-clolr-light-green;
+  background: $border-color-light-green;
   font-size: 20px;
 }

@@ -202,7 +202,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
 
   return (
     <div className={cn(style.salesReportWrapper, { open: isOpen })}>
-      <DocumentPdfViewer />
+      {/* <DocumentPdfViewer /> */}
       <div className={style.header}>
         <h2 className={style.title}>Звіт з продажів за </h2>
         {/* <input

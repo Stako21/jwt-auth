@@ -19,7 +19,6 @@
 // }
 
 .scrollContainer {
-  
   /* allow page to grow vertically; allow horizontal scroll if needed */
   overflow-y: visible;
   overflow-x: auto;
@@ -30,7 +29,6 @@
   // border-collapse: collapse;
   text-align: center;
   // font-size: 20px;
-  
 }
 
 // .tableHeader {
@@ -53,11 +51,11 @@
 // }
 
 // .tableBody tr:nth-child(odd) {
-//   background-color: $oddRowDarc;
+//   background-color: $oddRowDark;
 // }
 
 // .tableBody tr:nth-child(even) {
-//   background-color: $evenRowDarc;
+//   background-color: $evenRowDark;
 // }
 
 // .Select {
@@ -159,7 +157,7 @@
 // }
 
 // .cancelButton {
-//   background: $border-clolr-light-green;
+//   background: $border-color-light-green;
 //   color: white;
 //   border: none;
 //   padding: 10px 20px;

@@ -55,6 +55,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: #d8dadf;
   background-color: #6f717c85;
 }
 
@@ -64,7 +65,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #797b91a4;
+  color: #d8dadf;
+  background-color: #868797a4;
 }
 
 .agentTitle {
@@ -89,7 +91,7 @@
   // text-align: center;
   font-size: 11px;
   font-weight: 500;
-  color: $darc-text-color;
+  color: $dark-text-color;
 }
 
 .tableHeader tr th,
@@ -107,7 +109,7 @@
 
 .table.is-striped .salesTable .salesTableBody > tr > td,
 .salesTable .salesTableBody > tr > td {
-  color: $darc-text-color !important;
+  color: $dark-text-color !important;
 }
 
 .table.is-striped .salesTable .salesTableBody > tr:nth-child(odd),
