@@ -1,0 +1,91 @@
+/* Активируется при <html data-theme="dark"> */
+html[data-theme="dark"] {
+
+   /* ===== BODY ===== */
+
+  --bulma-body-background-color: #1b2434;
+  --bulma-body-color: #c2c2c2;
+
+  /* Базовые цвета Bulma */
+  --bulma-scheme-main: #1b2434;
+  --bulma-scheme-main-bis: #161c27;
+  --bulma-scheme-main-ter: #243146;
+
+  --bulma-background: #1b2434;
+  --bulma-border: #4d545f;
+  --bulma-text: #c2c2c2;
+  --bulma-text-strong: #ffffff;
+  --bulma-text-light: #949b9f;
+
+  --bulma-primary: #0097dc;
+  --bulma-link: #0097dc;
+
+  --bulma-info: #77bce4;
+  --bulma-success: #25c478;
+  --bulma-warning: #ffbb57;
+  --bulma-danger: #de3d3d;
+
+  /* ===== MODAL ===== */
+
+  --bulma-modal-background-background-color: rgba(27, 36, 52, 0.75);
+  --bulma-modal-card-background-color: #1b2434;
+  --bulma-modal-card-head-background-color: #1b2434;
+  --bulma-modal-card-foot-background-color: #1b2434;
+
+  --bulma-modal-card-title-color: #c2c2c2;
+  --bulma-modal-card-head-border-bottom: 1px solid #4d545f;
+  --bulma-modal-card-foot-border-top: 1px solid #4d545f;
+
+  /* ===== BUTTONS ===== */
+
+  --bulma-button-background-color: #2e3d57;
+  --bulma-button-border-color: #4d545f;
+  --bulma-button-color: #c2c2c2;
+
+  --bulma-button-hover-background-color: #253249;
+  --bulma-button-hover-border-color: #77bce4;
+
+  --bulma-button-focus-border-color: #1c6c9a;
+
+  --bulma-button-disabled-background-color: #2f3745;
+  --bulma-button-disabled-color: #687378;
+
+  /* Primary button */
+  --bulma-button-primary-background-color: #0097dc;
+  --bulma-button-primary-border-color: #0097dc;
+  --bulma-button-primary-color: #ffffff;
+
+  --bulma-button-primary-hover-background-color: #1c6c9a;
+
+  /* ===== INPUTS ===== */
+
+  --bulma-input-background-color: #1b2434;
+  --bulma-input-border-color: #4d545f;
+  --bulma-input-color: #c2c2c2;
+  --bulma-input-placeholder-color: #6f737b;
+
+  --bulma-input-focus-border-color: #0097dc;
+  --bulma-input-focus-box-shadow-color: rgba(0, 151, 220, 0.4);
+
+  --bulma-input-disabled-background-color: #2f3745;
+  --bulma-input-disabled-border-color: #4d545f;
+  --bulma-input-disabled-color: #6f737b;
+
+  /* ===== TABLE ===== */
+
+  --bulma-table-background-color: #1b2434;
+  --bulma-table-color: #c2c2c2;
+  --bulma-table-head-background-color: #122a52;
+  --bulma-table-row-hover-background-color: #161c27;
+  --bulma-table-border-color: #4d545f;
+
+  /* ===== NOTIFICATION ===== */
+
+  --bulma-notification-background-color: #263041;
+  --bulma-notification-color: #ffffff;
+
+  /* ===== CARD ===== */
+
+  --bulma-card-background-color: #1b2434;
+  --bulma-card-shadow: 0 0 18px 0 #06080b;
+}

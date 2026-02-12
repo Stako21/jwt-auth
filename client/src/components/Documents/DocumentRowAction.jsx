@@ -1,0 +1,96 @@
+import {
+  signDocument,
+  revisionDocument,
+  rejectDocument,
+} from "../../services/documents.api.js";
+import { ROLE_IDS } from "../../utils/roles.js";
+import styles from "./DocumentRowAction.module.scss";
+
+export default function DocumentRowActions({
+  doc,
+  currentUser,
+  onUpdated,
+  onOpenPdf,
+  loadingId,
+  setLoadingId,
+}) {
+  const canEditStatus =
+    ["NEW", "REVISION"].includes(doc.status) &&
+    [
+      ROLE_IDS.Director,
+      ROLE_IDS.Admin,
+      ROLE_IDS.NTO,
+      ROLE_IDS.Supervisor,
+    ].includes(currentUser.role);
+  // ["DIRECTOR", "ADMIN", "NTO", "SUPERVISOR"].includes(currentUser.role);
+
+  async function handle(action) {
+    const actionsText = {
+      sign: "Підписати документ?",
+      revision: "Відправити документ на доопрацювання?",
+      reject: "Відхилити документ остаточно?",
+    };
+
+    if (!window.confirm(actionsText[action])) return;
+
+    const comment = prompt("Коментар (не обовʼязково):") || "";
+
+    try {
+      setLoadingId(doc.id);
+
+      if (action === "sign") await signDocument(doc.id, comment);
+      if (action === "revision") await revisionDocument(doc.id, comment);
+      if (action === "reject") await rejectDocument(doc.id, comment);
+    } catch (e) {
+      console.error(`Error during ${action}:`, e);
+      alert(`Помилка під час виконання дії: ${e.message || e}`);
+    } finally {
+      setLoadingId(null);
+    }
+
+    onUpdated(); // перезагрузить список
+  }
+
+  return (
+    <div
+      className={`buttons is-mobile are-small is-right ${styles.actionButtons}`}
+    >
+      {canEditStatus && (
+        <>
+          <button
+            className="button is-success"
+            onClick={() => handle("sign")}
+            disabled={loadingId !== null}
+          >
+            <i className="fa-solid fa-check"></i>
+          </button>
+
+          <button
+            className="button is-warning"
+            onClick={() => handle("revision")}
+            disabled={loadingId !== null}
+          >
+            <i className="fa-solid fa-pen"></i>
+          </button>
+
+          <button
+            className="button is-danger"
+            onClick={() => handle("reject")}
+            disabled={loadingId !== null}
+          >
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </>
+      )}
+
+      <button
+        className={`button is-small is-light ${loadingId === doc.id ? "is-loading" : ""}`}
+        onClick={() => onOpenPdf && onOpenPdf(doc.id)}
+        disabled={loadingId === doc.id}
+      >
+        {/* <i className="fas fa-file-pdf"></i> */}
+        PDF
+      </button>
+    </div>
+  );
+}
