@@ -5,6 +5,7 @@ import style from "./style.module.scss";
 import { useSnackbar } from "notistack";
 import { UsersList } from "../components/UsersList/UsersList";
 import { Sidebar } from "../components/Sidebar/Sidebar";
+import { RegionNotifications } from "../components/RegionNotifications/RegionNotifications";
 import config from "../config";
 import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton";
 import { ROLE_LABELS } from "../utils/roles";
@@ -38,7 +39,7 @@ export default function AdminPage() {
     try {
       await axios.put(
         `${config.API_URL}/auth/users/${selectedUserId}/password`,
-        { newPassword }
+        { newPassword },
       );
       enqueueSnackbar("Пароль успішно змінено!", { variant: "success" });
 
@@ -79,8 +80,10 @@ export default function AdminPage() {
           <li className={activeTab === "users" ? "is-active" : ""}>
             <a onClick={() => handleTabChange("users")}>Users</a>
           </li>
-          <li className={activeTab === "teams" ? "is-active" : ""}>
-            <a onClick={() => handleTabChange("teams")}>Teams</a>
+          <li className={activeTab === "settings" ? "is-active" : ""}>
+            <a onClick={() => handleTabChange("settings")}>
+              Settings Notification
+            </a>
           </li>
         </ul>
       </div>
@@ -148,10 +151,9 @@ export default function AdminPage() {
         </>
       )}
 
-      {activeTab === "teams" && (
+      {activeTab === "settings" && (
         <div style={{ padding: 16 }}>
-          <h2 className="title is-4">Teams</h2>
-          <p>Teams content coming soon.</p>
+          <RegionNotifications />
         </div>
       )}
 

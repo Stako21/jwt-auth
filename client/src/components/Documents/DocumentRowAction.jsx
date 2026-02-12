@@ -16,13 +16,16 @@ export default function DocumentRowActions({
 }) {
   const canEditStatus =
     ["NEW", "REVISION"].includes(doc.status) &&
-    [
-      ROLE_IDS.Director,
-      ROLE_IDS.Admin,
-      ROLE_IDS.NTO,
-      ROLE_IDS.Supervisor,
-    ].includes(currentUser.role);
-  // ["DIRECTOR", "ADMIN", "NTO", "SUPERVISOR"].includes(currentUser.role);
+    [ROLE_IDS.Director, ROLE_IDS.Admin, ROLE_IDS.NTO, ROLE_IDS.SV].includes(
+      currentUser.role,
+    );
+
+  console.log("DocumentRowAction render:", {
+    docId: doc.id,
+    docStatus: doc.status,
+    currentUserRole: currentUser.role,
+    canEditStatus,
+  });
 
   async function handle(action) {
     const actionsText = {

@@ -411,7 +411,7 @@ export async function signDocumentService(user, documentId, comment) {
 
     await conn.commit();
 
-    notifyDocumentSigned(user, documentId)
+    notifyDocumentSigned(user, documentId);
 
     return { status: "SIGNED" };
   } catch (e) {
@@ -518,27 +518,41 @@ export async function getDocumentsService(user, query) {
     where.push("d.city = ?");
     params.push(user.city);
 
-    where.push(`
-      d.author_user_id IN (
-        SELECT ?
-        UNION
-        WITH RECURSIVE subordinates AS (
+    if (user.role === 4) {
+      // SV видит только своих прямых TA (depth = 1)
+      where.push(`
+        d.author_user_id IN (
           SELECT child_user_id
           FROM user_hierarchy
           WHERE parent_user_id = ?
-
           UNION ALL
-
-          SELECT uh.child_user_id
-          FROM user_hierarchy uh
-          JOIN subordinates s
-            ON s.child_user_id = uh.parent_user_id
+          SELECT ?
         )
-        SELECT child_user_id FROM subordinates
-      )
-    `);
+      `);
+      params.push(user.id, user.id);
+    } else {
+      // NTO видит своих SV и их TA (depth <= 2)
+      where.push(`
+        d.author_user_id IN (
+          WITH RECURSIVE subordinates AS (
+            SELECT child_user_id, 1 as depth
+            FROM user_hierarchy
+            WHERE parent_user_id = ?
 
-    params.push(user.id, user.id);
+            UNION ALL
+
+            SELECT uh.child_user_id, s.depth + 1
+            FROM user_hierarchy uh
+            JOIN subordinates s ON s.child_user_id = uh.parent_user_id
+            WHERE s.depth < 2
+          )
+          SELECT child_user_id FROM subordinates
+          UNION ALL
+          SELECT ?
+        )
+      `);
+      params.push(user.id, user.id);
+    }
   }
 
   // Accountant / Warehouse — регион, без иерархии
