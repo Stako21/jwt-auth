@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss" as *;
 
 .wrapperInputBox {
   position: relative;
@@ -68,8 +68,8 @@
 // .inputBox input:valid ~ span,
 .inputBox input:focus ~ span,
 .inputBox input:not(:placeholder-shown):not(:focus) ~ span {
-  color: $border-color-light-green;
-  border: 1px solid $border-color-light-green;
+  color: $border-color-light-blue;
+  border: 1px solid $border-color-light-blue;
   background: $main-background-color;
   transform: translateX(25px) translateY(-7px);
   font-size: 0.6em;
@@ -81,7 +81,7 @@
 // .inputBox input:valid,
 .inputBox input:focus,
 .inputBox input:not(:placeholder-shown) {
-  border: 1px solid $border-color-light-green;
+  border: 1px solid $border-color-light-blue;
 }
 
 .leftIcon {
@@ -91,8 +91,8 @@
   width: 25px;
   padding: 2px 0;
   padding-right: 8px;
-  color: $border-color-light-green;
-  border-right: 1px solid $border-color-light-green;
+  color: $border-color-light-blue;
+  border-right: 1px solid $border-color-light-blue;
   // margin: 0 10px
 }
 
@@ -103,8 +103,8 @@
   width: 25px;
   padding: 0 2px;
   padding-left: 8px;
-  color: $border-color-light-green;
-  border-left: 1px solid $border-color-light-green;
+  color: $border-color-light-blue;
+  border-left: 1px solid $border-color-light-blue;
   // margin: 0 10px
 }
 

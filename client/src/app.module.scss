@@ -1,11 +1,11 @@
-@import "./variables.scss";
+@use "./variables" as *;
 
-.content {
-  // margin: 0 auto;
-  // padding-top: $header-height;
-  // height: calc(100vh - $header-height);
-  // height: 100vh;
-}
+// .content {
+//   // margin: 0 auto;
+//   // padding-top: $header-height;
+//   // height: calc(100vh - $header-height);
+//   // height: 100vh;
+// }
 
 .centered {
   display: flex;

@@ -20,8 +20,32 @@ export default function ItemModal({
   /* ---------- init ---------- */
   useEffect(() => {
     if (initialItem) {
-      setGroupId(initialItem.groupId || "");
-      setProductId(initialItem.productId || "");
+      console.log("ItemModal - initialItem:", initialItem);
+
+      // Пытаемся найти товар по productId или product названию
+      let foundProduct = null;
+      if (initialItem.productId) {
+        foundProduct = products?.find(
+          (p) =>
+            p.id === initialItem.productId ||
+            String(p.id) === String(initialItem.productId),
+        );
+      } else if (initialItem.product) {
+        // Ищем по названию товара
+        foundProduct = products?.find((p) => p.name === initialItem.product);
+      }
+
+      console.log("Found product:", foundProduct);
+
+      // Если нашли товар, берем его группу
+      const gid = foundProduct
+        ? (foundProduct.group_id ?? foundProduct.groupId)
+        : initialItem.groupId || "";
+
+      setGroupId(gid?.toString() || "");
+      setProductId(
+        foundProduct ? foundProduct.id.toString() : initialItem.productId || "",
+      );
       setUnit(initialItem.unit || "PCS");
       setQuantity(initialItem.quantity || "");
       setManufactureDate(initialItem.manufactureDate || "");
@@ -29,7 +53,7 @@ export default function ItemModal({
     } else {
       reset();
     }
-  }, [initialItem, isOpen]);
+  }, [initialItem, isOpen, products]);
 
   function reset() {
     setGroupId("");

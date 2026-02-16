@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss" as *;
 
 .registration {
   margin-left: 10px;
@@ -8,7 +8,7 @@
   flex-direction: column;
   gap: 10px;
   color: $light-text-color;
-  border-bottom: $border-color-light-green solid 1px;
+  border-bottom: $border-color-light-blue solid 1px;
   font-size: 20px;
 }
 
@@ -29,6 +29,6 @@ select {
 }
 
 .sidebarBooton {
-  background: $border-color-light-green;
+  background: $border-color-light-blue;
   font-size: 20px;
 }

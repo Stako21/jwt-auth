@@ -26,7 +26,7 @@ api.interceptors.request.use(
 // }
 export async function createDocument(payload) {
   console.log("Creating document with payload:", payload);
-  
+
   const { data } = await api.post("/", payload);
   return data;
 }
@@ -63,3 +63,17 @@ export async function rejectDocument(id, comment) {
   return api.post(`/${id}/reject`, { comment });
 }
 
+export async function getDocumentHistory(id) {
+  const { data } = await api.get(`/${id}/history`);
+  return data;
+}
+
+export async function updateDocument(id, payload) {
+  const { data } = await api.put(`/${id}`, payload);
+  return data;
+}
+
+export async function getDocumentById(id) {
+  const { data } = await api.get(`/${id}`);
+  return data;
+}

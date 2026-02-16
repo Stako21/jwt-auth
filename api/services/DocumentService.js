@@ -6,6 +6,7 @@ import { notifyDocumentSigned } from "./notify.service.js";
  * payload: тело запроса
  */
 export async function createDocumentService(user, payload) {
+
   const { documentType, documentDate, tradePointId, reason, comment, items } =
     payload;
 
@@ -712,6 +713,8 @@ export async function getDocumentByIdService(user, documentId) {
   const [items] = await pool.query(
     `
     SELECT
+      product_id,
+      product_group_id,
       product_name_snapshot AS product_name,
       product_group_snapshot AS product_group,
       unit,
@@ -778,4 +781,230 @@ export async function getDocumentByIdService(user, documentId) {
     items,
     history,
   };
+}
+export async function getDocumentHistoryService(user, documentId) {
+  // Сначала проверяем доступ к документу
+  await getDocumentByIdService(user, documentId);
+
+  const [history] = await pool.query(
+    `
+    SELECT
+      dh.id,
+      dh.action,
+      dh.old_status,
+      dh.new_status,
+      dh.comment,
+      dh.created_at,
+      u.user_name
+    FROM document_history dh
+    LEFT JOIN users u ON u.id = dh.user_id
+    WHERE dh.document_id = ?
+    ORDER BY dh.created_at DESC
+    `,
+    [documentId],
+  );
+
+  return history;
+}
+
+
+
+export async function updateDocumentService(user, documentId, payload) {
+  const { documentType, documentDate, tradePointId, reason, comment, items } =
+    payload;
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // 1️⃣ Получаем документ
+    const [[doc]] = await connection.query(
+      `
+      SELECT id, status, author_user_id, city
+      FROM documents
+      WHERE id = ?
+      FOR UPDATE
+      `,
+      [documentId],
+    );
+
+    if (!doc) {
+      throw new Error("NOT_FOUND");
+    }
+
+    if (doc.author_user_id !== user.id) {
+      throw new Error("Тільки автор може редагувати документ");
+    }
+
+    if (!["NEW", "REVISION"].includes(doc.status)) {
+      throw new Error(
+        "Можна редагувати тільки документи зі статусом NEW або REVISION",
+      );
+    }
+
+    // 2️⃣ Валидация
+    if (!documentType || !documentDate || !tradePointId || !items?.length) {
+      throw new Error("Некорректные данные документа");
+    }
+
+    if (documentType === "EXCHANGE") {
+      const takeItems = items.filter((i) => i.operation === "TAKE");
+      const giveItems = items.filter((i) => i.operation === "GIVE");
+
+      if (!takeItems.length || !giveItems.length) {
+        throw new Error("Для обміну обовʼязково потрібні TAKE і GIVE");
+      }
+
+      const takeQty = takeItems.reduce(
+        (sum, i) => sum + Number(i.quantity || 0),
+        0,
+      );
+
+      const giveQty = giveItems.reduce(
+        (sum, i) => sum + Number(i.quantity || 0),
+        0,
+      );
+
+      if (takeQty !== giveQty) {
+        throw new Error(
+          `Кількість не співпадає: забрали ${takeQty}, видали ${giveQty}`,
+        );
+      }
+    }
+
+    if (documentType === "RETURN") {
+      if (items.some((i) => i.operation === "GIVE")) {
+        throw new Error("Для повернення дозволено тільки TAKE");
+      }
+    }
+
+    // 3️⃣ Проверяем торговую точку
+    const [[tp]] = await connection.query(
+      `
+      SELECT contractor_id
+      FROM trade_points
+      WHERE id = ? AND is_active = 1
+      `,
+      [tradePointId],
+    );
+
+    if (!tp) {
+      throw new Error("Торговая точка не найдена или неактивна");
+    }
+
+    // 4️⃣ Обновляем документ
+    await connection.query(
+      `
+      UPDATE documents
+      SET
+        document_type = ?,
+        document_date = ?,
+        trade_point_id = ?,
+        contractor_id = ?,
+        reason = ?,
+        comment = ?,
+        status = 'NEW'
+      WHERE id = ?
+      `,
+      [
+        documentType,
+        documentDate,
+        tradePointId,
+        tp.contractor_id,
+        reason,
+        comment ?? null,
+        documentId,
+      ],
+    );
+
+    // 5️⃣ Удаляем старые товары
+    await connection.query(
+      `DELETE FROM document_items WHERE document_id = ?`,
+      [documentId],
+    );
+
+    // 6️⃣ Добавляем новые товары (как в create)
+    for (const item of items) {
+      const {
+        productId,
+        unit,
+        quantity,
+        manufactureDate,
+        expiryDate,
+        operation,
+      } = item;
+
+      if (!productId || quantity <= 0 || !operation) {
+        throw new Error("Некорректная строка товара");
+      }
+
+      if (!["TAKE", "GIVE"].includes(operation)) {
+        throw new Error("Неверное значение operation");
+      }
+
+      const [[product]] = await connection.query(
+        `
+        SELECT p.name, g.id AS group_id, g.name AS group_name
+        FROM products p
+        JOIN product_groups g ON g.id = p.group_id
+        WHERE p.id = ? AND p.is_active = 1
+        `,
+        [productId],
+      );
+
+      if (!product) {
+        throw new Error(`Товар ${productId} не найден`);
+      }
+
+      await connection.query(
+        `
+        INSERT INTO document_items (
+          document_id,
+          product_id,
+          product_group_id,
+          product_name_snapshot,
+          product_group_snapshot,
+          unit,
+          quantity,
+          manufacture_date,
+          expiry_date,
+          operation
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          documentId,
+          productId,
+          product.group_id,
+          product.name,
+          product.group_name,
+          unit,
+          quantity,
+          manufactureDate,
+          expiryDate,
+          operation,
+        ],
+      );
+    }
+
+    // 7️⃣ История
+    await connection.query(
+      `
+      INSERT INTO document_history
+        (document_id, user_id, action, old_status, new_status, comment)
+      VALUES (?, ?, 'STATUS_CHANGE', ?, 'NEW', ?)
+      `,
+      [documentId, user.id, doc.status, "Редагування документа"],
+    );
+
+    await connection.commit();
+
+    return { success: true };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }

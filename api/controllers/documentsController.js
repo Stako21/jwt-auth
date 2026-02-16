@@ -11,6 +11,8 @@ import {
   revisionDocumentService,
   rejectDocumentService,
   getDocumentByIdService,
+  getDocumentHistoryService,
+  updateDocumentService,
 } from "../services/DocumentService.js";
 import UserRepository from "../repositories/User.js";
 
@@ -244,5 +246,32 @@ export async function retryDocumentNotificationsController(req, res) {
   } catch (e) {
     console.error("retryDocumentNotifications error:", e.message);
     res.status(403).json({ message: e.message });
+  }
+}
+
+export async function getDocumentHistory(req, res) {
+  try {
+    const { id } = req.params;
+
+    const history = await getDocumentHistoryService(req.user, Number(id));
+
+    res.json(history);
+  } catch (e) {
+    console.error("getDocumentHistory error:", e.message);
+    res.status(403).json({ message: e.message });
+  }
+}
+
+export async function updateDocument(req, res) {
+  try {
+    const { id } = req.params;
+    const payload = req.body;
+
+    const result = await updateDocumentService(req.user, Number(id), payload);
+
+    res.json(result);
+  } catch (e) {
+    console.error("updateDocument error:", e.message);
+    res.status(400).json({ message: e.message });
   }
 }

@@ -5,7 +5,10 @@ const inMemoryJWTService = () => {
   let refreshTimeoutId = null;
 
   const refreshToken = (expiration) => {
-    const timeoutTrigger = expiration * 1000 - 10000; // Преобразуем время истечения в миллисекунды и вычитаем 10 секунд.
+    const timeoutTrigger = expiration - 10000; // Преобразуем время истечения в миллисекунды и вычитаем 10 секунд.
+
+    console.log("Setting refresh timeout:", timeoutTrigger);
+    
 
     refreshTimeoutId = setTimeout(() => {
       AuthClient.post("/refresh").then((res) => {

@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss" as *;
 
 /* Scoped styles for SalesReport component to avoid overriding global Bulma table styles */
 .salesReportWrapper {

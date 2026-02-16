@@ -1,0 +1,18 @@
+@use "../variables" as *;
+
+.dropdownContent {
+  background-color: $dropdown-background;
+  border: solid 1px $dropdown-border;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+
+  .dropdownItem {
+    padding: 8px 12px;
+    cursor: pointer;
+    color: $light-text-color;
+
+    &:hover {
+      background-color: $border-color-light-blue;
+    }
+  }
+}

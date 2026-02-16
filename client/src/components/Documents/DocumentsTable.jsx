@@ -7,6 +7,7 @@ export default function DocumentTable({
   documents,
   currentUser,
   reloadDocuments,
+  onEditDocument,
 }) {
   const [loadingId, setLoadingId] = useState(null);
 
@@ -20,6 +21,25 @@ export default function DocumentTable({
       setLoadingId(null);
     }
   };
+
+  const handleRowClick = (e, doc) => {
+    console.log("Press row for edit");
+    
+    // Не реагируем на клик по кнопкам
+    if (e.target.closest("button")) {
+      return;
+    }
+
+    // Только автор может редактировать и только со статусом NEW или REVISION
+    if (
+      doc.author_user_id === currentUser.id &&
+      ["NEW", "REVISION"].includes(doc.status)
+    ) {
+      onEditDocument?.(doc);
+    }
+  };
+
+  
 
   if (!documents.length) {
     return <div className="notification is-light">Документів не знайдено</div>;
@@ -43,7 +63,17 @@ export default function DocumentTable({
 
         <tbody>
           {documents.map((doc) => (
-            <tr key={doc.id}>
+            <tr
+              key={doc.id}
+              onClick={(e) => handleRowClick(e, doc)}
+              style={{
+                cursor:
+                  doc.author_user_id === currentUser.id &&
+                  ["NEW", "REVISION"].includes(doc.status)
+                    ? "pointer"
+                    : "default",
+              }}
+            >
               <td>
                 <StatusBadge status={doc.status} />
               </td>
@@ -55,15 +85,6 @@ export default function DocumentTable({
               <td>{doc.contractor}</td>
               <td>{doc.author}</td>
               <td>{new Date(doc.document_date).toLocaleDateString("uk-UA")}</td>
-              {/* <td className="has-text-right">
-                <button
-                  className={`button is-small is-light ${loadingId === doc.id ? "is-loading" : ""}`}
-                  onClick={() => handleOpenPdf(doc.id)}
-                  disabled={loadingId !== null}
-                >
-                  PDF
-                </button>
-              </td> */}
               <td className="has-text-right">
                 <DocumentRowActions
                   doc={doc}

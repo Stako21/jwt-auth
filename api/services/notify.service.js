@@ -9,7 +9,6 @@ import { getDocumentByIdService } from "./DocumentService.js";
 import pool from "../db.cjs";
 import FormData from "form-data";
 import { loadStampBase64 } from "../controllers/documentsController.js";
-import e from "express";
 
 async function logNotification({
   documentId,
@@ -24,7 +23,7 @@ async function logNotification({
       (document_id, channel, target, status, error_text)
     VALUES (?, ?, ?, ?, ?)
     `,
-    [documentId, channel, target, status, errorText]
+    [documentId, channel, target, status, errorText],
   );
 }
 
@@ -39,7 +38,9 @@ async function loadRegionNtification(city) {
   );
 
   return {
-    emails: rows.map((r) => r.email),
+    emails: rows
+      .map((r) => r.email)
+      .filter((email) => email && email.trim() !== ""),
     rocketChannel: rows[0]?.rocket_channel || null,
   };
 }
@@ -136,28 +137,28 @@ export async function sendEmailWithPdf(doc, filePath, emails) {
 }
 
 export async function sendRocketMessage(doc, rocketChannel, pdfPath) {
-  const res = await fetch(`${process.env.ROCKET_URL}/api/v1/chat.postMessage`, {
-    method: "POST",
-    headers: {
-      "X-Auth-Token": process.env.ROCKET_TOKEN,
-      "X-User-Id": process.env.ROCKET_USER_ID,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      channel: rocketChannel.replace(/^#/, ""),
-      text: `📄 *Документ підписано*\n${doc.documentNumber}`,
-    }),
-  });
+  // const res = await fetch(`${process.env.ROCKET_URL}/api/v1/chat.postMessage`, {
+  //   method: "POST",
+  //   headers: {
+  //     "X-Auth-Token": process.env.ROCKET_TOKEN,
+  //     "X-User-Id": process.env.ROCKET_USER_ID,
+  //     "Content-Type": "application/json",
+  //   },
+  //   body: JSON.stringify({
+  //     channel: rocketChannel.replace(/^#/, ""),
+  //     text: `📄 *Документ підписано*\n${doc.documentNumber}`,
+  //   }),
+  // });
 
-  const data = await res.json();
+  // const data = await res.json();
   const roomId = await getRoomIdByName(rocketChannel);
   await uploadPdfToRocket(roomId, pdfPath, doc);
 
-  console.log("Rocket.Chat response:", data);
+  // console.log("Rocket.Chat response:", data);
 
-  if (!data.success) {
-    throw new Error(`Rocket.Chat error: ${data.error || "unknown"}`);
-  }
+  // if (!data.success) {
+  //   throw new Error(`Rocket.Chat error: ${data.error || "unknown"}`);
+  // }
 }
 
 async function uploadPdfToRocket(roomId, filePath, doc) {
@@ -232,8 +233,10 @@ export async function notifyDocumentSigned(user, documentId) {
     if (emails.length) {
       try {
         await sendEmailWithPdf(doc, pdfPath, emails);
-    
+
         for (const email of emails) {
+          if (!email || email.trim() === "") continue;
+
           await logNotification({
             documentId: doc.id,
             channel: "EMAIL",
@@ -257,7 +260,7 @@ export async function notifyDocumentSigned(user, documentId) {
       if (rocketChannel) {
         try {
           await sendRocketMessage(doc, rocketChannel, pdfPath);
-      
+
           await logNotification({
             documentId: doc.id,
             channel: "ROCKET",
@@ -272,7 +275,7 @@ export async function notifyDocumentSigned(user, documentId) {
             status: "ERROR",
             errorText: err.message,
           });
-      
+
           throw err;
         }
       }

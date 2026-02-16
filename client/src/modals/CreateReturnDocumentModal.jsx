@@ -1,6 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
-import { createDocument } from "../services/documents.api";
+import {
+  createDocument,
+  updateDocument,
+  getDocumentById,
+} from "../services/documents.api";
 import ItemModal from "./ItemModal";
+import { getUnitLabel } from "../utils/unitLabels";
+import { useSnackbar } from "notistack";
+import styles from "./CreateReturnDocumentModal.module.scss";
 
 export default function CreateReturnDocumentModal({
   isOpen,
@@ -10,7 +17,10 @@ export default function CreateReturnDocumentModal({
   tradePoints,
   productGroups,
   products,
+  editingDocument,
 }) {
+  console.log("CreateReturnDocumentModal rendered with isOpen:", isOpen);
+
   /* ---------------- state ---------------- */
   const [contractorId, setContractorId] = useState("");
   const [tradePointId, setTradePointId] = useState("");
@@ -25,6 +35,7 @@ export default function CreateReturnDocumentModal({
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
   const [errors, setErrors] = useState({});
+  const { enqueueSnackbar } = useSnackbar();
 
   /* Запретить скролл страницы при открытом модальном окне */
   useEffect(() => {
@@ -50,7 +61,81 @@ export default function CreateReturnDocumentModal({
     };
   }, [isOpen]);
 
+  // Загружаем данные документа для редактирования
+  useEffect(() => {
+    if (editingDocument && isOpen) {
+      console.log("Loading editing document:", editingDocument);
+
+      // Получаем ID контрагента - может быть строка или объект
+      let contractorId = "";
+      if (
+        typeof editingDocument.contractor === "object" &&
+        editingDocument.contractor
+      ) {
+        // Ищем контрагента по имени в списке
+        const found = contractors.find(
+          (c) => c.name === editingDocument.contractor.name,
+        );
+        contractorId = found ? found.id.toString() : "";
+      } else {
+        contractorId = editingDocument.contractorId?.toString() || "";
+      }
+
+      setContractorId(contractorId);
+      setContractorSearch(
+        typeof editingDocument.contractor === "object"
+          ? editingDocument.contractor.name || ""
+          : editingDocument.contractor || "",
+      );
+
+      // Получаем ID торговой точки - может быть строка или объект
+      let tradePointId = "";
+      if (
+        typeof editingDocument.tradePoint === "object" &&
+        editingDocument.tradePoint
+      ) {
+        const found = tradePoints.find(
+          (tp) => tp.name === editingDocument.tradePoint.name,
+        );
+        tradePointId = found ? found.id.toString() : "";
+      } else {
+        tradePointId = editingDocument.tradePointId?.toString() || "";
+      }
+
+      setTradePointId(tradePointId);
+      setReason(editingDocument.reason || "");
+      setComment(editingDocument.comment || "");
+
+      // Преобразуем items в нужный формат
+      if (editingDocument.items && Array.isArray(editingDocument.items)) {
+        const formattedItems = editingDocument.items.map((item) => ({
+          productId: item.product_id || item.productId,
+          product: item.product_name || item.productName,
+          unit: item.unit,
+          quantity: item.quantity,
+          manufactureDate: formatDateForInput(
+            item.manufacture_date || item.manufactureDate,
+          ),
+          expiryDate: formatDateForInput(item.expiry_date || item.expiryDate),
+        }));
+        console.log("Formatted items:", formattedItems);
+        setItems(formattedItems);
+      }
+    } else if (!editingDocument) {
+      // Очищаем форму когда нет редактируемого документа
+      reset();
+    }
+  }, [editingDocument, isOpen, contractors, tradePoints]);
+
   console.log("errors: ", errors);
+  console.log("CreateReturnDocumentModal - editingDocument:", editingDocument);
+  console.log("CreateReturnDocumentModal - isOpen:", isOpen);
+  console.log("CreateReturnDocumentModal - state:", {
+    contractorId,
+    tradePointId,
+    reason,
+    itemsCount: items.length,
+  });
 
   function validateDocument() {
     const e = {};
@@ -68,11 +153,23 @@ export default function CreateReturnDocumentModal({
 
   /* ---------------- helpers ---------------- */
   function reset() {
+    setContractorSearch("");
     setContractorId("");
     setTradePointId("");
     setReason("");
     setComment("");
     setItems([]);
+  }
+
+  // Преобразуем дату из ISO формата в yyyy-MM-dd
+  function formatDateForInput(dateStr) {
+    if (!dateStr) return "";
+    try {
+      const date = new Date(dateStr);
+      return date.toISOString().slice(0, 10);
+    } catch (e) {
+      return dateStr;
+    }
   }
 
   /* ---------------- filters ---------------- */
@@ -84,9 +181,10 @@ export default function CreateReturnDocumentModal({
   }, [contractorId, tradePoints]);
 
   const filteredContractors = useMemo(() => {
-    if (!contractorSearch.trim()) return [];
+    const searchStr = String(contractorSearch || "").trim();
+    if (!searchStr) return [];
     return contractors.filter((c) =>
-      c.name.toLowerCase().includes(contractorSearch.toLowerCase()),
+      c.name.toLowerCase().includes(searchStr.toLowerCase()),
     );
   }, [contractorSearch, contractors]);
 
@@ -122,7 +220,7 @@ export default function CreateReturnDocumentModal({
     if (!validateDocument()) return;
 
     try {
-      await createDocument({
+      const payload = {
         documentType: "RETURN",
         documentDate: new Date().toISOString().slice(0, 10),
         tradePointId: Number(tradePointId),
@@ -136,13 +234,23 @@ export default function CreateReturnDocumentModal({
           expiryDate: i.expiryDate,
           operation: "TAKE",
         })),
-      });
+      };
+
+      if (editingDocument) {
+        // Редактирование
+        await updateDocument(editingDocument.id, payload);
+      } else {
+        // Создание нового
+        await createDocument(payload);
+      }
 
       onCreated();
       reset();
       onClose();
     } catch (e) {
-      console.error(e);
+      const message =
+        e.response?.data?.message || "Помилка при збереженні документу";
+      enqueueSnackbar(message, { variant: "error" });
     }
   }
 
@@ -162,7 +270,11 @@ export default function CreateReturnDocumentModal({
 
         <div className="modal-card" style={{ width: "95%" }}>
           <header className="modal-card-head">
-            <p className="modal-card-title">Новий документ — Повернення</p>
+            <p className="modal-card-title">
+              {editingDocument
+                ? "Редагувати документ — Повернення"
+                : "Новий документ — Повернення"}
+            </p>
             <button className="delete" onClick={onClose} />
           </header>
 
@@ -191,11 +303,11 @@ export default function CreateReturnDocumentModal({
                 )}
 
                 {showContractorDropdown && filteredContractors.length > 0 && (
-                  <div className="dropdown-content">
+                  <div className={`dropdown-content ${styles.dropdownContent}`}>
                     {filteredContractors.map((c) => (
                       <div
                         key={c.id}
-                        className="dropdown-item"
+                        className={`dropdown-item ${styles.dropdownItem}`}
                         onMouseDown={() => {
                           setContractorSearch(c.name);
                           setContractorId(c.id);
@@ -270,7 +382,7 @@ export default function CreateReturnDocumentModal({
                 </p>
               )}
               <button className="button is-link is-light" onClick={openAddItem}>
-                ➕ Додати позицію
+                <i className="fa-solid fa-plus">{'\u00A0'}</i> Додати позицію
               </button>
             </div>
 
@@ -298,7 +410,7 @@ export default function CreateReturnDocumentModal({
                           )?.name
                         }
                       </td>
-                      <td>{i.unit}</td>
+                      <td>{getUnitLabel(i.unit)}</td>
                       <td>{i.quantity}</td>
                       <td>{i.manufactureDate}</td>
                       <td>{i.expiryDate}</td>
@@ -307,13 +419,13 @@ export default function CreateReturnDocumentModal({
                           className="button is-small is-light"
                           onClick={() => openEditItem(idx)}
                         >
-                          ✏️
+                          <i className="fa-solid fa-pencil"></i>
                         </button>
                         <button
                           className="button is-small is-danger ml-1"
                           onClick={() => removeItem(idx)}
                         >
-                          ✕
+                          <i className="fa-solid fa-xmark"></i>
                         </button>
                       </td>
                     </tr>

@@ -1,9 +1,14 @@
 import { useContext, useEffect, useState } from "react";
 import DocumentTable from "../components/Documents/DocumentsTable.jsx";
-import { fetchDocuments } from "../services/documents.api.js";
+import { fetchDocuments, getDocumentById } from "../services/documents.api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
 import CreateReturnDocumentModal from "../modals/CreateReturnDocumentModal.jsx";
-import { fetchContractors, fetchProductGroups, fetchProducts, fetchTradePoints } from "../services/directories.api.js";
+import {
+  fetchContractors,
+  fetchProductGroups,
+  fetchProducts,
+  fetchTradePoints,
+} from "../services/directories.api.js";
 import CreateExchangeDocumentModal from "../modals/CreateExchangeDocumentModal.jsx";
 
 export default function DocumentsPage() {
@@ -17,6 +22,7 @@ export default function DocumentsPage() {
   const { userInfo } = useContext(AuthContext);
   const [showCreateReturn, setShowCreateReturn] = useState(false);
   const [showCreateExchange, setShowCreateExchange] = useState(false);
+  const [editingDocument, setEditingDocument] = useState(null);
 
   useEffect(() => {
     fetchTradePoints().then((data) => setTradePoints(data));
@@ -25,13 +31,13 @@ export default function DocumentsPage() {
     fetchProductGroups().then((data) => setProductGroups(data));
 
     console.log("Trade-points", tradePoints.slice(5));
-    
   }, []);
 
-
-  async function loadDocuments() {
+  async function loadDocuments({ silent = false } = {}) {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const data = await fetchDocuments();
       setDocuments(data);
     } catch (e) {
@@ -40,6 +46,54 @@ export default function DocumentsPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadDocuments();
+  }, []);
+
+  useEffect(() => {
+  const interval = setInterval(() => {
+    if (!document.hidden) {
+      loadDocuments({ silent: true });
+    }
+  }, 10000);
+
+  return () => clearInterval(interval);
+}, []);
+
+  // useEffect(() => {
+  //   loadDocuments();
+
+  //   const interval = setInterval(() => {
+  //     if (!document.hidden) {
+  //       loadDocuments();
+  //     }
+  //   }, 10000);
+
+  //   return () => clearInterval(interval);
+  // }, []);
+
+  const handleEditDocument = (doc) => {
+    console.log("handleEditDocument called with doc:", doc);
+    // Получаем полные данные документа перед редактированием
+    getDocumentById(doc.id)
+      .then((fullDoc) => {
+        console.log("Full document loaded:", fullDoc);
+        setEditingDocument(fullDoc);
+        // API возвращает documentType (camelCase)
+        if (fullDoc.documentType === "RETURN") {
+          console.log("Setting showCreateReturn to true");
+          setShowCreateReturn(true);
+        } else if (fullDoc.documentType === "EXCHANGE") {
+          console.log("Setting showCreateExchange to true");
+          setShowCreateExchange(true);
+        }
+      })
+      .catch((e) => {
+        console.error("Помилка завантаження документу:", e);
+        alert("Помилка при завантаженні даних документу");
+      });
+  };
 
   useEffect(() => {
     loadDocuments();
@@ -58,35 +112,43 @@ export default function DocumentsPage() {
               className="button is-primary"
               onClick={() => setShowCreateReturn(true)}
             >
-              ➕ Повернення
+              <i className="fa-solid fa-plus">{'\u00A0'}</i> Повернення
             </button>
             <button
               className="button is-primary"
               onClick={() => setShowCreateExchange(true)}
             >
-              ➕ Обмін
+              <i className="fa-solid fa-plus">{'\u00A0'}</i> Обмін
             </button>
           </div>
         </div>
 
         <CreateReturnDocumentModal
           isOpen={showCreateReturn}
-          onClose={() => setShowCreateReturn(false)}
+          onClose={() => {
+            setShowCreateReturn(false);
+            setEditingDocument(null);
+          }}
           onCreated={loadDocuments}
           tradePoints={tradePoints}
           products={products}
           contractors={contractors}
           productGroups={productGroups}
+          editingDocument={editingDocument}
         />
 
         <CreateExchangeDocumentModal
           isOpen={showCreateExchange}
-          onClose={() => setShowCreateExchange(false)}
+          onClose={() => {
+            setShowCreateExchange(false);
+            setEditingDocument(null);
+          }}
           onCreated={loadDocuments}
           tradePoints={tradePoints}
           products={products}
           contractors={contractors}
           productGroups={productGroups}
+          editingDocument={editingDocument}
         />
 
         {loading && <progress className="progress is-small is-primary" />}
@@ -98,6 +160,7 @@ export default function DocumentsPage() {
             documents={documents}
             currentUser={userInfo}
             reloadDocuments={loadDocuments}
+            onEditDocument={handleEditDocument}
           />
         )}
       </div>

@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss" as *;
 
 .inputBox {
   position: relative;
@@ -23,7 +23,7 @@
 }
 
 .inputBox input[type="submit"] {
-  background: $border-color-light-green;
+  background: $border-color-light-blue;
   color: $main-background-color;
   padding: 10px 0;
   font-weight: 500;

@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
-import { createDocument } from "../services/documents.api";
+import { createDocument, updateDocument } from "../services/documents.api";
 import ItemModal from "./ItemModal";
+import { getUnitLabel } from "../utils/unitLabels";
+import { useSnackbar } from "notistack";
 
 export default function CreateExchangeDocumentModal({
   isOpen,
@@ -10,7 +12,10 @@ export default function CreateExchangeDocumentModal({
   tradePoints,
   productGroups,
   products,
+  editingDocument,
 }) {
+  console.log("CreateExchangeDocumentModal rendered with isOpen:", isOpen);
+
   /* ---------------- state ---------------- */
   const [contractorId, setContractorId] = useState("");
   const [tradePointId, setTradePointId] = useState("");
@@ -28,6 +33,7 @@ export default function CreateExchangeDocumentModal({
   const [editingType, setEditingType] = useState(null);
 
   const [errors, setErrors] = useState({});
+  const { enqueueSnackbar } = useSnackbar();
 
   /* ---------- scroll lock ---------- */
   useEffect(() => {
@@ -53,6 +59,82 @@ export default function CreateExchangeDocumentModal({
     };
   }, [isOpen]);
 
+  // Загружаем данные документа для редактирования
+  useEffect(() => {
+    if (editingDocument && isOpen) {
+      console.log("Loading editing exchange document:", editingDocument);
+
+      // Получаем ID контрагента - может быть строка или объект
+      let contractorId = "";
+      if (
+        typeof editingDocument.contractor === "object" &&
+        editingDocument.contractor
+      ) {
+        // Ищем контрагента по имени в списке
+        const found = contractors.find(
+          (c) => c.name === editingDocument.contractor.name,
+        );
+        contractorId = found ? found.id.toString() : "";
+      } else {
+        contractorId = editingDocument.contractorId?.toString() || "";
+      }
+
+      setContractorId(contractorId);
+      setContractorSearch(
+        typeof editingDocument.contractor === "object"
+          ? editingDocument.contractor.name || ""
+          : editingDocument.contractor || "",
+      );
+
+      // Получаем ID торговой точки - может быть строка или объект
+      let tradePointId = "";
+      if (
+        typeof editingDocument.tradePoint === "object" &&
+        editingDocument.tradePoint
+      ) {
+        const found = tradePoints.find(
+          (tp) => tp.name === editingDocument.tradePoint.name,
+        );
+        tradePointId = found ? found.id.toString() : "";
+      } else {
+        tradePointId = editingDocument.tradePointId?.toString() || "";
+      }
+
+      setTradePointId(tradePointId);
+      setReason(editingDocument.reason || "");
+      setComment(editingDocument.comment || "");
+
+      // Преобразуем items в нужный формат по операциям
+      if (editingDocument.items && Array.isArray(editingDocument.items)) {
+        const take = [];
+        const give = [];
+        editingDocument.items.forEach((item) => {
+          const formattedItem = {
+            productId: item.product_id,
+            product: item.product_name,
+            unit: item.unit,
+            quantity: item.quantity,
+            manufactureDate: formatDateForInput(
+              item.manufacture_date || item.manufactureDate,
+            ),
+            expiryDate: formatDateForInput(item.expiry_date || item.expiryDate),
+          };
+          if (item.operation === "TAKE") {
+            take.push(formattedItem);
+          } else {
+            give.push(formattedItem);
+          }
+        });
+        console.log("Exchange items - take:", take, "give:", give);
+        setTakeItems(take);
+        setGiveItems(give);
+      }
+    } else if (!editingDocument) {
+      // Очищаем форму когда нет редактируемого документа
+      reset();
+    }
+  }, [editingDocument, isOpen, contractors, tradePoints]);
+
   /* ---------- helpers ---------- */
 
   function reset() {
@@ -62,6 +144,17 @@ export default function CreateExchangeDocumentModal({
     setComment("");
     setTakeItems([]);
     setGiveItems([]);
+  }
+
+  // Преобразуем дату из ISO формата в yyyy-MM-dd
+  function formatDateForInput(dateStr) {
+    if (!dateStr) return "";
+    try {
+      const date = new Date(dateStr);
+      return date.toISOString().slice(0, 10);
+    } catch (e) {
+      return dateStr;
+    }
   }
 
   function total(items) {
@@ -95,9 +188,10 @@ export default function CreateExchangeDocumentModal({
   }, [contractorId, tradePoints]);
 
   const filteredContractors = useMemo(() => {
-    if (!contractorSearch.trim()) return [];
+    const searchStr = String(contractorSearch || "").trim();
+    if (!searchStr) return [];
     return contractors.filter((c) =>
-      c.name.toLowerCase().includes(contractorSearch.toLowerCase()),
+      c.name.toLowerCase().includes(searchStr.toLowerCase()),
     );
   }, [contractorSearch, contractors]);
 
@@ -150,8 +244,10 @@ export default function CreateExchangeDocumentModal({
   async function handleSubmit() {
     if (!validateDocument()) return;
 
+    console.log("takeItems:", takeItems);
+
     try {
-      await createDocument({
+      const payload = {
         documentType: "EXCHANGE",
         documentDate: new Date().toISOString().slice(0, 10),
         tradePointId: Number(tradePointId),
@@ -175,13 +271,26 @@ export default function CreateExchangeDocumentModal({
             operation: "GIVE",
           })),
         ],
-      });
+      };
+
+      console.log("Payload!!!", payload);
+
+      if (editingDocument) {
+        // Редактирование
+        await updateDocument(editingDocument.id, payload);
+      } else {
+        // Создание нового
+        await createDocument(payload);
+      }
 
       onCreated();
       reset();
       onClose();
     } catch (e) {
-      console.error(e);
+      // console.error(e);
+      const message =
+        e.response?.data?.message || "Помилка при збереженні документу";
+      enqueueSnackbar(message, { variant: "error" });
     }
   }
 
@@ -216,13 +325,10 @@ export default function CreateExchangeDocumentModal({
           {items.map((i, idx) => (
             <tr key={idx}>
               <td>
-                {
-                  products.find(
-                    (p) => String(p.id) === String(i.productId),
-                  )?.name
-                }
+                {products.find((p) => String(p.id) === String(i.productId))
+                  ?.name || i.product}
               </td>
-              <td>{i.unit}</td>
+              <td>{getUnitLabel(i.unit)}</td>
               <td>{i.quantity}</td>
               <td>{i.manufactureDate}</td>
               <td>{i.expiryDate}</td>
@@ -231,13 +337,13 @@ export default function CreateExchangeDocumentModal({
                   className="button is-small is-light"
                   onClick={() => openEditItem(type, idx)}
                 >
-                  ✏️
+                  <i className="fa-solid fa-pencil"></i>
                 </button>
                 <button
                   className="button is-small is-danger ml-1"
                   onClick={() => removeItem(type, idx)}
                 >
-                  ✕
+                  <i className="fa-solid fa-xmark"></i>
                 </button>
               </td>
             </tr>
@@ -255,7 +361,9 @@ export default function CreateExchangeDocumentModal({
         <div className="modal-card" style={{ width: "95%" }}>
           <header className="modal-card-head">
             <p className="modal-card-title">
-              Новий документ — Обмін
+              {editingDocument
+                ? "Редагувати документ — Обмін"
+                : "Новий документ — Обмін"}
             </p>
             <button className="delete" onClick={onClose} />
           </header>
@@ -341,7 +449,7 @@ export default function CreateExchangeDocumentModal({
                 className="button is-link is-light"
                 onClick={() => openAddItem("TAKE")}
               >
-                ➕ Додати
+                <i className="fa-solid fa-plus">{"\u00A0"}</i> Додати
               </button>
             </div>
             {renderTable(takeItems, "TAKE")}
@@ -355,7 +463,7 @@ export default function CreateExchangeDocumentModal({
                 className="button is-link is-light"
                 onClick={() => openAddItem("GIVE")}
               >
-                ➕ Додати
+                <i className="fa-solid fa-plus">{"\u00A0"}</i> Додати
               </button>
             </div>
             {renderTable(giveItems, "GIVE")}

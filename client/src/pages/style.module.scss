@@ -1,4 +1,4 @@
-@import "../variables.scss";
+@use "../variables.scss" as *;
 
 .mainWrapper {
   height: calc(100vh - $header-height);
@@ -83,7 +83,7 @@
   // flex-direction: column;
   align-items: center;
   justify-content: space-evenly;
-  border-bottom: $border-color-light-green 1px solid;
+  border-bottom: $border-color-light-blue 1px solid;
 }
 
 .adpWrapperTitleUserInfo {
@@ -118,7 +118,7 @@ button {
 // }
 
 .adpChangePassBtn {
-  background: $border-color-light-green;
+  background: $border-color-light-blue;
   font-size: 20px;
 }
 

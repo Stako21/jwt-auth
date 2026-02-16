@@ -46,6 +46,41 @@ ResourceClient.interceptors.request.use(
   }
 );
 
+ResourceClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        const res = await AuthClient.post("/refresh");
+
+        const { accessToken, accessTokenExpiration } = res.data;
+
+        inMemoryJWT.setToken(
+          accessToken,
+          accessTokenExpiration
+        );
+
+        originalRequest.headers["Authorization"] =
+          `Bearer ${accessToken}`;
+
+        return ResourceClient(originalRequest);
+      } catch (refreshError) {
+        inMemoryJWT.deleteToken();
+        window.location.href = "/login";
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export const AuthContext = createContext({});
 
 const AuthProvider = ({ children }) => {
