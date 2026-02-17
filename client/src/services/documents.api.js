@@ -77,3 +77,14 @@ export async function getDocumentById(id) {
   const { data } = await api.get(`/${id}`);
   return data;
 }
+
+export async function getDocumentNotificationHistory(id) {
+  const { data } = await api.get(`/${id}/notification-history`);
+  return data;
+}
+// export async function getDocumentNotificationHistory(id) {
+//   const res = await ResourceClient.get(
+//     `/${id}/notifications-history`
+//   );
+//   return res.data;
+// }

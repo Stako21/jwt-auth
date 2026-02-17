@@ -52,14 +52,14 @@ export default function DocumentsPage() {
   }, []);
 
   useEffect(() => {
-  const interval = setInterval(() => {
-    if (!document.hidden) {
-      loadDocuments({ silent: true });
-    }
-  }, 10000);
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadDocuments({ silent: true });
+      }
+    }, 10000);
 
-  return () => clearInterval(interval);
-}, []);
+    return () => clearInterval(interval);
+  }, []);
 
   // useEffect(() => {
   //   loadDocuments();
@@ -112,44 +112,48 @@ export default function DocumentsPage() {
               className="button is-primary"
               onClick={() => setShowCreateReturn(true)}
             >
-              <i className="fa-solid fa-plus">{'\u00A0'}</i> Повернення
+              <i className="fa-solid fa-plus">{"\u00A0"}</i> Повернення
             </button>
             <button
               className="button is-primary"
               onClick={() => setShowCreateExchange(true)}
             >
-              <i className="fa-solid fa-plus">{'\u00A0'}</i> Обмін
+              <i className="fa-solid fa-plus">{"\u00A0"}</i> Обмін
             </button>
           </div>
         </div>
 
-        <CreateReturnDocumentModal
-          isOpen={showCreateReturn}
-          onClose={() => {
-            setShowCreateReturn(false);
-            setEditingDocument(null);
-          }}
-          onCreated={loadDocuments}
-          tradePoints={tradePoints}
-          products={products}
-          contractors={contractors}
-          productGroups={productGroups}
-          editingDocument={editingDocument}
-        />
+        {showCreateReturn && (
+          <CreateReturnDocumentModal
+            isOpen={showCreateReturn}
+            onClose={() => {
+              setShowCreateReturn(false);
+              setEditingDocument(null);
+            }}
+            onCreated={loadDocuments}
+            tradePoints={tradePoints}
+            products={products}
+            contractors={contractors}
+            productGroups={productGroups}
+            editingDocument={editingDocument}
+          />
+        )}
 
-        <CreateExchangeDocumentModal
-          isOpen={showCreateExchange}
-          onClose={() => {
-            setShowCreateExchange(false);
-            setEditingDocument(null);
-          }}
-          onCreated={loadDocuments}
-          tradePoints={tradePoints}
-          products={products}
-          contractors={contractors}
-          productGroups={productGroups}
-          editingDocument={editingDocument}
-        />
+        {showCreateExchange && (
+          <CreateExchangeDocumentModal
+            isOpen={showCreateExchange}
+            onClose={() => {
+              setShowCreateExchange(false);
+              setEditingDocument(null);
+            }}
+            onCreated={loadDocuments}
+            tradePoints={tradePoints}
+            products={products}
+            contractors={contractors}
+            productGroups={productGroups}
+            editingDocument={editingDocument}
+          />
+        )}
 
         {loading && <progress className="progress is-small is-primary" />}
 

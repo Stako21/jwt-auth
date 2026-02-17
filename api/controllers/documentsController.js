@@ -4,7 +4,7 @@ import { existsSync } from "fs";
 import { renderDocumentHtml } from "../pdf/documentTemplate.js";
 import { renderReturnHtml } from "../pdf/return.template.js";
 import { renderExchangeHtml } from "../pdf/exchange.template.js";
-import { getDocumentsService } from "../services/DocumentService.js";
+import { getDocumentNotificationHistoryService, getDocumentsService } from "../services/DocumentService.js";
 import {
   createDocumentService,
   signDocumentService,
@@ -273,5 +273,19 @@ export async function updateDocument(req, res) {
   } catch (e) {
     console.error("updateDocument error:", e.message);
     res.status(400).json({ message: e.message });
+  }
+}
+
+export async function getDocumentNotificationHistory(req, res) {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+
+    const data = await getDocumentNotificationHistoryService(user, id);
+
+    res.json(data);
+  } catch (err) {
+    console.error("Notification history error:", err);
+    res.status(500).json({ message: err.message });
   }
 }

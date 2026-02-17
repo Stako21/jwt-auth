@@ -133,11 +133,13 @@ export default function DocumentRowActions({
         </button>
       </div>
 
-      <DocumentHistoryModal
-        isOpen={historyModalOpen}
-        onClose={() => setHistoryModalOpen(false)}
-        documentId={doc.id}
-      />
+      {historyModalOpen && (
+        <DocumentHistoryModal
+          isOpen={historyModalOpen}
+          onClose={() => setHistoryModalOpen(false)}
+          documentId={doc.id}
+        />
+      )}
     </>
   );
 }

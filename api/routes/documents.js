@@ -9,6 +9,7 @@ import {
   retryDocumentNotificationsController,
   getDocumentHistory,
   updateDocument,
+  getDocumentNotificationHistory,
 } from "../controllers/documentsController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import { getDocumentPdf } from "../controllers/documentsController.js";
@@ -29,9 +30,14 @@ router.post(
 );
 
 router.get("/", authMiddleware, getDocuments);
-router.get("/:id", authMiddleware, getDocumentById);
 router.get("/:id/pdf", authMiddleware, getDocumentPdf);
 router.get("/:id/history", authMiddleware, getDocumentHistory);
 router.get("/:id/notifications", authMiddleware, getDocumentNotifications);
+router.get(
+  "/:id/notification-history",
+  authMiddleware,
+  getDocumentNotificationHistory,
+);
 
+router.get("/:id", authMiddleware, getDocumentById);
 export default router;

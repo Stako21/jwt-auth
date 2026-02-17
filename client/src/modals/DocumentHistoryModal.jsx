@@ -1,19 +1,58 @@
 import { useEffect, useState } from "react";
 import { useSnackbar } from "notistack";
-import { getDocumentHistory } from "../services/documents.api.js";
+import {
+  getDocumentHistory,
+  getDocumentNotificationHistory,
+} from "../services/documents.api.js";
 import styles from "./DocumentHistoryModal.module.scss";
+import cn from "classnames";
 
 const ACTION_LABELS = {
-  CREATE: "Створено",
-  STATUS_CHANGE: "Зміна статусу",
-  SIGN: "Підписано",
-  REVISION: "На доопрацювання",
-  REJECT: "Відхилено",
+  CREATE: {
+    label: "Створено",
+    className: "has-text-primary",
+  },
+  STATUS_CHANGE: {
+    label: "Зміна статусу",
+    className: "has-text-info",
+  },
+  SIGN: {
+    label: "Підписано",
+    className: "has-text-success",
+  },
+  REVISION: {
+    label: "На доопрацювання",
+    className: "has-text-warning",
+  },
+  REJECT: {
+    label: "Відхилено",
+    className: "has-text-danger",
+  },
 };
+
+const STATUS_LABELS = {
+  NEW: {
+    label: "Новий",
+    className: "has-text-info",
+  },
+  REVISION: {
+    label: "На доопрацювання",
+    className: "has-text-warning",
+  },
+  REJECTED: {
+    label: "Відхилено",
+    className: "has-text-danger",
+  },
+  SIGNED: {
+    label: "Підписано",
+    className: "has-text-success",
+  },
+}
 
 export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
   const { enqueueSnackbar } = useSnackbar();
   const [history, setHistory] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -27,6 +66,9 @@ export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
       setLoading(true);
       const data = await getDocumentHistory(documentId);
       setHistory(data);
+
+      const dataHistory = await getDocumentNotificationHistory(documentId);
+      setNotifications(dataHistory);
     } catch (error) {
       console.error("Error loading history:", error);
       enqueueSnackbar("Помилка завантаження історії", { variant: "error" });
@@ -34,6 +76,9 @@ export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
       setLoading(false);
     }
   }
+
+  console.log("History: ", history);
+  
 
   if (!isOpen) return null;
 
@@ -75,14 +120,14 @@ export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
                       </td>
                       <td>{item.user_name || "—"}</td>
                       <td>
-                        <span className="tag is-info">
-                          {ACTION_LABELS[item.action] || item.action}
+                        <span className={ACTION_LABELS[item.action]?.className || ""}>
+                          {ACTION_LABELS[item.action]?.label || item.action}
                         </span>
                       </td>
                       <td>
                         {item.old_status ? (
-                          <span className="tag is-warning is-light">
-                            {item.old_status}
+                          <span className={STATUS_LABELS[item.old_status]?.className || ""}>
+                            {STATUS_LABELS[item.old_status]?.label || item.old_status}
                           </span>
                         ) : (
                           "—"
@@ -90,8 +135,8 @@ export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
                       </td>
                       <td>
                         {item.new_status ? (
-                          <span className="tag is-success is-light">
-                            {item.new_status}
+                          <span className={STATUS_LABELS[item.new_status]?.className || ""}>
+                            {STATUS_LABELS[item.new_status]?.label || item.new_status}
                           </span>
                         ) : (
                           "—"
@@ -103,6 +148,48 @@ export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
                 </tbody>
               </table>
             </div>
+          )}
+        </section>
+        <section className="modal-card-body">
+          <h3 className="is-size-6 has-text-weight-bold">Історія сповіщень</h3>
+          {notifications.length > 0 ? (
+            <div className="table-container">
+              <table className="table is-fullwidth is-striped is-narrow is-size-7 has-text-left">
+                <thead>
+                  <tr>
+                    <th>Канал</th>
+                    <th>Адресат</th>
+                    <th>Статус</th>
+                    <th>Помилка</th>
+                    <th>Дата</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notifications.map((item, idx) => (
+                    <tr key={idx}>
+                      <td>{item.channel}</td>
+                      <td>{item.target}</td>
+                      <td
+                        className={cn("is-capitalized", {
+                          "has-text-success": item.status === "SUCCESS",
+                          "has-text-danger": item.status === "ERROR",
+                        })}
+                      >
+                        {item.status}
+                      </td>
+                      <td className={item.error_text ? "has-text-danger" : ""}>
+                        {item.error_text || "—"}
+                      </td>
+                      <td>
+                        {new Date(item.created_at).toLocaleString("uk-UA")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="has-text-grey">Сповіщення не знайдено</p>
           )}
         </section>
 

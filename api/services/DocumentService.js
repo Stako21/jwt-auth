@@ -807,7 +807,27 @@ export async function getDocumentHistoryService(user, documentId) {
   return history;
 }
 
+export async function getDocumentNotificationHistoryService(user, documentId) {
+  // Проверяем доступ к документу
+  await getDocumentByIdService(user, documentId);
 
+  const [rows] = await pool.query(
+    `
+    SELECT
+      channel,
+      target,
+      status,
+      error_text,
+      created_at
+    FROM notification_log
+    WHERE document_id = ?
+    ORDER BY created_at DESC
+    `,
+    [documentId]
+  );
+
+  return rows;
+}
 
 export async function updateDocumentService(user, documentId, payload) {
   const { documentType, documentDate, tradePointId, reason, comment, items } =
