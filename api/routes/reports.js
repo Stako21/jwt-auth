@@ -5,6 +5,7 @@ import authMiddleware from "../middlewares/authMiddleware.js";
 const router = Router();
 
 router.get("/sales", authMiddleware, ReportsController.getSalesReport);
+router.get("/sales/pdf", authMiddleware, ReportsController.getSalesReportPdf);
 
 router.get("/date-range", authMiddleware, ReportsController.getReportDateRange);
 

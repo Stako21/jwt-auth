@@ -7,7 +7,6 @@ import { ROLE_IDS } from "../../utils/roles";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { uk } from "date-fns/locale/uk";
 import "react-datepicker/dist/react-datepicker.css";
-import DocumentPdfViewer from "../DocumentPdfViwer/DocumentPdfViewer";
 
 registerLocale("uk", uk);
 
@@ -103,6 +102,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   const [openComment, setOpenComment] = useState(
     /** @type {number|null} */ (null)
   );
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     AuthClient.get("/reports/date-range").then((res) => {
@@ -191,6 +191,27 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
       .finally(() => setLoading(false));
   }, [userInfo, date, setLastUpdateTime]);
 
+  async function handleOpenPdf() {
+    try {
+      setPdfLoading(true);
+      const res = await AuthClient.get("/reports/sales/pdf", {
+        params: { date },
+        responseType: "blob",
+      });
+
+      const contentType = res.headers["content-type"] || "application/pdf";
+      const blob = new Blob([res.data], { type: contentType });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+    } catch (error) {
+      console.error("Error opening sales report PDF:", error);
+      alert("Не вдалося відкрити PDF звіт");
+    } finally {
+      setPdfLoading(false);
+    }
+  }
+
   const grandTotal = groups.reduce((sum, sv) => sum + (sv.total || 0), 0);
 
   const showGrandTotal =
@@ -220,6 +241,14 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
           minDate={minDate ? new Date(minDate) : null}
           maxDate={maxDate ? new Date(maxDate) : null}
         ></DatePicker>
+        <button
+          className={`button is-small is-light ${pdfLoading ? "is-loading" : ""}`}
+          onClick={handleOpenPdf}
+          disabled={pdfLoading}
+          title="Відкрити PDF"
+        >
+          PDF
+        </button>
       </div>
 
       {loading && <p>Завантаження…</p>}
