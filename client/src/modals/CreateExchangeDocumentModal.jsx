@@ -3,6 +3,8 @@ import { createDocument, updateDocument } from "../services/documents.api";
 import ItemModal from "./ItemModal";
 import { getUnitLabel } from "../utils/unitLabels";
 import { useSnackbar } from "notistack";
+import styles from "./CreateReturnDocumentModal.module.scss";
+
 
 export default function CreateExchangeDocumentModal({
   isOpen,
@@ -13,8 +15,8 @@ export default function CreateExchangeDocumentModal({
   productGroups,
   products,
   editingDocument,
+  isViewOnly = false,
 }) {
-  console.log("CreateExchangeDocumentModal rendered with isOpen:", isOpen);
 
   /* ---------------- state ---------------- */
   const [contractorId, setContractorId] = useState("");
@@ -62,7 +64,6 @@ export default function CreateExchangeDocumentModal({
   // Загружаем данные документа для редактирования
   useEffect(() => {
     if (editingDocument && isOpen) {
-      console.log("Loading editing exchange document:", editingDocument);
 
       // Получаем ID контрагента - может быть строка или объект
       let contractorId = "";
@@ -125,7 +126,6 @@ export default function CreateExchangeDocumentModal({
             give.push(formattedItem);
           }
         });
-        console.log("Exchange items - take:", take, "give:", give);
         setTakeItems(take);
         setGiveItems(give);
       }
@@ -198,12 +198,14 @@ export default function CreateExchangeDocumentModal({
   /* ---------- item modal ---------- */
 
   function openAddItem(type) {
+    if (isViewOnly) return;
     setEditingIndex(null);
     setEditingType(type);
     setIsItemModalOpen(true);
   }
 
   function openEditItem(type, index) {
+    if (isViewOnly) return;
     setEditingIndex(index);
     setEditingType(type);
     setIsItemModalOpen(true);
@@ -232,6 +234,7 @@ export default function CreateExchangeDocumentModal({
   }
 
   function removeItem(type, index) {
+    if (isViewOnly) return;
     if (type === "TAKE") {
       setTakeItems(takeItems.filter((_, i) => i !== index));
     } else {
@@ -242,9 +245,9 @@ export default function CreateExchangeDocumentModal({
   /* ---------- submit ---------- */
 
   async function handleSubmit() {
+    if (isViewOnly) return;
     if (!validateDocument()) return;
 
-    console.log("takeItems:", takeItems);
 
     try {
       const payload = {
@@ -273,7 +276,6 @@ export default function CreateExchangeDocumentModal({
         ],
       };
 
-      console.log("Payload!!!", payload);
 
       if (editingDocument) {
         // Редактирование
@@ -295,6 +297,7 @@ export default function CreateExchangeDocumentModal({
   }
 
   const isSaveDisabled =
+    isViewOnly ||
     !contractorId ||
     !tradePointId ||
     !reason.trim() ||
@@ -333,18 +336,18 @@ export default function CreateExchangeDocumentModal({
               <td>{i.manufactureDate}</td>
               <td>{i.expiryDate}</td>
               <td>
-                <button
+                {!isViewOnly && <button
                   className="button is-small is-light"
                   onClick={() => openEditItem(type, idx)}
                 >
                   <i className="fa-solid fa-pencil"></i>
-                </button>
-                <button
+                </button>}
+                {!isViewOnly && <button
                   className="button is-small is-danger ml-1"
                   onClick={() => removeItem(type, idx)}
                 >
                   <i className="fa-solid fa-xmark"></i>
-                </button>
+                </button>}
               </td>
             </tr>
           ))}
@@ -377,6 +380,7 @@ export default function CreateExchangeDocumentModal({
                   className={`input ${errors.contractorId ? "is-danger" : ""}`}
                   placeholder="Почніть вводити назву"
                   value={contractorSearch}
+                  disabled={isViewOnly}
                   onChange={(e) => {
                     setContractorSearch(e.target.value);
                     setShowContractorDropdown(true);
@@ -390,11 +394,11 @@ export default function CreateExchangeDocumentModal({
                 />
 
                 {showContractorDropdown && filteredContractors.length > 0 && (
-                  <div className="dropdown-content">
+                  <div className={`dropdown-content ${styles.dropdownContent}`}>
                     {filteredContractors.map((c) => (
                       <div
                         key={c.id}
-                        className="dropdown-item"
+                        className={`dropdown-item ${styles.dropdownItem}`}
                         onMouseDown={() => {
                           setContractorSearch(c.name);
                           setContractorId(c.id);
@@ -416,7 +420,7 @@ export default function CreateExchangeDocumentModal({
               <div className="select is-fullwidth">
                 <select
                   value={tradePointId}
-                  disabled={!contractorId}
+                  disabled={isViewOnly || !contractorId}
                   onChange={(e) => setTradePointId(e.target.value)}
                 >
                   <option value="">— Оберіть —</option>
@@ -436,6 +440,7 @@ export default function CreateExchangeDocumentModal({
                 className="textarea"
                 rows="1"
                 value={reason}
+                disabled={isViewOnly}
                 onChange={(e) => setReason(e.target.value)}
               />
             </div>
@@ -445,12 +450,12 @@ export default function CreateExchangeDocumentModal({
             {/* TAKE */}
             <div className="is-flex is-justify-content-space-between mb-2">
               <h4 className="title is-6">Забрати від контрагента</h4>
-              <button
+              {!isViewOnly && <button
                 className="button is-link is-light"
                 onClick={() => openAddItem("TAKE")}
               >
                 <i className="fa-solid fa-plus">{"\u00A0"}</i> Додати
-              </button>
+              </button>}
             </div>
             {renderTable(takeItems, "TAKE")}
 
@@ -459,12 +464,12 @@ export default function CreateExchangeDocumentModal({
             {/* GIVE */}
             <div className="is-flex is-justify-content-space-between mb-2">
               <h4 className="title is-6">Видати контрагенту</h4>
-              <button
+              {!isViewOnly && <button
                 className="button is-link is-light"
                 onClick={() => openAddItem("GIVE")}
               >
                 <i className="fa-solid fa-plus">{"\u00A0"}</i> Додати
-              </button>
+              </button>}
             </div>
             {renderTable(giveItems, "GIVE")}
 
@@ -479,13 +484,13 @@ export default function CreateExchangeDocumentModal({
             className="modal-card-foot"
             style={{ justifyContent: "center", gap: "20px" }}
           >
-            <button
+            {!isViewOnly && <button
               className="button is-primary"
               onClick={handleSubmit}
               disabled={isSaveDisabled}
             >
               Зберегти
-            </button>
+            </button>}
             <button className="button is-danger" onClick={onClose}>
               Скасувати
             </button>

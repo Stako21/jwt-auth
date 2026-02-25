@@ -16,6 +16,10 @@ const ACTION_LABELS = {
     label: "Зміна статусу",
     className: "has-text-info",
   },
+  PREPARE: {
+    label: "Погоджено до підпису",
+    className: "has-text-link",
+  },
   SIGN: {
     label: "Підписано",
     className: "has-text-success",
@@ -35,6 +39,10 @@ const STATUS_LABELS = {
     label: "Новий",
     className: "has-text-info",
   },
+  PREPARED: {
+    label: "Погоджено",
+    className: "has-text-link",
+  },
   REVISION: {
     label: "На доопрацювання",
     className: "has-text-warning",
@@ -47,7 +55,7 @@ const STATUS_LABELS = {
     label: "Підписано",
     className: "has-text-success",
   },
-}
+};
 
 export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
   const { enqueueSnackbar } = useSnackbar();
@@ -76,9 +84,6 @@ export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
       setLoading(false);
     }
   }
-
-  console.log("History: ", history);
-  
 
   if (!isOpen) return null;
 
@@ -115,9 +120,7 @@ export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
                 <tbody>
                   {history.map((item, idx) => (
                     <tr key={idx}>
-                      <td>
-                        {new Date(item.created_at).toLocaleString("uk-UA")}
-                      </td>
+                      <td>{new Date(item.created_at).toLocaleString("uk-UA")}</td>
                       <td>{item.user_name || "—"}</td>
                       <td>
                         <span className={ACTION_LABELS[item.action]?.className || ""}>
@@ -180,9 +183,7 @@ export function DocumentHistoryModal({ isOpen, onClose, documentId }) {
                       <td className={item.error_text ? "has-text-danger" : ""}>
                         {item.error_text || "—"}
                       </td>
-                      <td>
-                        {new Date(item.created_at).toLocaleString("uk-UA")}
-                      </td>
+                      <td>{new Date(item.created_at).toLocaleString("uk-UA")}</td>
                     </tr>
                   ))}
                 </tbody>

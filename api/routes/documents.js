@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createDocument,
   signDocument,
+  prepareDocument,
   revisionDocument,
   rejectDocument,
   getDocuments,
@@ -21,6 +22,7 @@ const router = Router();
 router.post("/", authMiddleware, createDocument);
 router.put("/:id", authMiddleware, updateDocument);
 router.post("/:id/sign", authMiddleware, signDocument);
+router.post("/:id/prepare", authMiddleware, prepareDocument);
 router.post("/:id/revision", authMiddleware, revisionDocument);
 router.post("/:id/reject", authMiddleware, rejectDocument);
 router.post(

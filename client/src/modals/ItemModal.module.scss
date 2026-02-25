@@ -1,0 +1,26 @@
+.dateInput {
+  background: #14161a; // тёмный фон
+  color: #f9fafb;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #2a75d8;
+    box-shadow: 0 0 0 1px #2a75d8;
+  }
+
+  &::-webkit-calendar-picker-indicator {
+    filter: invert(1); // делает иконку светлой
+    cursor: pointer;
+  }
+}
+
+.dateInputError {
+  background: #2e0009;
+  border-color: #ff6685;
+  // box-shadow: 0 0 0 1px #ff6685;
+}

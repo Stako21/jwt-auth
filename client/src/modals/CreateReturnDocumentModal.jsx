@@ -18,8 +18,8 @@ export default function CreateReturnDocumentModal({
   productGroups,
   products,
   editingDocument,
+  isViewOnly = false,
 }) {
-  console.log("CreateReturnDocumentModal rendered with isOpen:", isOpen);
 
   /* ---------------- state ---------------- */
   const [contractorId, setContractorId] = useState("");
@@ -64,7 +64,6 @@ export default function CreateReturnDocumentModal({
   // Загружаем данные документа для редактирования
   useEffect(() => {
     if (editingDocument && isOpen) {
-      console.log("Loading editing document:", editingDocument);
 
       // Получаем ID контрагента - может быть строка или объект
       let contractorId = "";
@@ -118,7 +117,6 @@ export default function CreateReturnDocumentModal({
           ),
           expiryDate: formatDateForInput(item.expiry_date || item.expiryDate),
         }));
-        console.log("Formatted items:", formattedItems);
         setItems(formattedItems);
       }
     } else if (!editingDocument) {
@@ -127,15 +125,6 @@ export default function CreateReturnDocumentModal({
     }
   }, [editingDocument, isOpen, contractors, tradePoints]);
 
-  console.log("errors: ", errors);
-  console.log("CreateReturnDocumentModal - editingDocument:", editingDocument);
-  console.log("CreateReturnDocumentModal - isOpen:", isOpen);
-  console.log("CreateReturnDocumentModal - state:", {
-    contractorId,
-    tradePointId,
-    reason,
-    itemsCount: items.length,
-  });
 
   function validateDocument() {
     const e = {};
@@ -145,7 +134,6 @@ export default function CreateReturnDocumentModal({
     if (!reason.trim()) e.reason = true;
     if (items.length === 0) e.items = true;
 
-    console.log("validateDocument: ", e);
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -190,11 +178,13 @@ export default function CreateReturnDocumentModal({
 
   /* ---------------- item modal ---------------- */
   function openAddItem() {
+    if (isViewOnly) return;
     setEditingIndex(null);
     setIsItemModalOpen(true);
   }
 
   function openEditItem(index) {
+    if (isViewOnly) return;
     setEditingIndex(index);
     setIsItemModalOpen(true);
   }
@@ -210,12 +200,13 @@ export default function CreateReturnDocumentModal({
   }
 
   function removeItem(index) {
+    if (isViewOnly) return;
     setItems(items.filter((_, i) => i !== index));
   }
 
   /* ---------------- submit ---------------- */
   async function handleSubmit() {
-    console.log("handleSubmit - я сработала!!!");
+    if (isViewOnly) return;
 
     if (!validateDocument()) return;
 
@@ -255,7 +246,11 @@ export default function CreateReturnDocumentModal({
   }
 
   const isSaveDisabled =
-    !contractorId || !tradePointId || !reason.trim() || items.length === 0;
+    isViewOnly ||
+    !contractorId ||
+    !tradePointId ||
+    !reason.trim() ||
+    items.length === 0;
 
   if (!isOpen) return null;
 
@@ -287,6 +282,7 @@ export default function CreateReturnDocumentModal({
                   className={`input ${errors.contractorId ? "is-danger" : ""}`}
                   placeholder="Почніть вводити назву"
                   value={contractorSearch}
+                  disabled={isViewOnly}
                   onChange={(e) => {
                     setContractorSearch(e.target.value);
                     setShowContractorDropdown(true);
@@ -330,7 +326,7 @@ export default function CreateReturnDocumentModal({
                 <select
                   className={errors.tradePointId ? "is-danger" : ""}
                   value={tradePointId}
-                  disabled={!contractorId}
+                  disabled={isViewOnly || !contractorId}
                   onChange={(e) => setTradePointId(e.target.value)}
                 >
                   <option value="">— Оберіть —</option>
@@ -353,6 +349,7 @@ export default function CreateReturnDocumentModal({
                 className={`textarea ${errors.reason ? "is-danger" : ""}`}
                 rows="1"
                 value={reason}
+                disabled={isViewOnly}
                 onChange={(e) => setReason(e.target.value)}
               />
             </div>
@@ -367,6 +364,7 @@ export default function CreateReturnDocumentModal({
                 className="textarea"
                 rows="1"
                 value={comment}
+                disabled={isViewOnly}
                 onChange={(e) => setComment(e.target.value)}
               />
             </div>
@@ -381,9 +379,9 @@ export default function CreateReturnDocumentModal({
                   Додайте хоча б одну позицію
                 </p>
               )}
-              <button className="button is-link is-light" onClick={openAddItem}>
+              {!isViewOnly && <button className="button is-link is-light" onClick={openAddItem}>
                 <i className="fa-solid fa-plus">{'\u00A0'}</i> Додати позицію
-              </button>
+              </button>}
             </div>
 
             {items.length === 0 ? (
@@ -415,18 +413,18 @@ export default function CreateReturnDocumentModal({
                       <td>{i.manufactureDate}</td>
                       <td>{i.expiryDate}</td>
                       <td>
-                        <button
+                        {!isViewOnly && <button
                           className="button is-small is-light"
                           onClick={() => openEditItem(idx)}
                         >
                           <i className="fa-solid fa-pencil"></i>
-                        </button>
-                        <button
+                        </button>}
+                        {!isViewOnly && <button
                           className="button is-small is-danger ml-1"
                           onClick={() => removeItem(idx)}
                         >
                           <i className="fa-solid fa-xmark"></i>
-                        </button>
+                        </button>}
                       </td>
                     </tr>
                   ))}
@@ -439,13 +437,13 @@ export default function CreateReturnDocumentModal({
             className="modal-card-foot"
             style={{ justifyContent: "center", gap: "20px" }}
           >
-            <button
+            {!isViewOnly && <button
               className="button is-primary"
               onClick={handleSubmit}
               disabled={isSaveDisabled}
             >
               Зберегти
-            </button>
+            </button>}
             <button className="button is-danger" onClick={onClose}>
               Скасувати
             </button>

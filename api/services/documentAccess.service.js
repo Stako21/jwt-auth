@@ -45,8 +45,12 @@ export async function ensureDocumentAccess(user, documentId) {
     return doc;
   }
 
-  // 4️⃣ SV / NTO — иерархия
-  if ([3, 4].includes(user.role)) {
+  // 4️⃣ SV — только свой регион + иерархия
+  if (user.role === 4) {
+    if (doc.city !== user.city) {
+      throw new Error("FORBIDDEN");
+    }
+
     const [subs] = await pool.query(
       `
       WITH RECURSIVE subordinates AS (
@@ -70,6 +74,53 @@ export async function ensureDocumentAccess(user, documentId) {
     allowedIds.push(user.id);
 
     if (!allowedIds.includes(doc.author_user_id)) {
+      throw new Error("FORBIDDEN");
+    }
+
+    return doc;
+  }
+
+  // 5️⃣ NTO — иерархия + TA без руководителя (любой регион)
+  if (user.role === 3) {
+    const [subs] = await pool.query(
+      `
+      WITH RECURSIVE subordinates AS (
+        SELECT child_user_id
+        FROM user_hierarchy
+        WHERE parent_user_id = ?
+
+        UNION ALL
+
+        SELECT uh.child_user_id
+        FROM user_hierarchy uh
+        JOIN subordinates s
+          ON s.child_user_id = uh.parent_user_id
+      )
+      SELECT child_user_id FROM subordinates
+      `,
+      [user.id]
+    );
+
+    const allowedIds = subs.map(r => r.child_user_id);
+    allowedIds.push(user.id);
+
+    if (allowedIds.includes(doc.author_user_id)) {
+      return doc;
+    }
+
+    const [[orphanTa]] = await pool.query(
+      `
+      SELECT 1
+      FROM users u
+      LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
+      WHERE u.id = ?
+        AND u.role = 5
+        AND h.parent_user_id IS NULL
+      `,
+      [doc.author_user_id],
+    );
+
+    if (!orphanTa) {
       throw new Error("FORBIDDEN");
     }
 

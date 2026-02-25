@@ -4,6 +4,7 @@ export function renderExchangeHtml(doc, stampBase64) {
   const giveItems = doc.items.filter((i) => i.operation === "GIVE");
 
   const STATUS_STAMP = {
+    PREPARED: "stamps/PREPARED.png",
     SIGNED: "stamps/SIGNED.png",
     REJECTED: "stamps/REJECTED.png",
     REVISION: "stamps/REVISION.png",
@@ -129,6 +130,8 @@ ${
     ${
       doc.status === "SIGNED"
         ? "ПІДПИСАНО"
+        : doc.status === "PREPARED"
+          ? "ПІДГОТОВЛЕНО"
         : doc.status === "REJECTED"
           ? "ВІДХИЛЕНО"
           : doc.status === "REVISION"

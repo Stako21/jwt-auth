@@ -23,14 +23,13 @@ export default function DocumentsPage() {
   const [showCreateReturn, setShowCreateReturn] = useState(false);
   const [showCreateExchange, setShowCreateExchange] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
+  const [isViewOnly, setIsViewOnly] = useState(false);
 
   useEffect(() => {
     fetchTradePoints().then((data) => setTradePoints(data));
     fetchProducts().then((data) => setProducts(data));
     fetchContractors().then((data) => setContractors(data));
     fetchProductGroups().then((data) => setProductGroups(data));
-
-    console.log("Trade-points", tradePoints.slice(5));
   }, []);
 
   async function loadDocuments({ silent = false } = {}) {
@@ -61,43 +60,31 @@ export default function DocumentsPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // useEffect(() => {
-  //   loadDocuments();
+  const openDocumentModal = (doc, viewOnly = false) => {
+    setIsViewOnly(viewOnly);
 
-  //   const interval = setInterval(() => {
-  //     if (!document.hidden) {
-  //       loadDocuments();
-  //     }
-  //   }, 10000);
-
-  //   return () => clearInterval(interval);
-  // }, []);
-
-  const handleEditDocument = (doc) => {
-    console.log("handleEditDocument called with doc:", doc);
-    // Получаем полные данные документа перед редактированием
     getDocumentById(doc.id)
       .then((fullDoc) => {
-        console.log("Full document loaded:", fullDoc);
         setEditingDocument(fullDoc);
-        // API возвращает documentType (camelCase)
         if (fullDoc.documentType === "RETURN") {
-          console.log("Setting showCreateReturn to true");
           setShowCreateReturn(true);
         } else if (fullDoc.documentType === "EXCHANGE") {
-          console.log("Setting showCreateExchange to true");
           setShowCreateExchange(true);
         }
       })
       .catch((e) => {
-        console.error("Помилка завантаження документу:", e);
+        console.error("Ошибка загрузки документа:", e);
         alert("Помилка при завантаженні даних документу");
       });
   };
 
-  useEffect(() => {
-    loadDocuments();
-  }, []);
+  const handleEditDocument = (doc) => {
+    openDocumentModal(doc, false);
+  };
+
+  const handleViewDocument = (doc) => {
+    openDocumentModal(doc, true);
+  };
 
   return (
     <section className="section">
@@ -129,6 +116,7 @@ export default function DocumentsPage() {
             onClose={() => {
               setShowCreateReturn(false);
               setEditingDocument(null);
+              setIsViewOnly(false);
             }}
             onCreated={loadDocuments}
             tradePoints={tradePoints}
@@ -136,6 +124,7 @@ export default function DocumentsPage() {
             contractors={contractors}
             productGroups={productGroups}
             editingDocument={editingDocument}
+            isViewOnly={isViewOnly}
           />
         )}
 
@@ -145,6 +134,7 @@ export default function DocumentsPage() {
             onClose={() => {
               setShowCreateExchange(false);
               setEditingDocument(null);
+              setIsViewOnly(false);
             }}
             onCreated={loadDocuments}
             tradePoints={tradePoints}
@@ -152,6 +142,7 @@ export default function DocumentsPage() {
             contractors={contractors}
             productGroups={productGroups}
             editingDocument={editingDocument}
+            isViewOnly={isViewOnly}
           />
         )}
 
@@ -165,6 +156,7 @@ export default function DocumentsPage() {
             currentUser={userInfo}
             reloadDocuments={loadDocuments}
             onEditDocument={handleEditDocument}
+            onViewDocument={handleViewDocument}
           />
         )}
       </div>

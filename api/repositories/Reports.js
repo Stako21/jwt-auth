@@ -128,7 +128,62 @@ class ReportsRepository {
 
         WHERE
           sr.report_date = :report_date
-          AND sr.user_id IN (SELECT child_user_id FROM user_tree)
+          AND (
+            sr.user_id IN (SELECT child_user_id FROM user_tree)
+            OR sr.user_id IN (
+              SELECT uo.id
+              FROM users uo
+              LEFT JOIN user_hierarchy ho ON ho.child_user_id = uo.id
+              WHERE uo.role = ${ROLE_IDS.TA}
+                AND ho.parent_user_id IS NULL
+            )
+          )
+          AND u.role = ${ROLE_IDS.TA}
+          AND u.is_active = 1
+          AND EXISTS (
+            SELECT 1 FROM users u2 WHERE u2.NAME = sr.login_agent
+          )
+        ORDER BY supervisor_name, agent_name, sr.document_number
+      `;
+    }
+
+    // === Accountant =============================================
+    else if (role === ROLE_IDS.Accountant) {
+      sql = `
+        SELECT
+          sr.id,
+          sr.document_number,
+          sr.document_date,
+          sr.amount,
+          sr.point_of_sale,
+          sr.comment,
+          sr.form2,
+          sr.login_agent,
+          sr.sales_agent_name,
+          sr.status,
+          sr.change_comment,
+
+          u.id        AS agent_id,
+          u.NAME      AS agent_login,
+          u.user_name AS agent_name,
+
+          sup.id        AS supervisor_id,
+          sup.user_name AS supervisor_name
+
+        FROM sales_reports sr
+        JOIN users u ON u.id = sr.user_id
+        LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
+        LEFT JOIN users sup ON sup.id = h.parent_user_id
+        JOIN users me ON me.id = :current_user_id
+
+        WHERE
+          sr.report_date = :report_date
+          AND u.role = ${ROLE_IDS.TA}
+          AND u.is_active = 1
+          AND (
+            u.city = me.city
+            OR h.parent_user_id IS NULL
+          )
           AND EXISTS (
             SELECT 1 FROM users u2 WHERE u2.NAME = sr.login_agent
           )

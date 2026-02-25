@@ -1,5 +1,7 @@
 import cn from "classnames";
 import { useEffect, useMemo, useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import style from "./ItemModal.module.scss";
 
 export default function ItemModal({
   isOpen,
@@ -20,7 +22,6 @@ export default function ItemModal({
   /* ---------- init ---------- */
   useEffect(() => {
     if (initialItem) {
-      console.log("ItemModal - initialItem:", initialItem);
 
       // Пытаемся найти товар по productId или product названию
       let foundProduct = null;
@@ -35,7 +36,6 @@ export default function ItemModal({
         foundProduct = products?.find((p) => p.name === initialItem.product);
       }
 
-      console.log("Found product:", foundProduct);
 
       // Если нашли товар, берем его группу
       const gid = foundProduct
@@ -85,12 +85,10 @@ export default function ItemModal({
     if (!manufactureDate) e.manufactureDate = true;
     if (!expiryDate) e.expiryDate = true;
     setErrors(e);
-    console.log("Error: ", e);
 
     return Object.keys(e).length === 0;
   }
 
-  console.log("errors: ", errors);
 
   function handleSave() {
     if (!validate()) return;
@@ -139,6 +137,7 @@ export default function ItemModal({
                 onChange={(e) => {
                   setGroupId(e.target.value);
                   setProductId("");
+                  setErrors((prev) => ({ ...prev, groupId: false }));
                 }}
               >
                 <option value="">— Оберіть —</option>
@@ -162,7 +161,10 @@ export default function ItemModal({
               <select
                 value={productId}
                 disabled={!groupId}
-                onChange={(e) => setProductId(e.target.value)}
+                onChange={(e) => {
+                  setProductId(e.target.value);
+                  setErrors((prev) => ({ ...prev, productId: false }));
+                }}
               >
                 <option value="">— Оберіть —</option>
                 {(productsByGroup[String(groupId)] || []).map((p) => (
@@ -195,7 +197,10 @@ export default function ItemModal({
                 type="number"
                 min="0"
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                onChange={(e) => {
+                  setQuantity(e.target.value);
+                  setErrors((prev) => ({ ...prev, quantity: false }));
+                }}
               />
             </div>
           </div>
@@ -204,22 +209,46 @@ export default function ItemModal({
           <div className="columns">
             <div className="column">
               <label className="label">Дата виготовлення *</label>
-              <input
+              {/* <input
                 className={`input ${errors.manufactureDate ? "is-danger" : ""}`}
                 type="date"
                 value={manufactureDate}
                 onChange={(e) => setManufactureDate(e.target.value)}
-              />
+              /> */}
+              <DatePicker
+                className={cn(style.dateInput, {
+                  [style.dateInputError]: errors.manufactureDate,
+                })}
+                locale="uk"
+                dateFormat="dd.MM.yyyy"
+                selected={manufactureDate}
+                onChange={(date) => {
+                  setManufactureDate(date.toISOString().split("T")[0]);
+                  setErrors((prev) => ({ ...prev, manufactureDate: false }));
+                }}
+              ></DatePicker>
             </div>
 
             <div className="column">
               <label className="label">Придатний до *</label>
-              <input
+              {/* <input
                 className={`input ${errors.expiryDate ? "is-danger" : ""}`}
                 type="date"
                 value={expiryDate}
                 onChange={(e) => setExpiryDate(e.target.value)}
-              />
+                /> */}
+              <DatePicker
+                className={cn(style.dateInput, {
+                  [style.dateInputError]: errors.expiryDate,
+                })}
+                locale="uk"
+                dateFormat="dd.MM.yyyy"
+                selected={expiryDate}
+                onChange={(date) => {
+                  setExpiryDate(date.toISOString().split("T")[0]);
+                  setErrors((prev) => ({ ...prev, expiryDate: false }));
+                }}
+              ></DatePicker>
             </div>
           </div>
         </section>

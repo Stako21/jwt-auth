@@ -1,7 +1,10 @@
 import pool from "../db.cjs";
-import { sendEmailWithPdf, sendRocketMessage } from "./notify.service.js";
+import {
+  generatePdfBuffer,
+  sendEmailWithPdf,
+  sendRocketMessage,
+} from "./notify.service.js";
 import { getDocumentByIdService } from "./DocumentService.js";
-import fs from "fs";
 
 export async function retryFailedNotifications() {
   const [rows] = await pool.query(
@@ -24,14 +27,14 @@ export async function retryFailedNotifications() {
         row.document_id
       );
 
-      const pdfPath = await generatePdfTemp(doc);
+      const pdfBuffer = await generatePdfBuffer(doc);
 
       if (row.channel === "EMAIL") {
-        await sendEmailWithPdf(doc, pdfPath, [row.target]);
+        await sendEmailWithPdf(doc, pdfBuffer, [row.target]);
       }
 
       if (row.channel === "ROCKET") {
-        await sendRocketMessage(doc, row.target, pdfPath);
+        await sendRocketMessage(doc, row.target, pdfBuffer);
       }
 
       // ✅ УСПЕХ
@@ -45,7 +48,6 @@ export async function retryFailedNotifications() {
         [row.id]
       );
 
-      fs.unlinkSync(pdfPath);
     } catch (err) {
       // ❌ ОШИБКА — увеличиваем attempt
       await pool.query(

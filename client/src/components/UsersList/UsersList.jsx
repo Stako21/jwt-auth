@@ -23,8 +23,6 @@ export const UsersList = ({
       try {
         const response = await axios.get(`${config.API_URL}/auth/users/tree/`);
         setUsers(response.data);
-          
-        
       } catch (error) {
         console.error("Error fetching users:", error);
       }
@@ -103,7 +101,7 @@ export const UsersList = ({
   const displayName = (u) => u.user_name || u.name;
 
   const sortedUsers = [...users].sort((a, b) =>
-    displayName(a).localeCompare(displayName(b))
+    displayName(a).localeCompare(displayName(b)),
   );
 
   const handleSelectUser = (userId) => {
@@ -119,14 +117,8 @@ export const UsersList = ({
   //   user.name.toLowerCase().includes(searchQuery.toLowerCase())
   // );
   const filteredUsers = sortedUsers.filter((user) =>
-    displayName(user).toLowerCase().includes(searchQuery.toLowerCase())
+    displayName(user).toLowerCase().includes(searchQuery.toLowerCase()),
   );
-
-  filteredUsers.map((user) => {
-    console.log(user.id, user.is_active);
-    
-  });
-  
 
   const cityLabel = {
     1: "ZP",

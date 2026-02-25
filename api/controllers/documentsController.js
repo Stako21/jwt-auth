@@ -8,6 +8,7 @@ import { getDocumentNotificationHistoryService, getDocumentsService } from "../s
 import {
   createDocumentService,
   signDocumentService,
+  prepareDocumentService,
   revisionDocumentService,
   rejectDocumentService,
   getDocumentByIdService,
@@ -40,6 +41,19 @@ export async function createDocument(req, res) {
 export async function signDocument(req, res) {
   try {
     const result = await signDocumentService(
+      req.user,
+      req.params.id,
+      req.body?.comment,
+    );
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ message: e.message });
+  }
+}
+
+export async function prepareDocument(req, res) {
+  try {
+    const result = await prepareDocumentService(
       req.user,
       req.params.id,
       req.body?.comment,
@@ -104,8 +118,6 @@ export async function getDocumentPdf(req, res) {
   try {
     const doc = await getDocumentByIdService(req.user, req.params.id);
 
-    console.log("Document:", doc);
-
     if (doc.signedBy) {
       const signer = await UserRepository.getUserById(doc.signedBy);
 
@@ -114,13 +126,10 @@ export async function getDocumentPdf(req, res) {
 
     const stampBase64 = await loadStampBase64(doc.status);
 
-    console.log("Rendering HTML for doc:", doc.documentNumber);
     const html =
       doc.documentType === "RETURN"
         ? renderReturnHtml(doc, stampBase64)
         : renderExchangeHtml(doc, stampBase64);
-
-    console.log("HTML length:", html.length);
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -135,7 +144,6 @@ export async function getDocumentPdf(req, res) {
 
     const page = await browser.newPage();
 
-    page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
     page.on("pageerror", (err) => console.error("PAGE ERROR:", err));
 
     await page.setContent(html, {
@@ -173,22 +181,7 @@ export async function getDocumentPdf(req, res) {
       },
     });
 
-    console.log("PDF generated, size:", pdf.length, "type:", typeof pdf);
-    console.log("PDF first 50 bytes (hex):", pdf.slice(0, 50).toString("hex"));
-    console.log(
-      "PDF starts with %PDF?:",
-      pdf.slice(0, 5).toString() === "%PDF-",
-    );
     await browser.close();
-
-    //////////////////////////////////////////////////////////////////////////
-    const pdfDir = path.resolve("tmp-pdf");
-    await fs.mkdir(pdfDir, { recursive: true });
-
-    const fileName = `${doc.documentNumber}.pdf`;
-    const filePath = path.join(pdfDir, fileName);
-
-    await fs.writeFile(filePath, pdf);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Length", pdf.length);
@@ -219,6 +212,7 @@ export async function getDocumentNotifications(req, res) {
 
 export async function loadStampBase64(status) {
   const map = {
+    PREPARED: "PREPARED.png",
     SIGNED: "SIGNED.png",
     REJECTED: "REJECTED.png",
     REVISION: "REVISION.png",

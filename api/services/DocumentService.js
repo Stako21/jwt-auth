@@ -1,4 +1,4 @@
-import pool from "../db.cjs";
+﻿import pool from "../db.cjs";
 import { notifyDocumentSigned } from "./notify.service.js";
 
 /**
@@ -275,6 +275,52 @@ async function checkDirectSubordinate(conn, parentId, authorId) {
   return !!row;
 }
 
+async function isTaWithoutSupervisor(conn, authorId) {
+  const [[row]] = await conn.query(
+    `
+    SELECT 1
+    FROM users u
+    LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
+    WHERE u.id = ?
+      AND u.role = 5
+      AND h.parent_user_id IS NULL
+    `,
+    [authorId],
+  );
+
+  return !!row;
+}
+
+async function canNtoAccessAuthor(conn, ntoUserId, authorId) {
+  const [rows] = await conn.query(
+    `
+    WITH RECURSIVE subordinates AS (
+      SELECT child_user_id
+      FROM user_hierarchy
+      WHERE parent_user_id = ?
+
+      UNION ALL
+
+      SELECT uh.child_user_id
+      FROM user_hierarchy uh
+      JOIN subordinates s
+        ON s.child_user_id = uh.parent_user_id
+    )
+    SELECT child_user_id FROM subordinates
+    `,
+    [ntoUserId],
+  );
+
+  const allowedIds = rows.map((r) => r.child_user_id);
+  allowedIds.push(ntoUserId);
+
+  if (allowedIds.includes(authorId)) {
+    return true;
+  }
+
+  return isTaWithoutSupervisor(conn, authorId);
+}
+
 async function checkCanSignDocument(conn, user, documentId) {
   const [[doc]] = await conn.query(
     `
@@ -293,7 +339,7 @@ async function checkCanSignDocument(conn, user, documentId) {
     throw new Error("NOT_FOUND");
   }
 
-  if (!["NEW", "REVISION"].includes(doc.status)) {
+  if (doc.status !== "PREPARED") {
     throw new Error("Нельзя подписать документ в этом статусе");
   }
 
@@ -302,34 +348,19 @@ async function checkCanSignDocument(conn, user, documentId) {
     return doc;
   }
 
-  // NTO — ❗ без региона
+  // NTO — иерархия + TA без руководителя
   if (user.role === 3) {
-    await checkHierarchy(conn, user.id, doc.author_user_id);
-    return doc;
-  }
-
-  // SV — только TA + свой регион
-  if (user.role === 4) {
-    if (doc.city !== user.city) {
-      throw new Error("SV не может подписывать другой регион");
+    const allowed = await canNtoAccessAuthor(conn, user.id, doc.author_user_id);
+    if (!allowed) {
+      throw new Error("NTO не может подписать этот документ");
     }
-
-    const isSubordinate = await checkDirectSubordinate(
-      conn,
-      user.id,
-      doc.author_user_id,
-    );
-
-    if (!isSubordinate) {
-      throw new Error("SV может подписывать только документы TA");
-    }
-
     return doc;
   }
 
   throw new Error("Нет прав подписи");
 }
-async function checkCanChangeStatus(conn, user, documentId) {
+
+async function checkCanChangeStatus(conn, user, documentId, nextStatus) {
   const [[doc]] = await conn.query(
     `
     SELECT
@@ -347,23 +378,45 @@ async function checkCanChangeStatus(conn, user, documentId) {
     throw new Error("NOT_FOUND");
   }
 
-  if (doc.status === "REJECTED") {
-    throw new Error("Нельзя изменить статус отклоненного документа");
+  if (["REJECTED", "SIGNED"].includes(doc.status)) {
+    throw new Error("Нельзя изменить статус финального документа");
   }
 
-  // Admin / Director
-  if (user.role === 1 || user.role === 2) {
+  // Автор может отклонить ошибочный документ
+  if (
+    nextStatus === "REJECTED" &&
+    doc.author_user_id === user.id &&
+    ["NEW", "REVISION", "PREPARED"].includes(doc.status)
+  ) {
     return doc;
   }
 
-  // NTO — ❗ без региона
-  if (user.role === 3) {
-    await checkHierarchy(conn, user.id, doc.author_user_id);
+  // SV: NEW/REVISION -> PREPARED
+  if (nextStatus === "PREPARED" && user.role === 4) {
+    if (!["NEW", "REVISION"].includes(doc.status)) {
+      throw new Error("SV может одобрять только NEW/REVISION");
+    }
+    if (doc.city !== user.city) {
+      throw new Error("SV не может менять статус в другом регионе");
+    }
+
+    const isSubordinate = await checkDirectSubordinate(
+      conn,
+      user.id,
+      doc.author_user_id,
+    );
+    if (!isSubordinate) {
+      throw new Error("SV может менять статус только документов TA");
+    }
+
     return doc;
   }
 
-  // SV — только TA + свой регион
-  if (user.role === 4) {
+  // SV: NEW/REVISION -> REVISION/REJECTED
+  if (["REVISION", "REJECTED"].includes(nextStatus) && user.role === 4) {
+    if (!["NEW", "REVISION"].includes(doc.status)) {
+      throw new Error("SV может менять статус только до PREPARED");
+    }
     if (doc.city !== user.city) {
       throw new Error("SV не может изменять статус в другом регионе");
     }
@@ -373,9 +426,54 @@ async function checkCanChangeStatus(conn, user, documentId) {
       user.id,
       doc.author_user_id,
     );
-
     if (!isSubordinate) {
       throw new Error("SV может изменять статус только документов TA");
+    }
+
+    return doc;
+  }
+
+  // Admin / Director: PREPARED -> REVISION/REJECTED
+  if (
+    ["REVISION", "REJECTED"].includes(nextStatus) &&
+    (user.role === 1 || user.role === 2)
+  ) {
+    if (doc.status !== "PREPARED") {
+      throw new Error("Admin/Director могут менять статус только из PREPARED");
+    }
+    return doc;
+  }
+
+  // NTO: PREPARED -> REVISION/REJECTED
+  if (["REVISION", "REJECTED"].includes(nextStatus) && user.role === 3) {
+    if (doc.status !== "PREPARED") {
+      throw new Error("NTO может менять статус только из PREPARED");
+    }
+
+    const allowed = await canNtoAccessAuthor(conn, user.id, doc.author_user_id);
+    if (!allowed) {
+      throw new Error("NTO не может менять статус этого документа");
+    }
+
+    return doc;
+  }
+
+  // PREPARED от Admin/Director/NTO только для TA без руководителя
+  if (nextStatus === "PREPARED" && [1, 2, 3].includes(user.role)) {
+    if (!["NEW", "REVISION", "PREPARED"].includes(doc.status)) {
+      throw new Error("Нельзя одобрить в этом статусе");
+    }
+
+    const orphanTa = await isTaWithoutSupervisor(conn, doc.author_user_id);
+    if (!orphanTa) {
+      throw new Error("PREPARED доступен только для TA без руководителя");
+    }
+
+    if (user.role === 3) {
+      const allowed = await canNtoAccessAuthor(conn, user.id, doc.author_user_id);
+      if (!allowed) {
+        throw new Error("NTO не может одобрить этот документ");
+      }
     }
 
     return doc;
@@ -423,12 +521,47 @@ export async function signDocumentService(user, documentId, comment) {
   }
 }
 
+export async function prepareDocumentService(user, documentId, comment) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const doc = await checkCanChangeStatus(conn, user, documentId, "PREPARED");
+
+    await conn.query(
+      `
+      UPDATE documents
+      SET status = 'PREPARED'
+      WHERE id = ?
+      `,
+      [documentId],
+    );
+
+    await conn.query(
+      `
+      INSERT INTO document_history
+      (document_id, user_id, action, old_status, new_status, comment)
+      VALUES (?, ?, 'PREPARE', ?, 'PREPARED', ?)
+      `,
+      [documentId, user.id, doc.status, comment ?? null],
+    );
+
+    await conn.commit();
+    return { status: "PREPARED" };
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
 export async function revisionDocumentService(user, documentId, comment) {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    const doc = await checkCanChangeStatus(conn, user, documentId);
+    const doc = await checkCanChangeStatus(conn, user, documentId, "REVISION");
 
     await conn.query(
       `
@@ -463,7 +596,7 @@ export async function rejectDocumentService(user, documentId, comment) {
   try {
     await conn.beginTransaction();
 
-    const doc = await checkCanChangeStatus(conn, user, documentId);
+    const doc = await checkCanChangeStatus(conn, user, documentId, "REJECTED");
 
     await conn.query(
       `
@@ -514,26 +647,28 @@ export async function getDocumentsService(user, query) {
     params.push(user.id);
   }
 
-  // SV / NTO — иерархия + регион
-  else if ([3, 4].includes(user.role)) {
+  // SV — иерархия + регион
+  else if (user.role === 4) {
     where.push("d.city = ?");
     params.push(user.city);
 
-    if (user.role === 4) {
-      // SV видит только своих прямых TA (depth = 1)
-      where.push(`
-        d.author_user_id IN (
-          SELECT child_user_id
-          FROM user_hierarchy
-          WHERE parent_user_id = ?
-          UNION ALL
-          SELECT ?
-        )
-      `);
-      params.push(user.id, user.id);
-    } else {
-      // NTO видит своих SV и их TA (depth <= 2)
-      where.push(`
+    // SV видит только своих прямых TA (depth = 1)
+    where.push(`
+      d.author_user_id IN (
+        SELECT child_user_id
+        FROM user_hierarchy
+        WHERE parent_user_id = ?
+        UNION ALL
+        SELECT ?
+      )
+    `);
+    params.push(user.id, user.id);
+  }
+
+  // NTO — иерархия + все TA без руководителя (без региона)
+  else if (user.role === 3) {
+    where.push(`
+      (
         d.author_user_id IN (
           WITH RECURSIVE subordinates AS (
             SELECT child_user_id, 1 as depth
@@ -551,9 +686,19 @@ export async function getDocumentsService(user, query) {
           UNION ALL
           SELECT ?
         )
-      `);
-      params.push(user.id, user.id);
-    }
+        OR d.author_user_id IN (
+          SELECT u.id
+          FROM users u
+          WHERE u.role = 5
+            AND NOT EXISTS (
+              SELECT 1
+              FROM user_hierarchy h
+              WHERE h.child_user_id = u.id
+            )
+        )
+      )
+    `);
+    params.push(user.id, user.id);
   }
 
   // Accountant / Warehouse — регион, без иерархии
@@ -664,8 +809,8 @@ export async function getDocumentByIdService(user, documentId) {
     }
   }
 
-  // NTO / SV — регион + иерархия
-  else if ([3, 4].includes(user.role)) {
+  // SV — регион + иерархия
+  else if (user.role === 4) {
     if (doc.city !== user.city) {
       throw new Error("FORBIDDEN");
     }
@@ -694,6 +839,42 @@ export async function getDocumentByIdService(user, documentId) {
 
     if (!allowedIds.includes(doc.author_user_id)) {
       throw new Error("FORBIDDEN");
+    }
+  }
+
+  // NTO — иерархия + все TA без руководителя (без региона)
+  else if (user.role === 3) {
+    let allowed = false;
+
+    const [subs] = await pool.query(
+      `
+      WITH RECURSIVE subordinates AS (
+        SELECT child_user_id, 1 as depth
+        FROM user_hierarchy
+        WHERE parent_user_id = ?
+
+        UNION ALL
+
+        SELECT uh.child_user_id, s.depth + 1
+        FROM user_hierarchy uh
+        JOIN subordinates s
+          ON s.child_user_id = uh.parent_user_id
+        WHERE s.depth < 2
+      )
+      SELECT child_user_id FROM subordinates
+      `,
+      [user.id],
+    );
+
+    const allowedIds = subs.map((r) => r.child_user_id);
+    allowedIds.push(user.id);
+    allowed = allowedIds.includes(doc.author_user_id);
+
+    if (!allowed) {
+      const orphanTa = await isTaWithoutSupervisor(pool, doc.author_user_id);
+      if (!orphanTa) {
+        throw new Error("FORBIDDEN");
+      }
     }
   }
 

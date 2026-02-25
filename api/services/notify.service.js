@@ -1,7 +1,5 @@
 import nodemailer from "nodemailer";
 import fetch from "node-fetch";
-import fs from "fs";
-import path from "path";
 import puppeteer from "puppeteer";
 import { renderExchangeHtml } from "../pdf/exchange.template.js";
 import { renderReturnHtml } from "../pdf/return.template.js";
@@ -45,7 +43,7 @@ async function loadRegionNtification(city) {
   };
 }
 
-export async function generatePdfTemp(doc) {
+export async function generatePdfBuffer(doc) {
   const browser = await puppeteer.launch({
     headless: true,
     args: [
@@ -68,15 +66,7 @@ export async function generatePdfTemp(doc) {
 
   await page.setContent(html, { waitUntil: "networkidle0" });
 
-  const tmpDir = path.join(process.cwd(), "tmp");
-  if (!fs.existsSync(tmpDir)) {
-    fs.mkdirSync(tmpDir);
-  }
-
-  const filePath = path.join(tmpDir, `${doc.documentNumber}.pdf`);
-
-  await page.pdf({
-    path: filePath,
+  const pdfBuffer = await page.pdf({
     format: "A4",
     printBackground: true,
     displayHeaderFooter: true,
@@ -106,10 +96,10 @@ export async function generatePdfTemp(doc) {
 
   await browser.close();
 
-  return filePath;
+  return pdfBuffer;
 }
 
-export async function sendEmailWithPdf(doc, filePath, emails) {
+export async function sendEmailWithPdf(doc, pdfBuffer, emails) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: 587,
@@ -128,7 +118,8 @@ export async function sendEmailWithPdf(doc, filePath, emails) {
     attachments: [
       {
         filename: `${doc.documentNumber}.pdf`,
-        path: filePath,
+        content: pdfBuffer,
+        contentType: "application/pdf",
       },
     ],
   };
@@ -136,7 +127,7 @@ export async function sendEmailWithPdf(doc, filePath, emails) {
   await transporter.sendMail(mailOptions);
 }
 
-export async function sendRocketMessage(doc, rocketChannel, pdfPath) {
+export async function sendRocketMessage(doc, rocketChannel, pdfBuffer) {
   // const res = await fetch(`${process.env.ROCKET_URL}/api/v1/chat.postMessage`, {
   //   method: "POST",
   //   headers: {
@@ -152,7 +143,7 @@ export async function sendRocketMessage(doc, rocketChannel, pdfPath) {
 
   // const data = await res.json();
   const roomId = await getRoomIdByName(rocketChannel);
-  await uploadPdfToRocket(roomId, pdfPath, doc);
+  await uploadPdfToRocket(roomId, pdfBuffer, doc);
 
   // console.log("Rocket.Chat response:", data);
 
@@ -161,10 +152,13 @@ export async function sendRocketMessage(doc, rocketChannel, pdfPath) {
   // }
 }
 
-async function uploadPdfToRocket(roomId, filePath, doc) {
+async function uploadPdfToRocket(roomId, pdfBuffer, doc) {
   const form = new FormData();
 
-  form.append("file", fs.createReadStream(filePath));
+  form.append("file", pdfBuffer, {
+    filename: `${doc.documentNumber}.pdf`,
+    contentType: "application/pdf",
+  });
   form.append(
     "msg",
     `📄 *Документ підписано*\n*TA - ${doc.author}*\n${doc.documentNumber}`,
@@ -227,60 +221,56 @@ export async function notifyDocumentSigned(user, documentId) {
     return;
   }
 
-  const pdfPath = await generatePdfTemp(doc);
+  const pdfBuffer = await generatePdfBuffer(doc);
 
-  try {
-    if (emails.length) {
+  if (emails.length) {
+    try {
+      await sendEmailWithPdf(doc, pdfBuffer, emails);
+
+      for (const email of emails) {
+        if (!email || email.trim() === "") continue;
+
+        await logNotification({
+          documentId: doc.id,
+          channel: "EMAIL",
+          target: email,
+          status: "SUCCESS",
+        });
+      }
+    } catch (err) {
+      for (const email of emails) {
+        await logNotification({
+          documentId: doc.id,
+          channel: "EMAIL",
+          target: email,
+          status: "ERROR",
+          errorText: err.message,
+        });
+      }
+      throw err;
+    }
+
+    if (rocketChannel) {
       try {
-        await sendEmailWithPdf(doc, pdfPath, emails);
+        await sendRocketMessage(doc, rocketChannel, pdfBuffer);
 
-        for (const email of emails) {
-          if (!email || email.trim() === "") continue;
-
-          await logNotification({
-            documentId: doc.id,
-            channel: "EMAIL",
-            target: email,
-            status: "SUCCESS",
-          });
-        }
+        await logNotification({
+          documentId: doc.id,
+          channel: "ROCKET",
+          target: rocketChannel,
+          status: "SUCCESS",
+        });
       } catch (err) {
-        for (const email of emails) {
-          await logNotification({
-            documentId: doc.id,
-            channel: "EMAIL",
-            target: email,
-            status: "ERROR",
-            errorText: err.message,
-          });
-        }
+        await logNotification({
+          documentId: doc.id,
+          channel: "ROCKET",
+          target: rocketChannel,
+          status: "ERROR",
+          errorText: err.message,
+        });
+
         throw err;
       }
-
-      if (rocketChannel) {
-        try {
-          await sendRocketMessage(doc, rocketChannel, pdfPath);
-
-          await logNotification({
-            documentId: doc.id,
-            channel: "ROCKET",
-            target: rocketChannel,
-            status: "SUCCESS",
-          });
-        } catch (err) {
-          await logNotification({
-            documentId: doc.id,
-            channel: "ROCKET",
-            target: rocketChannel,
-            status: "ERROR",
-            errorText: err.message,
-          });
-
-          throw err;
-        }
-      }
     }
-  } finally {
-    fs.unlinkSync(pdfPath);
   }
 }

@@ -8,6 +8,7 @@ export default function DocumentTable({
   currentUser,
   reloadDocuments,
   onEditDocument,
+  onViewDocument,
 }) {
   const [loadingId, setLoadingId] = useState(null);
 
@@ -23,23 +24,21 @@ export default function DocumentTable({
   };
 
   const handleRowClick = (e, doc) => {
-    console.log("Press row for edit");
-    
-    // Не реагируем на клик по кнопкам
     if (e.target.closest("button")) {
       return;
     }
 
-    // Только автор может редактировать и только со статусом NEW или REVISION
-    if (
+    const canEdit =
       doc.author_user_id === currentUser.id &&
-      ["NEW", "REVISION"].includes(doc.status)
-    ) {
-      onEditDocument?.(doc);
-    }
-  };
+      ["NEW", "REVISION"].includes(doc.status);
 
-  
+    if (canEdit) {
+      onEditDocument?.(doc);
+      return;
+    }
+
+    onViewDocument?.(doc);
+  };
 
   if (!documents.length) {
     return <div className="notification is-light">Документів не знайдено</div>;
@@ -66,13 +65,7 @@ export default function DocumentTable({
             <tr
               key={doc.id}
               onClick={(e) => handleRowClick(e, doc)}
-              style={{
-                cursor:
-                  doc.author_user_id === currentUser.id &&
-                  ["NEW", "REVISION"].includes(doc.status)
-                    ? "pointer"
-                    : "default",
-              }}
+              style={{ cursor: "pointer" }}
             >
               <td>
                 <StatusBadge status={doc.status} />

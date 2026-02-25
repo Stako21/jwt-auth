@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   signDocument,
+  prepareDocument,
   revisionDocument,
   rejectDocument,
 } from "../../services/documents.api.js";
@@ -21,27 +22,29 @@ export default function DocumentRowActions({
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   const isAuthor = doc.author_user_id === currentUser.id;
+  const isTopRole = [
+    ROLE_IDS.Director,
+    ROLE_IDS.Admin,
+    ROLE_IDS.NTO,
+  ].includes(currentUser.role);
+  const isSv = currentUser.role === ROLE_IDS.SV;
 
-  const canEditStatus =
-    ["NEW", "REVISION"].includes(doc.status) &&
-    [ROLE_IDS.Director, ROLE_IDS.Admin, ROLE_IDS.NTO, ROLE_IDS.SV].includes(
-      currentUser.role,
-    );
-
-  // Показуємо кнопку відхилення для автора тільки якщо він не має прав редагувати статус
+  const canPrepare =
+    (isSv && ["NEW", "REVISION"].includes(doc.status)) ||
+    (isTopRole && ["NEW", "REVISION"].includes(doc.status));
+  const canSign = isTopRole && doc.status === "PREPARED";
+  const canRevision =
+    (isSv && ["NEW", "REVISION"].includes(doc.status)) ||
+    (isTopRole && doc.status === "PREPARED");
+  const canRejectAsReviewer = canRevision;
   const canRejectAsAuthor =
-    isAuthor && ["NEW", "REVISION"].includes(doc.status) && !canEditStatus;
-
-  // console.log("DocumentRowAction render:", {
-  //   docId: doc.id,
-  //   docStatus: doc.status,
-  //   currentUserRole: currentUser.role,
-  //   canEditStatus,
-  //   canRejectAsAuthor,
-  // });
+    isAuthor &&
+    ["NEW", "REVISION", "PREPARED"].includes(doc.status) &&
+    !canRejectAsReviewer;
 
   async function handle(action) {
     const actionsText = {
+      prepare: "Погодити документ для підпису?",
       sign: "Підписати документ?",
       revision: "Відправити документ на доопрацювання?",
       reject: "Відхилити документ остаточно?",
@@ -49,22 +52,27 @@ export default function DocumentRowActions({
 
     if (!window.confirm(actionsText[action])) return;
 
-    const comment = prompt("Коментар (не обовʼязково):") || "";
+    const comment = prompt("Коментар (не обов'язково):") || "";
 
     try {
       setLoadingId(doc.id);
 
+      if (action === "prepare") await prepareDocument(doc.id, comment);
       if (action === "sign") await signDocument(doc.id, comment);
       if (action === "revision") await revisionDocument(doc.id, comment);
       if (action === "reject") await rejectDocument(doc.id, comment);
     } catch (e) {
       console.error(`Error during ${action}:`, e);
-      alert(`Помилка під час виконання дії: ${e.message || e}`);
+      const message =
+        e.response?.data?.message ||
+        e.message ||
+        "Помилка під час виконання дії";
+      enqueueSnackbar(message, { variant: "error" });
     } finally {
       setLoadingId(null);
     }
 
-    onUpdated(); // перезагрузить список
+    onUpdated();
   }
 
   return (
@@ -72,34 +80,51 @@ export default function DocumentRowActions({
       <div
         className={`buttons is-mobile are-small is-right ${styles.actionButtons}`}
       >
-        {canEditStatus && (
+        {(canPrepare || canSign || canRevision || canRejectAsReviewer) && (
           <>
-            <button
-              className="button is-success"
-              onClick={() => handle("sign")}
-              disabled={loadingId !== null}
-              title="Підписати"
-            >
-              <i className="fa-solid fa-check"></i>
-            </button>
+            {canPrepare && (
+              <button
+                className="button is-link"
+                onClick={() => handle("prepare")}
+                disabled={loadingId !== null}
+                title="Погодити до підпису"
+              >
+                <i className="fa-solid fa-clipboard-check"></i>
+              </button>
+            )}
 
-            <button
-              className="button is-warning"
-              onClick={() => handle("revision")}
-              disabled={loadingId !== null}
-              title="На доопрацювання"
-            >
-              <i className="fa-solid fa-pen"></i>
-            </button>
+            {canSign && (
+              <button
+                className="button is-success"
+                onClick={() => handle("sign")}
+                disabled={loadingId !== null}
+                title="Підписати"
+              >
+                <i className="fa-solid fa-check"></i>
+              </button>
+            )}
 
-            <button
-              className="button is-danger"
-              onClick={() => handle("reject")}
-              disabled={loadingId !== null}
-              title="Відхилити"
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
+            {canRevision && (
+              <button
+                className="button is-warning"
+                onClick={() => handle("revision")}
+                disabled={loadingId !== null}
+                title="На доопрацювання"
+              >
+                <i className="fa-solid fa-pen"></i>
+              </button>
+            )}
+
+            {canRejectAsReviewer && (
+              <button
+                className="button is-danger"
+                onClick={() => handle("reject")}
+                disabled={loadingId !== null}
+                title="Відхилити"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
           </>
         )}
 
@@ -128,7 +153,6 @@ export default function DocumentRowActions({
           disabled={loadingId === doc.id}
           title="PDF"
         >
-          {/* <i className="fas fa-file-pdf"></i> */}
           PDF
         </button>
       </div>
