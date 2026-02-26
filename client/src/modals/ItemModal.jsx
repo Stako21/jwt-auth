@@ -239,7 +239,7 @@ export default function ItemModal({
                 locale="uk"
                 dateFormat="dd.MM.yyyy"
                 selected={parseIsoDate(manufactureDate)}
-                readOnly
+                inputMode="none"
                 withPortal={usePortalDatePicker}
                 popperPlacement="bottom-start"
                 popperClassName={style.datePickerPopper}
@@ -252,6 +252,9 @@ export default function ItemModal({
                   { name: "offset", options: { offset: [0, 8] } },
                 ]}
                 shouldCloseOnSelect
+                onFocus={(e) => {
+                  if (usePortalDatePicker) e.target.blur();
+                }}
                 onChange={(date) => {
                   if (!date) return;
                   setManufactureDate(date.toISOString().split("T")[0]);
@@ -275,7 +278,7 @@ export default function ItemModal({
                 locale="uk"
                 dateFormat="dd.MM.yyyy"
                 selected={parseIsoDate(expiryDate)}
-                readOnly
+                inputMode="none"
                 withPortal={usePortalDatePicker}
                 popperPlacement="bottom-start"
                 popperClassName={style.datePickerPopper}
@@ -288,6 +291,9 @@ export default function ItemModal({
                   { name: "offset", options: { offset: [0, 8] } },
                 ]}
                 shouldCloseOnSelect
+                onFocus={(e) => {
+                  if (usePortalDatePicker) e.target.blur();
+                }}
                 onChange={(date) => {
                   if (!date) return;
                   setExpiryDate(date.toISOString().split("T")[0]);
