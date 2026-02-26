@@ -11,7 +11,6 @@ export default function ItemModal({
   productGroups,
   products,
 }) {
-  const [usePortalDatePicker, setUsePortalDatePicker] = useState(false);
   const [groupId, setGroupId] = useState("");
   const [productId, setProductId] = useState("");
   const [unit, setUnit] = useState("PCS");
@@ -19,15 +18,6 @@ export default function ItemModal({
   const [manufactureDate, setManufactureDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    const ua = navigator.userAgent || "";
-    const isIOS = /iPad|iPhone|iPod/.test(ua);
-    const isSafari =
-      /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/.test(ua);
-
-    setUsePortalDatePicker(isIOS && isSafari);
-  }, []);
 
   /* ---------- init ---------- */
   useEffect(() => {
@@ -98,14 +88,6 @@ export default function ItemModal({
 
     return Object.keys(e).length === 0;
   }
-
-  function parseIsoDate(value) {
-    if (!value) return null;
-    const [year, month, day] = value.split("-").map(Number);
-    if (!year || !month || !day) return null;
-    return new Date(year, month - 1, day);
-  }
-
 
   function handleSave() {
     if (!validate()) return;
@@ -238,25 +220,8 @@ export default function ItemModal({
                 })}
                 locale="uk"
                 dateFormat="dd.MM.yyyy"
-                selected={parseIsoDate(manufactureDate)}
-                inputMode="none"
-                withPortal={usePortalDatePicker}
-                popperPlacement="bottom-start"
-                popperClassName={style.datePickerPopper}
-                calendarClassName={style.datePickerCalendar}
-                popperModifiers={[
-                  {
-                    name: "preventOverflow",
-                    options: { boundary: "viewport", padding: 8 },
-                  },
-                  { name: "offset", options: { offset: [0, 8] } },
-                ]}
-                shouldCloseOnSelect
-                onFocus={(e) => {
-                  if (usePortalDatePicker) e.target.blur();
-                }}
+                selected={manufactureDate}
                 onChange={(date) => {
-                  if (!date) return;
                   setManufactureDate(date.toISOString().split("T")[0]);
                   setErrors((prev) => ({ ...prev, manufactureDate: false }));
                 }}
@@ -277,25 +242,8 @@ export default function ItemModal({
                 })}
                 locale="uk"
                 dateFormat="dd.MM.yyyy"
-                selected={parseIsoDate(expiryDate)}
-                inputMode="none"
-                withPortal={usePortalDatePicker}
-                popperPlacement="bottom-start"
-                popperClassName={style.datePickerPopper}
-                calendarClassName={style.datePickerCalendar}
-                popperModifiers={[
-                  {
-                    name: "preventOverflow",
-                    options: { boundary: "viewport", padding: 8 },
-                  },
-                  { name: "offset", options: { offset: [0, 8] } },
-                ]}
-                shouldCloseOnSelect
-                onFocus={(e) => {
-                  if (usePortalDatePicker) e.target.blur();
-                }}
+                selected={expiryDate}
                 onChange={(date) => {
-                  if (!date) return;
                   setExpiryDate(date.toISOString().split("T")[0]);
                   setErrors((prev) => ({ ...prev, expiryDate: false }));
                 }}
