@@ -154,8 +154,11 @@ export async function sendRocketMessage(doc, rocketChannel, pdfBuffer) {
 
 async function uploadPdfToRocket(roomId, pdfBuffer, doc) {
   const form = new FormData();
+  const pdfBinary = Buffer.isBuffer(pdfBuffer)
+    ? pdfBuffer
+    : Buffer.from(pdfBuffer);
 
-  form.append("file", pdfBuffer, {
+  form.append("file", pdfBinary, {
     filename: `${doc.documentNumber}.pdf`,
     contentType: "application/pdf",
   });
