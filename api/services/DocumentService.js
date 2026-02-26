@@ -458,15 +458,10 @@ async function checkCanChangeStatus(conn, user, documentId, nextStatus) {
     return doc;
   }
 
-  // PREPARED от Admin/Director/NTO только для TA без руководителя
+  // PREPARED от Admin/Director/NTO без ограничения "TA без руководителя"
   if (nextStatus === "PREPARED" && [1, 2, 3].includes(user.role)) {
     if (!["NEW", "REVISION", "PREPARED"].includes(doc.status)) {
       throw new Error("Нельзя одобрить в этом статусе");
-    }
-
-    const orphanTa = await isTaWithoutSupervisor(conn, doc.author_user_id);
-    if (!orphanTa) {
-      throw new Error("PREPARED доступен только для TA без руководителя");
     }
 
     if (user.role === 3) {
