@@ -44,7 +44,7 @@ app.use(
   }),
 );
 
-app.get("/health", (req, res) => {
+app.get("/api/health", (req, res) => {
   res.status(200).json({
     status: "ok",
     uptime: Math.round(process.uptime()),
@@ -64,14 +64,14 @@ const documentsRateLimit = createRateLimit({
   keyPrefix: "documents",
 });
 
-app.use("/auth", authRateLimit, AuthRootRouter);
+app.use("/api/auth", authRateLimit, AuthRootRouter);
 
 app.get("/resource/protected", TokenService.checkAccess, (req, res) => {
   return res.status(200).json("Ласкаво прошу!" + Date.now());
 });
 
-app.use("/documents", documentsRateLimit, documentRoutes);
-app.use("/directories", directoryRoutes);
+app.use("/api/documents", documentsRateLimit, documentRoutes);
+app.use("/api/directories", directoryRoutes);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log("Сервер успішно запущено!!!");

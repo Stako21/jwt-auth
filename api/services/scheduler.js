@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { loadSalesAgents } from './loadAgents.js';
-import { loadSalesReports } from './LoadReports.js';
+import { loadSalesReports } from './loadReports.js';
 import { loadProducts } from './loadProducts.js';
 import { loadTradePoints } from './loadTradePoints.js';
 import { retryFailedNotifications } from './notify.retry.service.js';
