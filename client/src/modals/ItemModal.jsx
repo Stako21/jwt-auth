@@ -2,6 +2,7 @@ import cn from "classnames";
 import { useEffect, useMemo, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import style from "./ItemModal.module.scss";
+import React from "react";
 
 export default function ItemModal({
   isOpen,
@@ -105,6 +106,19 @@ export default function ItemModal({
   }
 
   if (!isOpen) return null;
+
+  const CustomInput = React.forwardRef(({ value, onClick }, ref) => (
+    <input
+      ref={ref}
+      value={value}
+      onClick={onClick}
+      className={cn("input", {
+        [style.dateInput]: true,
+        [style.dateInputError]: errors.manufactureDate || errors.expiryDate,
+      })}
+      readOnly
+    />
+  ));
 
   return (
     <div
@@ -220,6 +234,8 @@ export default function ItemModal({
                 })}
                 locale="uk"
                 dateFormat="dd.MM.yyyy"
+                // onFocus={(e) => e.target.blur()}
+                customInput={<CustomInput />}
                 selected={manufactureDate}
                 onChange={(date) => {
                   setManufactureDate(date.toISOString().split("T")[0]);
@@ -243,6 +259,7 @@ export default function ItemModal({
                 locale="uk"
                 dateFormat="dd.MM.yyyy"
                 selected={expiryDate}
+                customInput={<CustomInput />}
                 onChange={(date) => {
                   setExpiryDate(date.toISOString().split("T")[0]);
                   setErrors((prev) => ({ ...prev, expiryDate: false }));

@@ -143,16 +143,16 @@ export function RegionNotifications() {
                       </td>
                       <td className={styles.actionButtons}>
                         <button
-                          className="button is-small is-info"
+                          className="button is-small is-info ml-1"
                           onClick={() => handleEdit(notif)}
                         >
-                          ✏️
+                          <i class="fas fa-pen"></i>
                         </button>
                         <button
                           className="button is-small is-danger ml-1"
                           onClick={() => handleDelete(notif.id)}
                         >
-                          ✕
+                          <i class="fa-solid fa-xmark"></i>
                         </button>
                       </td>
                     </tr>
