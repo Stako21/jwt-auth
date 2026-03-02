@@ -2,6 +2,7 @@ import { openDocumentPdf } from "../../services/documents.api";
 import DocumentRowActions from "./DocumentRowAction";
 import StatusBadge from "./StatusBadge";
 import { useState } from "react";
+import { ROLE_IDS } from "../../utils/roles.js";
 
 export default function DocumentTable({
   documents,
@@ -29,8 +30,9 @@ export default function DocumentTable({
     }
 
     const canEdit =
-      doc.author_user_id === currentUser.id &&
-      ["NEW", "REVISION"].includes(doc.status);
+      ["NEW", "REVISION"].includes(doc.status) &&
+      (doc.author_user_id === currentUser.id ||
+        currentUser.role === ROLE_IDS.SV);
 
     if (canEdit) {
       onEditDocument?.(doc);

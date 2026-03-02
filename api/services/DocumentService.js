@@ -1029,8 +1029,39 @@ export async function updateDocumentService(user, documentId, payload) {
       throw new Error("NOT_FOUND");
     }
 
-    if (doc.author_user_id !== user.id) {
-      throw new Error("Тільки автор може редагувати документ");
+    const isAuthor = doc.author_user_id === user.id;
+
+    if (!isAuthor) {
+      let canEditAsSv = false;
+
+      if (user.role === 4) {
+        if (doc.city !== user.city) {
+          throw new Error("SV може редагувати тільки документи свого регіону");
+        }
+
+        const isDirectSubordinate = await checkDirectSubordinate(
+          connection,
+          user.id,
+          doc.author_user_id,
+        );
+
+        if (isDirectSubordinate) {
+          const [[author]] = await connection.query(
+            `
+            SELECT role
+            FROM users
+            WHERE id = ?
+            `,
+            [doc.author_user_id],
+          );
+
+          canEditAsSv = author?.role === 5;
+        }
+      }
+
+      if (!canEditAsSv) {
+        throw new Error("Тільки автор або його СВ може редагувати документ");
+      }
     }
 
     if (!["NEW", "REVISION"].includes(doc.status)) {
