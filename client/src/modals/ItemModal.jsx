@@ -85,6 +85,9 @@ export default function ItemModal({
     if (!quantity) e.quantity = true;
     if (!manufactureDate) e.manufactureDate = true;
     if (!expiryDate) e.expiryDate = true;
+    if (manufactureDate && expiryDate && manufactureDate > expiryDate) {
+      e.mismathDate = true;
+    }
     setErrors(e);
 
     return Object.keys(e).length === 0;
@@ -222,12 +225,6 @@ export default function ItemModal({
           <div className="columns">
             <div className="column">
               <label className="label">Дата виготовлення *</label>
-              {/* <input
-                className={`input ${errors.manufactureDate ? "is-danger" : ""}`}
-                type="date"
-                value={manufactureDate}
-                onChange={(e) => setManufactureDate(e.target.value)}
-              /> */}
               <DatePicker
                 className={cn(style.dateInput, {
                   [style.dateInputError]: errors.manufactureDate,
@@ -246,12 +243,6 @@ export default function ItemModal({
 
             <div className="column">
               <label className="label">Придатний до *</label>
-              {/* <input
-                className={`input ${errors.expiryDate ? "is-danger" : ""}`}
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                /> */}
               <DatePicker
                 className={cn(style.dateInput, {
                   [style.dateInputError]: errors.expiryDate,
@@ -267,6 +258,11 @@ export default function ItemModal({
               ></DatePicker>
             </div>
           </div>
+            {errors.mismathDate && (
+              <p className="help is-danger">
+                Дата виготовлення не може бути пізніше дати придатності
+              </p>
+            )}
         </section>
 
         <footer
