@@ -222,10 +222,11 @@ export default function ItemModal({
           </div>
 
           {/* Dates */}
-          <div className="columns">
+        <div className={`columns ${style.dateColumns}`}>
             <div className="column">
               <label className="label">Дата виготовлення *</label>
               <DatePicker
+                popperClassName={style.datepickerPopper}
                 className={cn(style.dateInput, {
                   [style.dateInputError]: errors.manufactureDate,
                 })}
@@ -244,6 +245,7 @@ export default function ItemModal({
             <div className="column">
               <label className="label">Придатний до *</label>
               <DatePicker
+                popperClassName={style.datepickerPopper}
                 className={cn(style.dateInput, {
                   [style.dateInputError]: errors.expiryDate,
                 })}

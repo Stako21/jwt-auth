@@ -29,6 +29,7 @@
 .logo img {
   height: 40px;
   color: red;
+
 }
 
 .infoTitle {
@@ -68,10 +69,10 @@ li:hover {
 .burger {
   display: none;
   position: relative;
-  z-index: 10070;
+  // z-index: 10070;
   align-items: center;
   justify-content: flex-end;
-  width: 30px;
+  width: 26px;
   height: 18px;
 }
 
@@ -100,6 +101,10 @@ li:hover {
   bottom: 0;
 }
 
+.burger.active {
+  z-index: 10080;
+}
+
 .burger.active span {
   transform: scale(0);
 }
@@ -114,16 +119,16 @@ li:hover {
   transform: rotate(45deg) translate(0, 50%);
 }
 
-@media (max-width: 500px) {
+@media (max-width: 780px) {
   .header {
     padding: 0 20px;
   }
 
-  .infoTitle {
-    display: block;
-    font-size: 20px;
-    text-align: center;
-  }
+  // .infoTitle {
+  //   display: block;
+  //   font-size: 20px;
+  //   text-align: center;
+  // }
 
   .burger {
     display: flex;

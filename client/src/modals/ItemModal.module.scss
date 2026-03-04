@@ -20,7 +20,21 @@
 }
 
 .dateInputError {
+  
   background: #2e0009;
   border-color: #ff6685;
   // box-shadow: 0 0 0 1px #ff6685;
+}
+
+.datepickerPopper {
+  z-index: 9999 !important;
+  // left: auto !important;
+}
+
+@media (max-width: 430px) {
+  .dateColumns {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
 }
