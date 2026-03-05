@@ -36,10 +36,20 @@ async function loadRegionNtification(city) {
   );
 
   return {
-    emails: rows
-      .map((r) => r.email)
-      .filter((email) => email && email.trim() !== ""),
-    rocketChannel: rows[0]?.rocket_channel || null,
+    emails: [
+      ...new Set(
+        rows
+          .map((r) => r.email)
+          .filter((email) => email && email.trim() !== ""),
+      ),
+    ],
+    rocketChannels: [
+      ...new Set(
+        rows
+          .map((r) => r.rocket_channel)
+          .filter((channel) => channel && channel.trim() !== ""),
+      ),
+    ],
   };
 }
 
@@ -214,17 +224,18 @@ async function getRoomIdByName(channelName) {
 export async function notifyDocumentSigned(user, documentId) {
   const doc = await getDocumentByIdService(user, documentId);
 
-  const { emails, rocketChannel } = await loadRegionNtification(doc.city);
+  const { emails, rocketChannels } = await loadRegionNtification(doc.city);
 
   console.log("Emails", emails);
-  console.log("rocketChannel", rocketChannel);
+  console.log("rocketChannels", rocketChannels);
 
-  if (emails.length === 0 && !rocketChannel) {
-    console.warn(`Нет получателей для региона: ${doc.city}`);
+  if (emails.length === 0 && rocketChannels.length === 0) {
+    console.warn(`No notification recipients for region: ${doc.city}`);
     return;
   }
 
   const pdfBuffer = await generatePdfBuffer(doc);
+  let firstError = null;
 
   if (emails.length) {
     try {
@@ -250,10 +261,12 @@ export async function notifyDocumentSigned(user, documentId) {
           errorText: err.message,
         });
       }
-      throw err;
+      firstError = firstError || err;
     }
+  }
 
-    if (rocketChannel) {
+  if (rocketChannels.length) {
+    for (const rocketChannel of rocketChannels) {
       try {
         await sendRocketMessage(doc, rocketChannel, pdfBuffer);
 
@@ -272,8 +285,12 @@ export async function notifyDocumentSigned(user, documentId) {
           errorText: err.message,
         });
 
-        throw err;
+        firstError = firstError || err;
       }
     }
+  }
+
+  if (firstError) {
+    throw firstError;
   }
 }
