@@ -133,6 +133,9 @@ export async function getDocumentPdf(req, res) {
 
     const browser = await puppeteer.launch({
       headless: true,
+      ...(process.env.PUPPETEER_EXECUTABLE_PATH
+        ? { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH }
+        : {}),
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
