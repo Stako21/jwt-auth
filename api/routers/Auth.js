@@ -8,8 +8,11 @@ import reportRoutes from "../routes/reports.js";
 import documentsRoutes from "../routes/documents.js";
 import directoriesRoutes from "../routes/directoryes.js";
 import regionNotificationsRoutes from "../routes/regionNotifications.js";
+import * as SchedulerController from "../controllers/SchedulerController.js";
+import { ensureRole } from "../utils/roles.js";
 
 const router = Router();
+const adminOnly = ensureRole([1]);
 
 router.post("/sign-in", AuthValidator.signIn, AuthController.signIn);
 router.post("/sign-up", AuthValidator.signUp, AuthController.signUp);
@@ -35,6 +38,20 @@ router.get(
   "/debug/hierarchy/:userId",
   authMiddleware,
   DebugController.debugUserHierarchy,
+);
+
+router.get("/scheduler/tasks", authMiddleware, adminOnly, SchedulerController.getTasks);
+router.post(
+  "/scheduler/run/:taskKey",
+  authMiddleware,
+  adminOnly,
+  SchedulerController.runTask,
+);
+router.patch(
+  "/scheduler/tasks/:taskKey",
+  authMiddleware,
+  adminOnly,
+  SchedulerController.updateTask,
 );
 
 router.use("/reports", reportRoutes);
