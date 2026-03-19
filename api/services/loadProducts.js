@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import pool from "../db.cjs";
+import { createTaskLogger } from "./taskLogger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,30 +17,45 @@ const productFile = path.join(
   "Product.json"
 );
 
+const logger = createTaskLogger("loadProducts");
+
 export async function loadProducts() {
+  const runLog = logger.start("loader started", { file: productFile });
+
   try {
     try {
       await fs.access(productFile);
     } catch {
+      runLog.warn("source file not found, skipping", { file: productFile });
       return;
     }
 
+    const fileStat = await fs.stat(productFile);
+    runLog.info("source file found", {
+      file: productFile,
+      sizeBytes: fileStat.size,
+      modifiedAt: fileStat.mtime.toISOString(),
+    });
+
     let raw = await fs.readFile(productFile, "utf-8");
-    raw = raw
-      .replace(/^\uFEFF/, "")
-      .replace(/\u0000/g, "")
-      .replace(/,\s*(?=[}\]])/g, "");
+    runLog.info("source file read", { rawLength: raw.length });
+    raw = raw.replace(/^\uFEFF/, "").replace(/\u0000/g, "").replace(/,\s*(?=[}\]])/g, "");
 
     let items;
     try {
       items = JSON.parse(raw);
     } catch (e) {
-      console.error("Product.json parse error:", e.message);
+      runLog.fail(e, "json parse failed");
       return;
     }
 
+    runLog.info("json parsed", {
+      isArray: Array.isArray(items),
+      recordsCount: Array.isArray(items) ? items.length : null,
+    });
+
     if (!Array.isArray(items) || items.length === 0) {
-      console.warn("Product.json is empty; import skipped");
+      runLog.warn("source file is empty or invalid array, skipping");
       return;
     }
 
@@ -54,6 +70,12 @@ export async function loadProducts() {
       }
     }
 
+    runLog.info("product groups prepared", {
+      groupsCount: groupsMap.size,
+      recordsCount: items.length,
+    });
+
+    let groupErrorCount = 0;
     for (const [group1cId, groupName] of groupsMap.entries()) {
       try {
         await pool.query(
@@ -67,7 +89,12 @@ export async function loadProducts() {
           [group1cId, groupName]
         );
       } catch (err) {
-        console.error("Group import error:", group1cId, err);
+        groupErrorCount += 1;
+        runLog.error("group import failed", {
+          group1cId,
+          errorMessage: err.message,
+          errorStack: err.stack,
+        });
       }
     }
 
@@ -81,22 +108,33 @@ export async function loadProducts() {
     );
 
     const groupIdMap = new Map();
-    for (const g of groupRows) {
-      groupIdMap.set(g.id_1c, g.id);
+    for (const group of groupRows) {
+      groupIdMap.set(group.id_1c, group.id);
     }
+
+    let importedProducts = 0;
+    let skippedInvalidRows = 0;
+    let missingGroups = 0;
+    let rowErrorCount = 0;
 
     for (const row of items) {
       try {
         if (!row.product_id || !row.product_name || !row.group_id) {
-          console.warn("Skipped invalid product row:", row);
+          skippedInvalidRows += 1;
+          runLog.warn("product row skipped: invalid data", {
+            productId: row?.product_id,
+            groupId: row?.group_id,
+          });
           continue;
         }
 
         const groupId = groupIdMap.get(row.group_id);
         if (!groupId) {
-          console.error(
-            `Group ${row.group_id} not found for product ${row.product_id}`
-          );
+          missingGroups += 1;
+          runLog.error("group not found for product", {
+            productId: row.product_id,
+            group1cId: row.group_id,
+          });
           continue;
         }
 
@@ -113,13 +151,19 @@ export async function loadProducts() {
         );
 
         usedProductIds.add(row.product_id);
+        importedProducts += 1;
       } catch (err) {
-        console.error("Product row processing error:", row.product_id, err);
+        rowErrorCount += 1;
+        runLog.error("product row processing failed", {
+          productId: row?.product_id,
+          errorMessage: err.message,
+          errorStack: err.stack,
+        });
       }
     }
 
     if (usedProductIds.size > 0) {
-      await pool.query(
+      const [productsDisabledRes] = await pool.query(
         `
         UPDATE products
         SET is_active = 0
@@ -127,10 +171,13 @@ export async function loadProducts() {
         `,
         [Array.from(usedProductIds)]
       );
+      runLog.info("products deactivated outside source file", {
+        affectedRows: productsDisabledRes.affectedRows,
+      });
     }
 
     if (usedGroupIds.size > 0) {
-      await pool.query(
+      const [groupsDisabledRes] = await pool.query(
         `
         UPDATE product_groups
         SET is_active = 0
@@ -138,13 +185,24 @@ export async function loadProducts() {
         `,
         [Array.from(usedGroupIds)]
       );
+      runLog.info("product groups deactivated outside source file", {
+        affectedRows: groupsDisabledRes.affectedRows,
+      });
     }
 
     await fs.unlink(productFile);
-    console.log(
-      `Product.json imported: groups=${usedGroupIds.size}, products=${usedProductIds.size}`
-    );
+    runLog.info("source file removed", { file: productFile });
+
+    runLog.end("loader completed", {
+      recordsCount: items.length,
+      groupsCount: usedGroupIds.size,
+      importedProducts,
+      skippedInvalidRows,
+      missingGroups,
+      groupErrorCount,
+      rowErrorCount,
+    });
   } catch (error) {
-    console.error("loadProducts failed:", error);
+    runLog.fail(error, "loader failed", { file: productFile });
   }
 }

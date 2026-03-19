@@ -2,10 +2,9 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import pool from "../db.cjs";
+import { createTaskLogger } from "./taskLogger.js";
 
 const __filename = fileURLToPath(import.meta.url);
-console.log(__filename);
-
 const __dirname = path.dirname(__filename);
 const salesAgentFile = path.join(
   __dirname,
@@ -17,69 +16,84 @@ const salesAgentFile = path.join(
   "SalesAgent.json"
 );
 
+const logger = createTaskLogger("loadSalesAgents");
+
 export async function loadSalesAgents() {
+  const runLog = logger.start("loader started", { file: salesAgentFile });
+
   try {
-    // Проверяем наличие файла
     try {
       await fs.access(salesAgentFile);
     } catch {
-      // файла нет — это нормально
+      runLog.warn("source file not found, skipping", { file: salesAgentFile });
       return;
     }
 
-    // читаем и "санитизируем" содержимое один раз
+    const fileStat = await fs.stat(salesAgentFile);
+    runLog.info("source file found", {
+      file: salesAgentFile,
+      sizeBytes: fileStat.size,
+      modifiedAt: fileStat.mtime.toISOString(),
+    });
+
     let raw = await fs.readFile(salesAgentFile, "utf-8");
-    raw = raw.replace(/^\uFEFF/, ""); // убрать BOM
-    raw = raw.replace(/\u0000/g, ""); // убрать нулевые байты
-    raw = raw.replace(/,\s*(?=[}\]])/g, ""); // убрать завершающие запятые перед } или ]
+    runLog.info("source file read", { rawLength: raw.length });
+    raw = raw.replace(/^\uFEFF/, "");
+    raw = raw.replace(/\u0000/g, "");
+    raw = raw.replace(/,\s*(?=[}\]])/g, "");
 
     let agents;
     try {
       agents = JSON.parse(raw);
-      console.log(
-        "JSON parse успешен, агентов:",
-        Array.isArray(agents) ? agents.length : "не массив"
-      );
     } catch (e) {
-      console.error("JSON parse error:", e.message);
-      console.error("Первые 200 символов файла:", raw.slice(0, 200));
-      await fs.writeFile(salesAgentFile + ".sanitized.json", raw, "utf8"); // для отладки
-      throw e;
-    }
-
-    if (!Array.isArray(agents) || agents.length === 0) {
-      console.warn(
-        "Файл SalesAgents.json пуст или не содержит массив агентов."
-      );
+      runLog.fail(e, "json parse failed", { rawPreview: raw.slice(0, 200) });
+      await fs.writeFile(salesAgentFile + ".sanitized.json", raw, "utf8");
       return;
     }
+
+    runLog.info("json parsed", {
+      isArray: Array.isArray(agents),
+      recordsCount: Array.isArray(agents) ? agents.length : null,
+    });
+
+    if (!Array.isArray(agents) || agents.length === 0) {
+      runLog.warn("source file is empty or invalid array, skipping");
+      return;
+    }
+
+    let importedCount = 0;
+    let skippedWithoutLogin = 0;
+    let skippedUserNotFound = 0;
+    let rowErrorCount = 0;
 
     for (const agent of agents) {
       try {
         if (!agent || !agent.login) {
-          console.warn("Пропущена запись агента без login:", agent);
+          skippedWithoutLogin += 1;
+          runLog.warn("agent row skipped: missing login", { agent });
           continue;
         }
 
-        // ищем пользователя в users по login
         const [userRows] = await pool.query(
           "SELECT id FROM users WHERE NAME = ?",
           [agent.login]
         );
+
         if (userRows.length === 0) {
-          console.warn(`Пользователь ${agent.login} не найден в users`);
+          skippedUserNotFound += 1;
+          runLog.warn("user not found for sales agent", { login: agent.login });
           continue;
         }
+
         const userId = userRows[0].id;
 
-        // обновляем или вставляем запись
         await pool.query(
           `INSERT INTO sales_agents (user_id, login, full_name, supervisor_name, city)
            VALUES (?, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE
-              full_name = VALUES(full_name),
-              supervisor_name = VALUES(supervisor_name),
-              city = VALUES(city)`,
+             full_name = VALUES(full_name),
+             supervisor_name = VALUES(supervisor_name),
+             city = VALUES(city)`,
           [
             userId,
             agent.login,
@@ -88,25 +102,44 @@ export async function loadSalesAgents() {
             agent.regionalDivision,
           ]
         );
+
+        importedCount += 1;
       } catch (rowErr) {
-        console.error("Ошибка при обработке записи агента:", rowErr);
-        // продолжаем со следующими записями
+        rowErrorCount += 1;
+        runLog.error("agent row processing failed", {
+          login: agent?.login,
+          errorMessage: rowErr.message,
+          errorStack: rowErr.stack,
+        });
       }
     }
 
-    console.log("SalesAgents обновлены");
+    runLog.info("rows processed", {
+      processedCount: agents.length,
+      importedCount,
+      skippedWithoutLogin,
+      skippedUserNotFound,
+      rowErrorCount,
+    });
 
     try {
       await fs.unlink(salesAgentFile);
-      console.log("SalesAgents.json успешно удалён после импорта");
+      runLog.info("source file removed", { file: salesAgentFile });
     } catch (unlinkErr) {
-      console.error("Не удалось удалить SalesAgents.json:", unlinkErr);
+      runLog.error("failed to remove source file", {
+        file: salesAgentFile,
+        errorMessage: unlinkErr.message,
+        errorStack: unlinkErr.stack,
+      });
     }
 
-    // 🔁 синхронизация имен пользователей из 1С
-    await syncUserNamesFromSalesAgents();
+    const syncedUsers = await syncUserNamesFromSalesAgents();
+    runLog.end("loader completed", {
+      importedCount,
+      syncedUsers,
+    });
   } catch (err) {
-    console.error("Ошибка загрузки SalesAgent.json:", err);
+    runLog.fail(err, "loader failed", { file: salesAgentFile });
   }
 }
 
@@ -120,7 +153,9 @@ async function syncUserNamesFromSalesAgents() {
       AND sa.full_name <> ''
   `);
 
-  console.log(
-    `users.user_name синхронизированы, обновлено строк: ${result.affectedRows}`
-  );
+  logger.info("users.user_name synchronized from sales_agents", {
+    affectedRows: result.affectedRows,
+  });
+
+  return result.affectedRows;
 }

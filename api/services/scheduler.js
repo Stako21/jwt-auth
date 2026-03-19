@@ -3,21 +3,28 @@ import { loadSalesReports } from "./loadReports.js";
 import { loadProducts } from "./loadProducts.js";
 import { loadTradePoints } from "./loadTradePoints.js";
 import { retryFailedNotifications } from "./notify.retry.service.js";
+import { createTaskLogger } from "./taskLogger.js";
+
+const schedulerLogger = createTaskLogger("scheduler");
 
 function withLock(name, task) {
   let isRunning = false;
 
   return async function runLockedTask() {
     if (isRunning) {
-      console.warn(`[scheduler] ${name} skipped: previous run still in progress`);
+      schedulerLogger.warn("task skipped: previous run still in progress", {
+        task: name,
+      });
       return;
     }
 
     isRunning = true;
+    const runLog = schedulerLogger.start("task started", { task: name });
     try {
       await task();
+      runLog.end("task completed", { task: name });
     } catch (error) {
-      console.error(`[scheduler] ${name} failed:`, error);
+      runLog.fail(error, "task failed", { task: name });
     } finally {
       isRunning = false;
     }
@@ -98,9 +105,17 @@ function restartSchedulerTask(task) {
   if (!task.active) return;
 
   task.timer = setInterval(async () => {
-    console.log(`Starting ${task.key} check`);
+    schedulerLogger.info("interval tick", {
+      task: task.key,
+      intervalMs: task.intervalMs,
+    });
     await task.run();
   }, task.intervalMs);
+
+  schedulerLogger.info("interval scheduled", {
+    task: task.key,
+    intervalMs: task.intervalMs,
+  });
 }
 
 export function updateSchedulerTask(taskKey, options = {}) {

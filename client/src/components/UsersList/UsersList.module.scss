@@ -24,6 +24,13 @@
   overflow-x: auto;
 }
 
+.searchcontainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
 .table {
   // width: 100%;
   // border-collapse: collapse;

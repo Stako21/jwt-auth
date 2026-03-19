@@ -17,6 +17,11 @@ export const UsersList = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchField, setSearchField] = useState("all");
+  const [sortConfig, setSortConfig] = useState({
+    key: "fullName",
+    direction: "asc",
+  });
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -100,9 +105,51 @@ export const UsersList = ({
 
   const displayName = (u) => u.user_name || u.name;
 
-  const sortedUsers = [...users].sort((a, b) =>
-    displayName(a).localeCompare(displayName(b)),
-  );
+  const getSortValue = (user, key) => {
+    if (key === "id") return Number(user.id) || 0;
+    if (key === "name") return String(user.name || "").toLowerCase();
+    if (key === "fullName")
+      return String(displayName(user) || "").toLowerCase();
+    return "";
+  };
+
+  const sortedUsers = React.useMemo(() => {
+    const sorted = [...users];
+
+    sorted.sort((a, b) => {
+      const aValue = getSortValue(a, sortConfig.key);
+      const bValue = getSortValue(b, sortConfig.key);
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortConfig.direction === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      const result = String(aValue).localeCompare(String(bValue));
+      return sortConfig.direction === "asc" ? result : -result;
+    });
+
+    return sorted;
+  }, [users, sortConfig]);
+
+  const handleSort = (key) => {
+    setSortConfig((current) => {
+      if (current.key === key) {
+        return {
+          key,
+          direction: current.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return { key, direction: "asc" };
+    });
+  };
+
+  const getSortIndicator = (key) => {
+    if (sortConfig.key !== key) return "";
+    return sortConfig.direction === "asc" ? " ▲" : " ▼";
+  };
 
   const handleSelectUser = (userId) => {
     setSelectedUserId(userId);
@@ -113,12 +160,33 @@ export const UsersList = ({
     setSearchQuery(e.target.value);
   };
 
+  const handleSearchFieldChange = (e) => {
+    setSearchField(e.target.value);
+  };
+
   // const filteredUsers = sortedUsers.filter((user) =>
   //   user.name.toLowerCase().includes(searchQuery.toLowerCase())
   // );
-  const filteredUsers = sortedUsers.filter((user) =>
-    displayName(user).toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredUsers = sortedUsers.filter((user) => {
+    const normalizedQuery = searchQuery.toLowerCase().trim();
+    if (!normalizedQuery) return true;
+
+    const normalizedName = String(user.name || "").toLowerCase();
+    const normalizedFullName = String(displayName(user) || "").toLowerCase();
+
+    if (searchField === "name") {
+      return normalizedName.includes(normalizedQuery);
+    }
+
+    if (searchField === "fullName") {
+      return normalizedFullName.includes(normalizedQuery);
+    }
+
+    return (
+      normalizedName.includes(normalizedQuery) ||
+      normalizedFullName.includes(normalizedQuery)
+    );
+  });
 
   const cityLabel = {
     1: "ZP",
@@ -151,29 +219,60 @@ export const UsersList = ({
           Create NEW User
         </button>
       </div>
-      <div className="field" style={{ margin: 10 }}>
-        <p className="control has-icons-left">
-          <input
-            className="input is-small"
-            type="search"
-            placeholder="Search user name..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-          />
-          <span className="icon is-small is-left">
-            <i className="fas fa-search"></i>
-          </span>
-        </p>
+
+      <div className="field is-grouped is-grouped-centered" style={{ margin: 10 }}>
+        <div className="field is-small">
+          <div className="select is-small">
+            <select value={searchField} onChange={handleSearchFieldChange}>
+              <option value="all">Search in Name + Full Name</option>
+              <option value="name">Search in Name</option>
+              <option value="fullName">Search in Full Name</option>
+            </select>
+          </div>
+        </div>
+        <div className="field  is-expanded">
+          <p className="control has-icons-left is-expanded">
+            <input
+              className="input is-small"
+              type="search"
+              placeholder="Search user name..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+            <span className="icon is-small is-left">
+              <i className="fas fa-search"></i>
+            </span>
+          </p>
+        </div>
       </div>
+
       <div className={style.wraperTable}>
         <div className={style.scrollContainer}>
           <table className="table is-bordered is-striped is-narrow is-hoverable">
             <thead>
               <tr>
                 <th className="has-text-centered">Ch PWD</th>
-                <th className="has-text-centered">ID</th>
-                <th className="has-text-centered">Name</th>
-                <th className="has-text-centered">Full Name</th>
+                <th
+                  className="has-text-centered"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("id")}
+                >
+                  ID{getSortIndicator("id")}
+                </th>
+                <th
+                  className="has-text-centered"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("name")}
+                >
+                  Name{getSortIndicator("name")}
+                </th>
+                <th
+                  className="has-text-centered"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("fullName")}
+                >
+                  Full Name{getSortIndicator("fullName")}
+                </th>
                 <th className="has-text-centered">City</th>
                 <th className="has-text-centered">Role</th>
                 <th className="has-text-centered">Edit</th>

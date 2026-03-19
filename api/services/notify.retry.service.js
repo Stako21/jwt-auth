@@ -5,8 +5,13 @@ import {
   sendRocketMessage,
 } from "./notify.service.js";
 import { getDocumentByIdService } from "./DocumentService.js";
+import { createTaskLogger } from "./taskLogger.js";
+
+const logger = createTaskLogger("retryFailedNotifications");
 
 export async function retryFailedNotifications() {
+  const runLog = logger.start("retry job started");
+
   const [rows] = await pool.query(
     `
     SELECT *
@@ -18,26 +23,39 @@ export async function retryFailedNotifications() {
     `
   );
 
-  for (const row of rows) {
-    try {
-      console.log("Retry notification:", row.id);
+  runLog.info("failed notifications loaded", { recordsCount: rows.length });
 
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (const row of rows) {
+    const rowLog = logger.child(`row:${row.id}`).start("retry started", {
+      documentId: row.document_id,
+      channel: row.channel,
+      target: row.target,
+      attempt: row.attempt,
+    });
+
+    try {
       const doc = await getDocumentByIdService(
-        { role: 1 }, // admin context
+        { role: 1 },
         row.document_id
       );
+      rowLog.info("document loaded");
 
       const pdfBuffer = await generatePdfBuffer(doc);
+      rowLog.info("pdf generated", { sizeBytes: pdfBuffer.length });
 
       if (row.channel === "EMAIL") {
         await sendEmailWithPdf(doc, pdfBuffer, [row.target]);
+        rowLog.info("email notification sent");
       }
 
       if (row.channel === "ROCKET") {
         await sendRocketMessage(doc, row.target, pdfBuffer);
+        rowLog.info("rocket notification sent");
       }
 
-      // ✅ УСПЕХ
       await pool.query(
         `
         UPDATE notification_log
@@ -48,8 +66,11 @@ export async function retryFailedNotifications() {
         [row.id]
       );
 
+      successCount += 1;
+      rowLog.end("retry completed");
     } catch (err) {
-      // ❌ ОШИБКА — увеличиваем attempt
+      errorCount += 1;
+
       await pool.query(
         `
         UPDATE notification_log
@@ -61,7 +82,13 @@ export async function retryFailedNotifications() {
         [err.message, row.id]
       );
 
-      console.error("Retry failed:", err.message);
+      rowLog.fail(err, "retry failed");
     }
   }
+
+  runLog.end("retry job completed", {
+    recordsCount: rows.length,
+    successCount,
+    errorCount,
+  });
 }
