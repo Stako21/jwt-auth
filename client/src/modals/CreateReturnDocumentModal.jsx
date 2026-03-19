@@ -332,7 +332,7 @@ export default function CreateReturnDocumentModal({
                   <option value="">— Оберіть —</option>
                   {filteredTradePoints.map((tp) => (
                     <option key={tp.id} value={tp.id}>
-                      {tp.name}
+                      {tp.name} {tp.address ? `(${tp.address})` : ""}
                     </option>
                   ))}
                 </select>
