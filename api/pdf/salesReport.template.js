@@ -77,6 +77,7 @@ export function renderSalesReportHtml({ date, generatedAt, rows }) {
                 <tr ${row.status !== "ACTIVE" ? 'style="text-decoration: line-through;"' : ""}>
                   <td>${idx + 1}</td>
                   <td>${escapeHtml(row.document_number)}</td>
+                  <td>${escapeHtml(row.customer)}</td>
                   <td>${escapeHtml(row.point_of_sale)}</td>
                   <td>${escapeHtml(row.comment)}</td>
                   <td>${row.form2 ? "✔" : ""}</td>
@@ -95,6 +96,7 @@ export function renderSalesReportHtml({ date, generatedAt, rows }) {
                   <tr>
                     <th>#</th>
                     <th>Документ</th>
+                    <th>Контрагент</th>
                     <th>ТТ</th>
                     <th>Коментар</th>
                     <th>Ф2</th>

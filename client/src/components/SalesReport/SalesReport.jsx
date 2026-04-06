@@ -310,6 +310,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                             <tr>
                               <th>№</th>
                               <th>Документ</th>
+                              <th>Контрагент</th>
                               <th>ТТ</th>
                               <th>Коментар</th>
                               <th>Ф2</th>
@@ -341,6 +342,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                                     {statusIcon(r.status)}{" "}
                                     {shortDoc(r.document_number)}
                                   </td>
+                                  <td>{r.customer}</td>
                                   <td>{r.point_of_sale}</td>
                                   <td>{r.comment}</td>
                                   <td>
