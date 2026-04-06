@@ -375,7 +375,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                           </tbody>
                           <tfoot className={style.tableFooter}>
                             <tr>
-                              <td colSpan={5}>Всього:</td>
+                              <td colSpan={6}>Всього:</td>
                               <td>{money(ag.total)}</td>
                             </tr>
                           </tfoot>
