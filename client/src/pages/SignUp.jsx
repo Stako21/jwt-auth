@@ -9,6 +9,7 @@ import Field from "../components/Field/Field";
 import Button from "../components/Button/Button";
 import cn from "classnames";
 import { ROLE_OPTIONS } from "../utils/roles";
+import { useAppConfig } from "../context/AppConfigContext";
 
 const defaultValues = {
   userName: "",
@@ -23,14 +24,13 @@ const rolesList = ROLE_OPTIONS.map(({ value, label }) => ({
   title: label,
 }));
 
-const citiesList = [
-  { id: 1, title: "Запоріжжя" },
-  { id: 2, title: "Дніпро" },
-  { id: 3, title: "Кривий Ріг" },
-];
-
 export default function SignUp() {
   const { handleSignUp } = useContext(AuthContext);
+  const { activeCities } = useAppConfig();
+  const citiesList = activeCities.map((city) => ({
+    id: city.id,
+    title: city.name,
+  }));
 
   const {
     register,

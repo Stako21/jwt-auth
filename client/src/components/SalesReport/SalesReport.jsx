@@ -1,38 +1,44 @@
 import { useContext, useEffect, useState, Fragment } from "react";
 import cn from "classnames";
 import style from "./SalesReport.module.scss";
-import { AuthContext, AuthClient } from "../../context/AuthContext";
+import { AuthContext } from "../../context/AuthContext";
 import ScrollToTopButton from "../ScrollToTopButton/ScrollToTopButton";
 import { ROLE_IDS } from "../../utils/roles";
+import {
+  fetchReportDateRange,
+  fetchSalesReport,
+  fetchSalesReportPdf,
+} from "../../services/reports.api";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { uk } from "date-fns/locale/uk";
 import "react-datepicker/dist/react-datepicker.css";
 
 registerLocale("uk", uk);
 
-/**
- * Группировка:
- * Supervisor -> Agent -> Rows
- */
 function groupSales(rows) {
   const map = new Map();
 
   for (const r of rows) {
-    const svId = r.supervisor_id || "NO_SV";
-    const svName = r.supervisor_name || "Без керівника";
+    const branchId = r.branch_id || "NO_BRANCH";
+    const branchName = r.branch_short_name || r.branch_name || "";
+    const svKey = `${branchId}:${r.supervisor_id || "NO_SV"}`;
+    const svNameBase = r.supervisor_name || "Без керівника";
+    const svName = branchName ? `${branchName} / ${svNameBase}` : svNameBase;
 
-    if (!map.has(svId)) {
-      map.set(svId, {
-        id: svId,
+    if (!map.has(svKey)) {
+      map.set(svKey, {
+        id: svKey,
         name: svName,
+        branchName,
+        branchId,
         total: 0,
         agents: new Map(),
       });
     }
 
-    const sv = map.get(svId);
+    const sv = map.get(svKey);
 
-    const agentId = r.agent_id;
+    const agentId = `${branchId}:${r.agent_id}`;
     if (!sv.agents.has(agentId)) {
       sv.agents.set(agentId, {
         id: agentId,
@@ -44,7 +50,6 @@ function groupSales(rows) {
     }
 
     const agent = sv.agents.get(agentId);
-
     agent.rows.push(r);
 
     if (r.status === "ACTIVE") {
@@ -59,7 +64,6 @@ function groupSales(rows) {
   }));
 }
 
-/* helpers */
 function money(v) {
   return new Intl.NumberFormat("uk-UA", {
     style: "currency",
@@ -69,15 +73,15 @@ function money(v) {
 
 function shortDoc(num) {
   if (!num) return "";
-  return `${num.slice(0, 2)}…${num.slice(-5)}`;
+  return `${num.slice(0, 2)}...${num.slice(-5)}`;
 }
 
 function statusIcon(status) {
-  // if (status === "CANCELLED") return "❌";
-  if (status === "CANCELLED")
+  if (status === "CANCELLED") {
     return <i className="fa-solid fa-xmark" style={{ color: "#ED0202" }}></i>;
-  // if (status === "MOVED") return "🔄";
-  if (status === "MOVED")
+  }
+
+  if (status === "MOVED") {
     return (
       <i
         className="fa fa-refresh"
@@ -85,6 +89,8 @@ function statusIcon(status) {
         style={{ color: "#2402ED" }}
       ></i>
     );
+  }
+
   return "";
 }
 
@@ -95,18 +101,17 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   const [openSV, setOpenSV] = useState({});
   const [openAgent, setOpenAgent] = useState({});
   const [loading, setLoading] = useState(false);
-
   const [minDate, setMinDate] = useState(null);
   const [maxDate, setMaxDate] = useState(null);
-
   const [openComment, setOpenComment] = useState(
-    /** @type {number|null} */ (null)
+    /** @type {number|null} */ (null),
   );
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [showBranchColumn, setShowBranchColumn] = useState(false);
 
   useEffect(() => {
-    AuthClient.get("/reports/date-range").then((res) => {
-      const { minDate, maxDate } = res.data.data;
+    fetchReportDateRange().then((data) => {
+      const { minDate, maxDate } = data.data;
 
       setMinDate(minDate ? new Date(minDate) : null);
       setMaxDate(maxDate ? new Date(maxDate) : null);
@@ -137,30 +142,29 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
 
     setLoading(true);
 
-    AuthClient.get("/reports/sales", {
-      params: { date },
-    })
-      .then((res) => {
-        const rows = res.data?.data || [];
+    fetchSalesReport({ date })
+      .then((data) => {
+        const rows = data?.data || [];
         const grouped = groupSales(rows);
+        const branchIds = new Set(
+          rows.map((row) => Number(row.branch_id)).filter(Boolean),
+        );
 
         setGroups(grouped);
+        setShowBranchColumn(branchIds.size > 1);
 
         const svState = {};
         const agentState = {};
 
-        // всегда раскрываем верхний уровень (SV)
         for (const sv of grouped) {
           svState[sv.id] = true;
 
-          // SV и TA — раскрываем агентов
           if (role === ROLE_IDS.TA || role === ROLE_IDS.SV) {
             for (const ag of sv.agents) {
               agentState[ag.id] = false;
             }
           }
 
-          // TA — раскрываем ВСЁ (строки)
           if (role === ROLE_IDS.TA) {
             for (const ag of sv.agents) {
               agentState[ag.id] = true;
@@ -171,33 +175,21 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
         setOpenSV(svState);
         setOpenAgent(agentState);
 
-        const lastUpdate = res.data?.meta?.lastUpdate
-          ? formatDateTime(res.data.meta.lastUpdate)
+        const lastUpdate = data?.meta?.lastUpdate
+          ? formatDateTime(data.meta.lastUpdate)
           : null;
 
         if (lastUpdate && typeof setLastUpdateTime === "function") {
-          console.log("lastUpdate", lastUpdate);
           setLastUpdateTime(lastUpdate);
         }
-
-        // if (
-        //   res.data?.meta?.lastUpdate &&
-        //   typeof setLastUpdateTime === "function"
-        // ) {
-
-        //   setLastUpdateTime(formatDateTime(res.data.meta.lastUpdate));
-        // }
       })
       .finally(() => setLoading(false));
-  }, [userInfo, date, setLastUpdateTime]);
+  }, [userInfo, date, role, setLastUpdateTime]);
 
   async function handleOpenPdf() {
     try {
       setPdfLoading(true);
-      const res = await AuthClient.get("/reports/sales/pdf", {
-        params: { date },
-        responseType: "blob",
-      });
+      const res = await fetchSalesReportPdf({ date });
 
       const contentType = res.headers["content-type"] || "application/pdf";
       const blob = new Blob([res.data], { type: contentType });
@@ -223,19 +215,12 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
 
   return (
     <div className={cn(style.salesReportWrapper, { open: isOpen })}>
-      {/* <DocumentPdfViewer /> */}
       <div className={style.header}>
         <h2 className={style.title}>Звіт з продажів за </h2>
-        {/* <input
-          type="date"
-          className={style.dateInput}
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        /> */}
         <DatePicker
           locale="uk"
           selected={new Date(date)}
-          onChange={(date) => setDate(date.toISOString().split("T")[0])}
+          onChange={(nextDate) => setDate(nextDate.toISOString().split("T")[0])}
           dateFormat="dd.MM.yyyy"
           className={style.dateInput}
           minDate={minDate ? new Date(minDate) : null}
@@ -251,7 +236,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
         </button>
       </div>
 
-      {loading && <p>Завантаження…</p>}
+      {loading && <p>Завантаження...</p>}
 
       {showGrandTotal && (
         <div className={style.grandTotal}>
@@ -266,24 +251,21 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
 
           return (
             <div key={sv.id} className={style.supervisorBlock}>
-              {/* SV header */}
               <div
                 className={style.supervisorHeader}
                 onClick={() => setOpenSV((p) => ({ ...p, [sv.id]: !svOpened }))}
               >
-                <span>{svOpened ? "▼" : "▶"}</span>
+                <span>{svOpened ? "▾" : "▸"}</span>
                 <strong>{sv.name}</strong>
                 <span>{money(sv.total)}</span>
               </div>
 
-              {/* SV body */}
               {svOpened &&
                 sv.agents.map((ag) => {
                   const agOpened = openAgent[ag.id];
 
                   return (
                     <div key={ag.id} className={style.agentBlock}>
-                      {/* Agent header */}
                       <div
                         className={style.agentHeader}
                         onClick={() =>
@@ -293,23 +275,23 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                           }))
                         }
                       >
-                        <span>{agOpened ? "▼" : "▶"}</span>
+                        <span>{agOpened ? "▾" : "▸"}</span>
                         <span>{ag.name}</span>
                         <span>{money(ag.total)}</span>
                       </div>
 
-                      {/* Agent table */}
                       {agOpened && (
                         <table
                           className={cn(
                             "table is-light is-bordered is-striped is-narrow is-fullwidth",
-                            style.salesTable
+                            style.salesTable,
                           )}
                         >
                           <thead className={style.tableHeader}>
                             <tr>
                               <th>№</th>
                               <th>Документ</th>
+                              {showBranchColumn && <th>Філія</th>}
                               <th>Контрагент</th>
                               <th>ТТ</th>
                               <th>Коментар</th>
@@ -333,15 +315,19 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                                   }
                                   onClick={() =>
                                     setOpenComment((prev) =>
-                                      prev === r.id ? null : r.id
+                                      prev === r.id ? null : r.id,
                                     )
                                   }
                                 >
                                   <td>{i + 1}</td>
                                   <td>
-                                    {statusIcon(r.status)}{" "}
-                                    {shortDoc(r.document_number)}
+                                    {statusIcon(r.status)} {shortDoc(r.document_number)}
                                   </td>
+                                  {showBranchColumn && (
+                                    <td>
+                                      {r.branch_short_name || r.branch_name || "-"}
+                                    </td>
+                                  )}
                                   <td>{r.customer}</td>
                                   <td>{r.point_of_sale}</td>
                                   <td>{r.comment}</td>
@@ -362,11 +348,11 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                                     key={`${r.id}-comment`}
                                     className={style.commentRow}
                                   >
-                                    <td colSpan={6}>
+                                    <td colSpan={showBranchColumn ? 7 : 6}>
                                       <strong>
                                         Причина зміни статусу:{" "}
                                         {r.change_comment}
-                                      </strong>{" "}
+                                      </strong>
                                     </td>
                                   </tr>
                                 )}
@@ -375,7 +361,9 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                           </tbody>
                           <tfoot className={style.tableFooter}>
                             <tr>
-                              <td colSpan={6}>Всього:</td>
+                              <td colSpan={showBranchColumn ? 7 : 6}>
+                                Всього:
+                              </td>
                               <td>{money(ag.total)}</td>
                             </tr>
                           </tfoot>

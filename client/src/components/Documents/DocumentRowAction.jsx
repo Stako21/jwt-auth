@@ -28,14 +28,16 @@ export default function DocumentRowActions({
     ROLE_IDS.NTO,
   ].includes(currentUser.role);
   const isSv = currentUser.role === ROLE_IDS.SV;
+  const isSameBranch =
+    Number(doc.branch_id || currentUser.branchId) === Number(currentUser.branchId);
 
   const canPrepare =
     (isSv && ["NEW", "REVISION"].includes(doc.status)) ||
-    (isTopRole && ["NEW", "REVISION"].includes(doc.status));
-  const canSign = isTopRole && doc.status === "PREPARED";
+    (isTopRole && isSameBranch && ["NEW", "REVISION"].includes(doc.status));
+  const canSign = isTopRole && isSameBranch && doc.status === "PREPARED";
   const canRevision =
     (isSv && ["NEW", "REVISION"].includes(doc.status)) ||
-    (isTopRole && doc.status === "PREPARED");
+    (isTopRole && isSameBranch && doc.status === "PREPARED");
   const canRejectAsReviewer = canRevision;
   const canRejectAsAuthor =
     isAuthor &&

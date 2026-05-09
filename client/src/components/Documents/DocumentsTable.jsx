@@ -12,6 +12,9 @@ export default function DocumentTable({
   onViewDocument,
 }) {
   const [loadingId, setLoadingId] = useState(null);
+  const showBranchColumn = documents.some(
+    (doc) => Number(doc.branch_id) !== Number(currentUser.branchId),
+  );
 
   const handleOpenPdf = async (id) => {
     try {
@@ -53,6 +56,7 @@ export default function DocumentTable({
           <tr>
             <th>Статус</th>
             <th>№</th>
+            {showBranchColumn && <th>Філія</th>}
             <th>Тип</th>
             <th>Торгова точка</th>
             <th>Контрагент</th>
@@ -73,8 +77,11 @@ export default function DocumentTable({
                 <StatusBadge status={doc.status} />
               </td>
               <td>{doc.document_number}</td>
+              {showBranchColumn && (
+                <td>{doc.branch_short_name || doc.branch_name || "-"}</td>
+              )}
               <td>
-                {doc.document_type === "RETURN" ? "ПОВЕРНЕННЯ" : "ЗАМІНА"}
+                {doc.document_type === "RETURN" ? "ПОВЕРНЕННЯ" : "ОБМІН"}
               </td>
               <td>{doc.trade_point}</td>
               <td>{doc.contractor}</td>

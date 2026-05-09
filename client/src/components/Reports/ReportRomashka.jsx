@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import cn from "classnames";
 import style from "./ReportRomashka.module.scss";
+import { fetchStaticReport } from "../../services/reports.api";
 
 export const ReportRomashka = ({ isOpen, setLastUpdateTime }) => {
   const [romashkaReports, setRomashkaReports] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
-    fetch("/Sorce/report_romashka.json")
-      .then((res) => res.json())
-      .then((data) => setRomashkaReports(data));
+    fetchStaticReport("report-romashka").then((data) =>
+      setRomashkaReports(data || []),
+    );
   }, []);
 
   useEffect(() => {

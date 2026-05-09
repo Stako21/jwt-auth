@@ -24,6 +24,11 @@ export default function DocumentsPage() {
   const [showCreateExchange, setShowCreateExchange] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
   const [isViewOnly, setIsViewOnly] = useState(false);
+  const currentBranchName =
+    userInfo?.currentBranch?.name ||
+    userInfo?.currentBranch?.shortName ||
+    null;
+  const hasMultipleBranches = (userInfo?.availableBranches?.length || 0) > 1;
 
   useEffect(() => {
     fetchTradePoints().then((data) => setTradePoints(data));
@@ -73,8 +78,8 @@ export default function DocumentsPage() {
         }
       })
       .catch((e) => {
-        console.error("Ошибка загрузки документа:", e);
-        alert("Помилка при завантаженні даних документу");
+        console.error("Помилка завантаження документа:", e);
+        alert("Помилка при завантаженні даних документа");
       });
   };
 
@@ -91,7 +96,22 @@ export default function DocumentsPage() {
       <div className="container">
         <div className="level mb-4">
           <div className="level-left">
-            <h1 className="title is-4">Документи</h1>
+            <div>
+              <h1 className="title is-4 mb-2">Документи</h1>
+              {currentBranchName && (
+                <div className="is-flex is-align-items-center" style={{ gap: 8 }}>
+                  <span className="tag is-dark is-light">
+                    Філія: {currentBranchName}
+                  </span>
+                  {hasMultipleBranches && (
+                    <span className="is-size-7 has-text-grey">
+                      Створення та зміна статусів працює у поточному
+                      branch-контексті
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="level-right">

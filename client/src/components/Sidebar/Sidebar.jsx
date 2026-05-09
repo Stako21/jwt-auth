@@ -1,35 +1,38 @@
-import React, { useEffect, useState } from "react";
-import { AuthClient } from "../../context/AuthContext";
+import React, { useEffect, useMemo, useState } from "react";
 import { enqueueSnackbar } from "notistack";
-import style from "./sidebar.module.scss";
-import { ROLE_OPTIONS } from "../../utils/roles";
-import { UsersList } from "../UsersList/UsersList";
-import axios from "axios";
-import config from "../../config";
-import { ROLE_IDS } from "../../utils/roles";
+import { AuthClient } from "../../context/AuthContext";
+import {
+  fetchUserAccessConfig,
+  fetchUserAccessOptions,
+  updateUserAccessConfig,
+} from "../../services/config.api";
+import { ROLE_IDS, ROLE_OPTIONS } from "../../utils/roles";
+import { useAppConfig } from "../../context/AppConfigContext";
 
 const defaultValues = {
   userName: "",
   user_name: "",
   password: "",
-  role: 1, // Default role id
-  city: 1, // Default city id
+  role: 1,
+  city: 1,
+  supervisorId: null,
+  branchAccessIds: [],
+  cityAccessIds: [],
 };
 
-// replace local rolesList with ROLE_OPTIONS mapping
 const rolesList = ROLE_OPTIONS.map(({ value, label }) => ({
   id: value,
   title: label,
 }));
 
-const citiesList = [
-  { id: 1, title: "Запоріжжя" },
-  { id: 2, title: "Дніпро" },
-  { id: 3, title: "Кривий Ріг" },
-];
-
 export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
+  const { activeCities, appConfig } = useAppConfig();
   const [users, setUsers] = useState([]);
+  const [accessOptions, setAccessOptions] = useState({
+    branches: [],
+    cities: [],
+  });
+  const [accessLoading, setAccessLoading] = useState(false);
   const [formValues, setFormValues] = useState(
     user
       ? {
@@ -37,15 +40,33 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
           user_name: user.user_name || "",
           password: "",
           role: user.role || 1,
-          city: user.city || 1,
+          city: user.city || activeCities[0]?.id || 1,
+          supervisorId: user.parent_user_id ?? null,
+          branchAccessIds: [],
+          cityAccessIds: [],
         }
-      : defaultValues
+      : {
+          ...defaultValues,
+          city: activeCities[0]?.id || 1,
+        },
   );
+
+  const currentBranchId = Number(user?.branch_id || appConfig?.branch?.id || 0);
+  const canHaveParent =
+    formValues.role === ROLE_IDS.TA || formValues.role === ROLE_IDS.SV;
+  const canManageBranchAccess = [
+    ROLE_IDS.Admin,
+    ROLE_IDS.Director,
+  ].includes(Number(formValues.role));
+  const canManageCityAccess = [
+    ROLE_IDS.Accountant,
+    ROLE_IDS.Warehouse,
+  ].includes(Number(formValues.role));
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get(`${config.API_URL}/auth/users`);
+        const response = await AuthClient.get("/users");
         setUsers(response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -54,71 +75,83 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
 
     fetchUsers();
   }, [formValues.role]);
-  // keep form values in sync when 'user' prop changes
-  React.useEffect(() => {
-    if (user) {
+
+  useEffect(() => {
+    const loadAccessOptions = async () => {
+      setAccessLoading(true);
+      try {
+        const data = await fetchUserAccessOptions();
+        setAccessOptions({
+          branches: data.branches || [],
+          cities: data.cities || [],
+        });
+      } catch (error) {
+        console.error("Failed to load user access options:", error);
+      } finally {
+        setAccessLoading(false);
+      }
+    };
+
+    loadAccessOptions();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadUserAccess = async () => {
+      if (!user) {
+        setFormValues({
+          ...defaultValues,
+          city: activeCities[0]?.id || 1,
+        });
+        return;
+      }
+
       setFormValues({
         userName: user.name || "",
         user_name: user.user_name || "",
         password: "",
         role: user.role || 1,
-        city: user.city || 1,
+        city: user.city || activeCities[0]?.id || 1,
         supervisorId: user.parent_user_id ?? null,
+        branchAccessIds: [],
+        cityAccessIds: [],
       });
-    } else {
-      setFormValues(defaultValues);
-    }
-  }, [user]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    const parsed = name === "role" || name === "city" ? Number(value) : value; // ensure numbers
-    setFormValues({
-      ...formValues,
-      [name]: parsed,
-    });
-  };
+      try {
+        setAccessLoading(true);
+        const access = await fetchUserAccessConfig(user.id);
 
-  const handleRegister = () => {
-    const { userName, user_name, password, role, city } = formValues;
-
-    if (!userName || !password) {
-      enqueueSnackbar("Будь ласка, заповніть всі поля", { variant: "error" });
-      return;
-    }
-
-    // Формирование данных для запроса (user_name необязателен)
-    const data = {
-      userName,
-      user_name,
-      password,
-      role: Number(role),
-      city: Number(city),
+        if (!cancelled) {
+          setAccessOptions((current) => ({
+            branches: access.availableBranches?.length
+              ? access.availableBranches
+              : current.branches,
+            cities: access.availableCities?.length
+              ? access.availableCities
+              : current.cities,
+          }));
+          setFormValues((current) => ({
+            ...current,
+            branchAccessIds: access.branchAccessIds || [],
+            cityAccessIds: access.cityAccessIds || [],
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to load user access:", error);
+      } finally {
+        if (!cancelled) {
+          setAccessLoading(false);
+        }
+      }
     };
 
-    AuthClient.post("/sign-up", data)
-      .then(() => {
-        enqueueSnackbar("Користувач успішно зареєстрований", {
-          variant: "success",
-        });
-        setFormValues(defaultValues); // Сброс формы после успешної реєстрації
-        if (onSaved) onSaved();
-        if (onCancel) onCancel();
-      })
-      .catch((error) => {
-        console.error("Помилка реєстрації:", error);
-        if (error.response && error.response.data) {
-          enqueueSnackbar(error.response.data.message || "Помилка реєстрації", {
-            variant: "error",
-          });
-        } else {
-          enqueueSnackbar("Помилка реєстрації", { variant: "error" });
-        }
-      });
-  };
+    loadUserAccess();
 
-  const canHaveParent =
-    formValues.role === ROLE_IDS.TA || formValues.role === ROLE_IDS.SV;
+    return () => {
+      cancelled = true;
+    };
+  }, [user, activeCities]);
 
   const availableParents = users.filter((u) => {
     if (formValues.role === ROLE_IDS.TA) return u.role === ROLE_IDS.SV;
@@ -126,23 +159,120 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
     return false;
   });
 
-  // const handleUpdate = () => {
-  //   if (!user) return;
+  const cityWarningParent = availableParents.find(
+    (parent) =>
+      Number(parent.id) === Number(formValues.supervisorId) &&
+      Number(parent.city) !== Number(formValues.city),
+  );
 
-  //   const { userName, user_name, role, city } = formValues;
+  const branchOptions = useMemo(() => {
+    return (accessOptions.branches || []).filter(
+      (branch) => Number(branch.id) !== Number(currentBranchId),
+    );
+  }, [accessOptions.branches, currentBranchId]);
 
-  //   // userName and user_name are optional when updating
-  //   AuthClient.put(`/users/${user.id}`, { userName, user_name, role, city })
-  //     .then(() => {
-  //       enqueueSnackbar("Користувача оновлено", { variant: "success" });
-  //       if (onSaved) onSaved();
-  //       onCancel();
-  //     })
-  //     .catch((error) => {
-  //       console.error("Update error:", error);
-  //       enqueueSnackbar("Помилка оновлення", { variant: "error" });
-  //     });
-  // };
+  const cityAccessOptions = useMemo(() => {
+    const baseCities =
+      accessOptions.cities?.length > 0 ? accessOptions.cities : activeCities;
+    return baseCities.filter(
+      (city) => Number(city.id) !== Number(formValues.city),
+    );
+  }, [accessOptions.cities, activeCities, formValues.city]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const parsed = name === "role" || name === "city" ? Number(value) : value;
+
+    setFormValues((current) => ({
+      ...current,
+      [name]: parsed,
+      ...(name === "city"
+        ? {
+            cityAccessIds: current.cityAccessIds.filter(
+              (cityId) => Number(cityId) !== Number(parsed),
+            ),
+          }
+        : {}),
+    }));
+  };
+
+  const toggleAccessId = (field, id) => {
+    setFormValues((current) => {
+      const existing = current[field] || [];
+      const next = existing.includes(id)
+        ? existing.filter((item) => Number(item) !== Number(id))
+        : [...existing, id];
+
+      return {
+        ...current,
+        [field]: next,
+      };
+    });
+  };
+
+  const buildAccessPayload = () => ({
+    branchAccessIds: canManageBranchAccess ? formValues.branchAccessIds : [],
+    cityAccessIds: canManageCityAccess ? formValues.cityAccessIds : [],
+  });
+
+  const handleRegister = async () => {
+    const {
+      userName,
+      user_name,
+      password,
+      role,
+      city,
+      supervisorId,
+      branchAccessIds,
+      cityAccessIds,
+    } = formValues;
+
+    if (!userName || !password) {
+      enqueueSnackbar("Будь ласка, заповніть всі поля", {
+        variant: "error",
+      });
+      return;
+    }
+
+    const data = {
+      userName,
+      user_name,
+      password,
+      role: Number(role),
+      city: Number(city),
+      supervisorId: canHaveParent && supervisorId ? Number(supervisorId) : null,
+      branchAccessIds: canManageBranchAccess ? branchAccessIds : [],
+      cityAccessIds: canManageCityAccess ? cityAccessIds : [],
+    };
+
+    try {
+      await AuthClient.post("/sign-up", data);
+
+      enqueueSnackbar("Користувача успішно зареєстровано", {
+        variant: "success",
+      });
+      setFormValues({
+        ...defaultValues,
+        city: activeCities[0]?.id || 1,
+      });
+      if (onSaved) onSaved();
+      if (onCancel) onCancel();
+    } catch (error) {
+      console.error("Помилка реєстрації:", error);
+      if (error.response && error.response.data) {
+        enqueueSnackbar(
+          error.response.data.message ||
+            error.response.data.error ||
+            "Помилка реєстрації",
+          {
+            variant: "error",
+          },
+        );
+      } else {
+        enqueueSnackbar("Помилка реєстрації", { variant: "error" });
+      }
+    }
+  };
 
   const handleUpdate = async () => {
     if (!user) return;
@@ -150,7 +280,6 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
     const { userName, user_name, role, city, supervisorId } = formValues;
 
     try {
-      // 1️⃣ обновляем самого пользователя
       await AuthClient.put(`/users/${user.id}`, {
         userName,
         user_name,
@@ -158,7 +287,8 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
         city,
       });
 
-      // 2️⃣ обновляем иерархию (ТОЛЬКО если есть право иметь руководителя)
+      await updateUserAccessConfig(user.id, buildAccessPayload());
+
       if (canHaveParent) {
         await AuthClient.put(`/users/${user.id}/supervisor`, {
           supervisorId: supervisorId ?? null,
@@ -170,13 +300,18 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
       onCancel();
     } catch (error) {
       console.error("Update error:", error);
-      enqueueSnackbar("Помилка оновлення", { variant: "error" });
+      enqueueSnackbar(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Помилка оновлення",
+        { variant: "error" },
+      );
     }
   };
 
   return (
     <div className="modal is-active">
-      <div className="modal-background"></div> {/* fixed className */}
+      <div className="modal-background"></div>
       <div className="modal-card">
         <header className="modal-card-head">
           {user ? (
@@ -184,7 +319,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
               className="modal-card-title has-text-weight-medium"
               data-cy="modal-header"
             >
-              Змінити данні користувача: {formValues.userName}
+              Змінити дані користувача: {formValues.userName}
             </div>
           ) : (
             <div
@@ -198,7 +333,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
 
         <div className="modal-card-body">
           <div className="field">
-            <label className="label">User name (login):</label>
+            <label className="label">Логін користувача:</label>
             <div className="control">
               <input
                 className="input"
@@ -212,7 +347,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
 
           <div className="field">
             <label className="label">
-              Display name (user_name) — optional:
+              Відображуване ім'я (user_name), необов'язково:
             </label>
             <div className="control">
               <input
@@ -227,7 +362,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
 
           {!user && (
             <div className="field">
-              <label className="label">Password:</label>
+              <label className="label">Пароль:</label>
               <div className="control">
                 <input
                   className="input"
@@ -241,7 +376,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
           )}
 
           <div className="field">
-            <label className="label">Role:</label>
+            <label className="label">Роль:</label>
             <div className="control">
               <div className="select is-fullwidth">
                 <select
@@ -259,20 +394,21 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
             </div>
           </div>
 
-          {(formValues.role === 5 || formValues.role === 4) && (
+          {(formValues.role === ROLE_IDS.TA ||
+            formValues.role === ROLE_IDS.SV) && (
             <div className="field">
-              <label className="label">Team Head:</label>
+              <label className="label">Керівник:</label>
               <div className="control">
                 <div className="select is-fullwidth">
                   <select
                     value={formValues.supervisorId || ""}
                     onChange={(e) =>
-                      setFormValues({
-                        ...formValues,
+                      setFormValues((current) => ({
+                        ...current,
                         supervisorId: e.target.value
                           ? Number(e.target.value)
                           : null,
-                      })
+                      }))
                     }
                   >
                     <option value="">Без керівника</option>
@@ -282,22 +418,18 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
                       </option>
                     ))}
                   </select>
-                  {/* <select name="Supervisor">
-                    {users
-                      .filter((u) => u.role === 4 || u.role === 3)
-                      .map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name}
-                        </option>
-                      ))}
-                  </select> */}
                 </div>
+                {cityWarningParent && (
+                  <p className="help is-warning">
+                    Місто керівника відрізняється від міста користувача
+                  </p>
+                )}
               </div>
             </div>
           )}
 
           <div className="field">
-            <label className="label">City:</label>
+            <label className="label">Місто:</label>
             <div className="control is-expanded">
               <div className="select is-fullwidth">
                 <select
@@ -305,15 +437,75 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
                   value={formValues.city}
                   onChange={handleChange}
                 >
-                  {citiesList.map((city) => (
+                  {activeCities.map((city) => (
                     <option key={city.id} value={city.id}>
-                      {city.title}
+                      {city.name}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
           </div>
+
+          {canManageBranchAccess && (
+            <div className="field">
+              <label className="label">Доступ до філій</label>
+              <div className="content is-small mb-2">
+                <p>
+                  Основна філія:{" "}
+                  <strong>{appConfig?.branch?.name || "-"}</strong>
+                </p>
+              </div>
+              {accessLoading ? (
+                <p className="help">Завантаження...</p>
+              ) : branchOptions.length ? (
+                branchOptions.map((branch) => (
+                  <label key={branch.id} className="checkbox is-block mb-2">
+                    <input
+                      type="checkbox"
+                      checked={formValues.branchAccessIds.includes(branch.id)}
+                      onChange={() => toggleAccessId("branchAccessIds", branch.id)}
+                    />{" "}
+                    {branch.name} ({branch.shortName || branch.slug})
+                  </label>
+                ))
+              ) : (
+                <p className="help">Додаткові філії відсутні</p>
+              )}
+            </div>
+          )}
+
+          {canManageCityAccess && (
+            <div className="field">
+              <label className="label">Доступ до міст</label>
+              <div className="content is-small mb-2">
+                <p>
+                  Основне місто:{" "}
+                  <strong>
+                    {activeCities.find(
+                      (city) => Number(city.id) === Number(formValues.city),
+                    )?.name || "-"}
+                  </strong>
+                </p>
+              </div>
+              {accessLoading ? (
+                <p className="help">Завантаження...</p>
+              ) : cityAccessOptions.length ? (
+                cityAccessOptions.map((city) => (
+                  <label key={city.id} className="checkbox is-block mb-2">
+                    <input
+                      type="checkbox"
+                      checked={formValues.cityAccessIds.includes(city.id)}
+                      onChange={() => toggleAccessId("cityAccessIds", city.id)}
+                    />{" "}
+                    {city.name}
+                  </label>
+                ))
+              ) : (
+                <p className="help">Додаткові міста відсутні</p>
+              )}
+            </div>
+          )}
 
           <div className="field">
             {user ? (
@@ -322,14 +514,13 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
                   className="button is-success is-dark is-fullwidth"
                   onClick={handleUpdate}
                 >
-                  Update
+                  Оновити
                 </button>
                 <button
                   className="button is-danger is-dark is-fullwidth"
-                  // style={{ marginLeft: 8 }}
                   onClick={() => onCancel && onCancel()}
                 >
-                  Cancel
+                  Скасувати
                 </button>
               </div>
             ) : (
@@ -339,7 +530,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
                   className="button is-success is-fullwidth"
                   onClick={handleRegister}
                 >
-                  SignUp
+                  Зареєструвати
                 </button>
                 <button
                   type="button"

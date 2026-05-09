@@ -2,12 +2,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { Filter } from "../Filter/Filter";
 import { Table } from "../Table/Table";
+import { fetchBalanceFile } from "../../services/balances.api";
 
-export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
+export const ParseExcel = ({ fileName, balanceSlug, setLastUpdateTime }) => {
   const [parsedData, setParsedData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [keyword, setKeyword] = useState("all");
   const [isRendered, setIsRendered] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const level1 = ["ТОВАР"];
   const level2 = ["МРІЯ", "РОШЕН"];
@@ -47,10 +49,18 @@ export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
 
   const loadFile = useCallback(async () => {
     try {
-      const response = await fetch(`/Sorce/${fileName}`);
-      if (!response.ok) throw new Error("Failed to fetch the file");
+      setErrorMessage("");
+      setIsRendered(false);
 
-      const data = await response.arrayBuffer();
+      let data;
+      if (balanceSlug) {
+        data = await fetchBalanceFile(balanceSlug);
+      } else {
+        const response = await fetch(`/Sorce/${fileName}`);
+        if (!response.ok) throw new Error("Failed to fetch the file");
+        data = await response.arrayBuffer();
+      }
+
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
@@ -65,9 +75,19 @@ export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
       setFilteredData(hierarchy);
     } catch (error) {
       console.error("Error loading file:", error);
+      const status = error.response?.status;
+      const fileNotFoundMessage = error.response?.data?.message;
+      setErrorMessage(
+        status === 404
+          ? fileNotFoundMessage || "Файл залишків не знайдено"
+          : "Помилка завантаження файлу залишків",
+      );
+      setParsedData([]);
+      setFilteredData([]);
     } finally {
+      setIsRendered(true);
     }
-  }, [fileName, setLastUpdateTime]);
+  }, [balanceSlug, fileName, setLastUpdateTime]);
 
   useEffect(() => {
     loadFile();
@@ -118,7 +138,15 @@ export const ParseExcel = ({ fileName, setLastUpdateTime }) => {
     <div>
       <Filter onFilterChange={handleFilterChange} />
       
-      {!isRendered ? <p>Загрузка...</p> : filteredData.length > 0 ? <Table data={filteredData} /> : <p>Нет данных для отображения</p>}
+      {!isRendered ? (
+        <p>Загрузка...</p>
+      ) : errorMessage ? (
+        <p>{errorMessage}</p>
+      ) : filteredData.length > 0 ? (
+        <Table data={filteredData} />
+      ) : (
+        <p>Нет данных для отображения</p>
+      )}
     </div>
   );
 };

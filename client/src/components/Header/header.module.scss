@@ -36,10 +36,43 @@
   display: none;
 }
 
+.info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.infoUserName,
+.infoBranch {
+  font-size: 14px;
+}
+
 .infoUpdate {
   display: flex;
   align-items: center;
   font-size: 14px;
+}
+
+.branchSwitcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.branchLabel {
+  font-size: 13px;
+}
+
+.branchSelectWrapper,
+.branchSelect {
+  background-color: $main-background-color !important;
+}
+
+.branchSelect {
+  border: 1px solid $border-color !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
 }
 
 .burger {
@@ -122,6 +155,16 @@ li:hover {
 @media (max-width: 780px) {
   .header {
     padding: 0 20px;
+  }
+
+  .info {
+    align-items: center;
+    text-align: center;
+  }
+
+  .branchSwitcher {
+    flex-direction: column;
+    gap: 4px;
   }
 
   // .infoTitle {

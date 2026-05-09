@@ -1,21 +1,6 @@
-import axios from "axios";
-import config from "../config";
-import inMemoryJWT from "./inMemoryJWT";
+import { createAuthenticatedApi } from "./createAuthenticatedApi";
 
-const api = axios.create({
-  baseURL: `${config.API_URL}/directories`,
-  withCredentials: true,
-});
-
-
-
-api.interceptors.request.use((cfg) => {
-  const token = inMemoryJWT.getToken();
-  if (token) {
-    cfg.headers.Authorization = `Bearer ${token}`;
-  }
-  return cfg;
-});
+const api = createAuthenticatedApi("/directories");
 
 export async function fetchTradePoints() {
   const { data } = await api.get("/trade-points");

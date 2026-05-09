@@ -1,206 +1,171 @@
-import { useContext, useEffect, useState } from "react";
-// import { Circle, Planets, Zoom } from "react-preloaders";
-import {
-  Link,
-  Routes,
-  Route,
-  BrowserRouter,
-  Navigate,
-  useLocation,
-} from "react-router-dom";
-import { SnackbarProvider } from "notistack";
-// import SignUp from "./pages/SignUp";
+import { useContext, useMemo, useState } from "react";
+import { Routes, Route, BrowserRouter, Navigate } from "react-router-dom";
 import SignIn from "./pages/SignIn";
 import AdminPage from "./pages/AdminPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import Header from "./components/Header/Header";
 import { ParseExcel } from "./components/ParseExcel/ParseExcel";
-// import style from "./app.module.scss";
 import { AuthContext } from "./context/AuthContext";
 import { SalesReport } from "./components/SalesReport/SalesReport";
 import { ReportRomashka } from "./components/Reports/ReportRomashka";
-import React from "react";
-import { ROLE_IDS, ROLE_LABELS } from "./utils/roles";
+import { ROLE_IDS } from "./utils/roles";
+import {
+  AppConfigProvider,
+  useAppConfig,
+} from "./context/AppConfigContext";
 
-// const LogPageView = () => {
-//   const location = useLocation();
+function BalanceRoutes({ activeBalancePages, setLastUpdateTime }) {
+  return activeBalancePages.map((page) => (
+    <Route
+      key={page.id}
+      path={`/balance/${page.slug}`}
+      element={
+        <ParseExcel
+          balanceSlug={page.slug}
+          setLastUpdateTime={setLastUpdateTime}
+        />
+      }
+    />
+  ));
+}
 
-//   useEffect(() => {}, [location]);
-
-//   return null;
-// };
+function RomashkaRoute({
+  isEnabled,
+  route,
+  fallbackPath,
+  setLastUpdateTime,
+}) {
+  return (
+    <Route
+      path={route}
+      element={
+        isEnabled ? (
+          <ReportRomashka setLastUpdateTime={setLastUpdateTime} />
+        ) : (
+          <Navigate to={fallbackPath} replace />
+        )
+      }
+    />
+  );
+}
 
 const AppContent = () => {
   const { userInfo, isUserLogged } = useContext(AuthContext);
-  const [lastUpdateTime, setLastUpdateTime] = useState(""); // Время обновления
-  const [headerTitle, setHeaderTitle] = useState(""); // Заголовок страницы
-  const [currentPath, setCurrentPath] = useState(""); // Текущий путь
+  const { activeBalancePages, activeReports, loading: configLoading } =
+    useAppConfig();
+  const [lastUpdateTime, setLastUpdateTime] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
 
-  useEffect(() => {
-    if (location.pathname === "/zp") {
-      setHeaderTitle("Запоріжжя");
-    } else if (location.pathname === "/kr") {
-      setHeaderTitle("Кривий Ріг");
-    } else if (location.pathname === "/dp") {
-      setHeaderTitle("Дніпро");
-    } else {
-      setHeaderTitle("Your Title Here");
-    }
-  }, [location]);
+  const romashkaReport = activeReports.find(
+    (report) => report.reportKey === "report-romashka",
+  );
+  const isRomashkaEnabled = Boolean(romashkaReport);
+  const romashkaRoute = romashkaReport?.route || "/report-romashka";
+  const isAdmin = userInfo?.role === ROLE_IDS.Admin;
+  const isDirector = userInfo?.role === ROLE_IDS.Director;
 
-  useEffect(() => {
-    if (location.pathname !== currentPath) {
-      setCurrentPath(location.pathname);
-    }
-  }, [location.pathname, currentPath]);
+  const defaultLoggedPath = useMemo(() => {
+    if (isAdmin) return "/admin-page";
 
-  useEffect(() => {
-    if (currentPath !== location.pathname) {
-    }
-  }, [location.pathname, currentPath]);
+    const userCityPage = activeBalancePages.find(
+      (page) => Number(page.cityId) === Number(userInfo?.city),
+    );
+
+    if (userCityPage) return `/balance/${userCityPage.slug}`;
+    if (activeBalancePages[0]) return `/balance/${activeBalancePages[0].slug}`;
+    return "/documents";
+  }, [activeBalancePages, isAdmin, userInfo]);
+
+  const balanceRoutes = (
+    <BalanceRoutes
+      activeBalancePages={activeBalancePages}
+      setLastUpdateTime={setLastUpdateTime}
+    />
+  );
 
   return (
-    // <div className={style.content}>
     <>
       <Header
-        title={headerTitle}
         lastUpdateTime={lastUpdateTime}
         isOpen={isOpen}
         setIsOpen={setIsOpen}
       />
 
-      <Routes>
-        {isUserLogged ? (
-          userInfo?.role === ROLE_IDS.Admin ? (
-            <>
-              <Route path="/documents" element={<DocumentsPage />} />
-              <Route
-                path="/sales-report"
-                element={<SalesReport setLastUpdateTime={setLastUpdateTime} />}
-              />
-              <Route
-                path="/report-romashka"
-                element={
-                  <ReportRomashka setLastUpdateTime={setLastUpdateTime} />
-                }
-              />
-              <Route path="/admin-page" element={<AdminPage />} />
-              <Route
-                path="/zp"
-                element={
-                  <ParseExcel
-                    fileName="balanceZP.xlsx"
-                    setLastUpdateTime={setLastUpdateTime}
-                  />
-                }
-              />
-              <Route
-                path="/kr"
-                element={
-                  <ParseExcel
-                    fileName="balanceKR.xlsx"
-                    setLastUpdateTime={setLastUpdateTime}
-                  />
-                }
-              />
-              <Route
-                path="/dp"
-                element={
-                  <ParseExcel
-                    fileName="balanceDP.xlsx"
-                    setLastUpdateTime={setLastUpdateTime}
-                  />
-                }
-              />
-            </>
-          ) : (
-            <>
-              {userInfo?.role === ROLE_IDS.Director && (
+      {isUserLogged && configLoading ? (
+        <progress className="progress is-small is-primary" />
+      ) : (
+        <Routes>
+          {isUserLogged ? (
+            isAdmin ? (
+              <>
+                <Route path="/documents" element={<DocumentsPage />} />
                 <Route
-                  path="/report-romashka"
+                  path="/sales-report"
+                  element={<SalesReport setLastUpdateTime={setLastUpdateTime} />}
+                />
+                <RomashkaRoute
+                  isEnabled={isRomashkaEnabled}
+                  route={romashkaRoute}
+                  fallbackPath="/admin-page"
+                  setLastUpdateTime={setLastUpdateTime}
+                />
+                <Route path="/admin-page" element={<AdminPage />} />
+                {balanceRoutes}
+              </>
+            ) : (
+              <>
+                {isDirector ? (
+                  <RomashkaRoute
+                    isEnabled={isRomashkaEnabled}
+                    route={romashkaRoute}
+                    fallbackPath="/documents"
+                    setLastUpdateTime={setLastUpdateTime}
+                  />
+                ) : null}
+                <Route
+                  path="/sales-report"
                   element={
-                    <ReportRomashka setLastUpdateTime={setLastUpdateTime} />
+                    <SalesReport
+                      isOpen={isOpen}
+                      setLastUpdateTime={setLastUpdateTime}
+                    />
                   }
                 />
-              )}
-              <Route
-                path="/sales-report"
-                element={
-                  <SalesReport
-                    isOpen={isOpen}
-                    setLastUpdateTime={setLastUpdateTime}
-                  />
-                }
-              />
-              <Route
-                path="/zp"
-                element={
-                  <ParseExcel
-                    fileName="balanceZP.xlsx"
-                    setLastUpdateTime={setLastUpdateTime}
-                  />
-                }
-              />
-              <Route
-                path="/kr"
-                element={
-                  <ParseExcel
-                    fileName="balanceKR.xlsx"
-                    setLastUpdateTime={setLastUpdateTime}
-                  />
-                }
-              />
-              <Route
-                path="/dp"
-                element={
-                  <ParseExcel
-                    fileName="balanceDP.xlsx"
-                    setLastUpdateTime={setLastUpdateTime}
-                  />
-                }
-              />
-              <Route path="/documents" element={<DocumentsPage />} />
-            </>
-          )
-        ) : (
-          <>
+                {balanceRoutes}
+                <Route path="/documents" element={<DocumentsPage />} />
+              </>
+            )
+          ) : (
             <Route path="sign-in" element={<SignIn />} />
-            {/* <Route path="sign-up" element={<SignUp />} /> */}
-          </>
-        )}
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to={
-                isUserLogged
-                  ? userInfo?.role === ROLE_IDS.Admin
-                    ? "admin-page"
-                    : userInfo?.city === 1
-                      ? "/zp"
-                      : userInfo?.city === 2
-                        ? "/dp"
-                        : "/kr"
-                  : "sign-in"
-              }
-            />
-          }
-        />
-      </Routes>
+          )}
+
+          <Route
+            path="*"
+            element={
+              <Navigate
+                to={isUserLogged ? defaultLoggedPath : "/sign-in"}
+                replace
+              />
+            }
+          />
+        </Routes>
+      )}
     </>
-    // </div>
   );
 };
 
 const App = () => {
   return (
-    <SnackbarProvider>
-      <BrowserRouter>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <AppConfigProvider>
         <AppContent />
-      </BrowserRouter>
-    </SnackbarProvider>
+      </AppConfigProvider>
+    </BrowserRouter>
   );
 };
 

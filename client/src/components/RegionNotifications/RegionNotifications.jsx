@@ -7,21 +7,17 @@ import {
   deleteRegionNotification,
 } from "../../services/regionNotifications.api";
 import styles from "./RegionNotifications.module.scss";
-
-const CITIES = [
-  { id: 1, name: "Запоріжжя" },
-  { id: 2, name: "Дніпро" },
-  { id: 3, name: "Кривий Ріг" },
-];
+import { useAppConfig } from "../../context/AppConfigContext";
 
 export function RegionNotifications() {
   const { enqueueSnackbar } = useSnackbar();
+  const { cities, activeCities } = useAppConfig();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
 
   const [formData, setFormData] = useState({
-    city: 1,
+    city: activeCities[0]?.id || 1,
     email: "",
     rocket_channel: "",
     is_active: true,
@@ -30,6 +26,18 @@ export function RegionNotifications() {
   useEffect(() => {
     loadNotifications();
   }, []);
+
+  useEffect(() => {
+    if (!activeCities.length) return;
+
+    setFormData((current) => {
+      const cityExists = activeCities.some(
+        (city) => Number(city.id) === Number(current.city),
+      );
+
+      return cityExists ? current : { ...current, city: activeCities[0].id };
+    });
+  }, [activeCities]);
 
   async function loadNotifications() {
     try {
@@ -89,7 +97,7 @@ export function RegionNotifications() {
 
   function resetForm() {
     setFormData({
-      city: 1,
+      city: activeCities[0]?.id || 1,
       email: "",
       rocket_channel: "",
       is_active: true,
@@ -98,7 +106,7 @@ export function RegionNotifications() {
   }
 
   const cityName = (cityId) =>
-    CITIES.find((c) => c.id === cityId)?.name || cityId;
+    cities.find((c) => Number(c.id) === Number(cityId))?.name || cityId;
 
   if (loading) {
     return <div className="has-text-centered mt-5">Завантаження...</div>;
@@ -179,7 +187,7 @@ export function RegionNotifications() {
                       setFormData({ ...formData, city: Number(e.target.value) })
                     }
                   >
-                    {CITIES.map((city) => (
+                    {activeCities.map((city) => (
                       <option key={city.id} value={city.id}>
                         {city.name}
                       </option>

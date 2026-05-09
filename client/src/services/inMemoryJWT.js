@@ -39,13 +39,17 @@ const inMemoryJWTService = () => {
 
   const setToken = (token, tokenExpiration) => {
     inMemoryJWT = token;
+    localStorage.setItem(config.AUTH_SESSION_STORAGE_KEY, "1");
     refreshToken(tokenExpiration);
   };
 
-  const deleteToken = () => {
+  const deleteToken = (broadcast = true) => {
     inMemoryJWT = null;
     abortRefreshToken();
-    localStorage.setItem(config.LOGOUT_STORAGE_KEY, Date.now());
+    localStorage.removeItem(config.AUTH_SESSION_STORAGE_KEY);
+    if (broadcast) {
+      localStorage.setItem(config.LOGOUT_STORAGE_KEY, Date.now());
+    }
   };
 
   return { getToken, setToken, deleteToken };

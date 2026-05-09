@@ -1,6 +1,5 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useCallback, useEffect, useState } from "react";
 import axios from "axios";
-import { Circle, Planets, Zoom } from "react-preloaders";
 import config from "../config";
 import style from "../app.module.scss";
 import showErrorMessage from "../utils/showErrorMessage";
@@ -12,85 +11,30 @@ export const AuthClient = axios.create({
   withCredentials: true,
 });
 
-// Attach access token to auth requests when available
 AuthClient.interceptors.request.use(
-  (config) => {
+  (requestConfig) => {
     const accessToken = inMemoryJWT.getToken();
 
     if (accessToken) {
-      config.headers["Authorization"] = `Bearer ${accessToken}`;
+      requestConfig.headers["Authorization"] = `Bearer ${accessToken}`;
     }
 
-    return config;
+    return requestConfig;
   },
-  (error) => Promise.reject(error)
-);
-
-const ResourceClient = axios.create({
-  baseURL: `${config.API_URL}/resource`,
-  withCredentials: true,
-});
-
-ResourceClient.interceptors.request.use(
-  (config) => {
-    const accessToken = inMemoryJWT.getToken();
-
-    if (accessToken) {
-      config.headers["Authorization"] = `Bearer ${accessToken}`;
-    }
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-ResourceClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry
-    ) {
-      originalRequest._retry = true;
-
-      try {
-        const res = await AuthClient.post("/refresh");
-
-        const { accessToken, accessTokenExpiration } = res.data;
-
-        inMemoryJWT.setToken(
-          accessToken,
-          accessTokenExpiration
-        );
-
-        originalRequest.headers["Authorization"] =
-          `Bearer ${accessToken}`;
-
-        return ResourceClient(originalRequest);
-      } catch (refreshError) {
-        inMemoryJWT.deleteToken();
-        window.location.href = "/login";
-      }
-    }
-
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error),
 );
 
 export const AuthContext = createContext({});
 
+const serializeState = (value) => JSON.stringify(value ?? null);
+
 const AuthProvider = ({ children }) => {
   const [isAppReady, setIsAppReady] = useState(false);
   const [isUserLogged, setIsUserLogged] = useState(false);
-  const [data, setData] = useState();
   const [userInfo, setUserInfo] = useState();
+  const [isSwitchingBranch, setIsSwitchingBranch] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
 
-  // Decode JWT payload (base64url-safe)
   const decodeJwtPayload = (token) => {
     if (!token) throw new Error("Missing token");
     const parts = token.split(".");
@@ -108,118 +52,199 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  const mergeUserInfo = useCallback((patch) => {
+    setUserInfo((prev) => {
+      const nextPatch = typeof patch === "function" ? patch(prev) : patch;
+      const next = {
+        ...(prev || {}),
+        ...(nextPatch || {}),
+      };
 
-  const handleFetchProtected = () => {
-    ResourceClient.get("/protected")
-      .then((res) => {
-        setData(res.data);
-      })
-      .catch((error) => showErrorMessage(enqueueSnackbar, error));
-  };
+      if (
+        prev &&
+        prev.userName === next.userName &&
+        prev.role === next.role &&
+        prev.city === next.city &&
+        prev.branchId === next.branchId &&
+        prev.userID === next.userID &&
+        prev.id === next.id &&
+        prev.displayName === next.displayName &&
+        serializeState(prev.currentBranch) === serializeState(next.currentBranch) &&
+        serializeState(prev.availableBranches) ===
+          serializeState(next.availableBranches)
+      ) {
+        return prev;
+      }
 
-  const handleLogOut = () => {
+      return next;
+    });
+  }, []);
+
+  const clearAuthState = useCallback(() => {
+    inMemoryJWT.deleteToken();
+    setUserInfo(undefined);
+    setIsUserLogged(false);
+  }, []);
+
+  const resetAuthState = useCallback(() => {
+    inMemoryJWT.deleteToken(false);
+    setUserInfo(undefined);
+    setIsUserLogged(false);
+  }, []);
+
+  const hasStoredAuthSession = useCallback(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return localStorage.getItem(config.AUTH_SESSION_STORAGE_KEY) === "1";
+  }, []);
+
+  const applyTokenUser = useCallback((accessToken) => {
+    const decoded = decodeJwtPayload(accessToken);
+
+    mergeUserInfo({
+      userName: decoded.userName,
+      role: decoded.role,
+      city: decoded.city,
+      branchId: decoded.branchId ?? null,
+      userID: decoded.id,
+      id: decoded.id,
+    });
+
+    return decoded;
+  }, [mergeUserInfo]);
+
+  const loadMe = useCallback(async () => {
+    try {
+      const res = await AuthClient.get("/me");
+
+      mergeUserInfo((prev) => ({
+        displayName: res.data.displayName,
+        branchId:
+          res.data.currentBranchId ?? res.data.branchId ?? prev?.branchId ?? null,
+        currentBranch: res.data.currentBranch || null,
+        availableBranches: res.data.availableBranches || [],
+      }));
+
+      return res.data;
+    } catch (error) {
+      console.error("Failed to load /me", error);
+      return null;
+    }
+  }, [mergeUserInfo]);
+
+  const handleLogOut = (event) => {
+    if (event?.preventDefault) {
+      event.preventDefault();
+    }
+
     AuthClient.post("/logout")
       .then(() => {
-        inMemoryJWT.deleteToken();
-        setIsUserLogged(false);
+        clearAuthState();
       })
       .catch((error) => showErrorMessage(enqueueSnackbar, error));
   };
 
-  const handleSignUp = (data) => {
-    AuthClient.post("/sign-up", data)
+  const handleSignUp = (payload) => {
+    AuthClient.post("/sign-up", payload)
       .then(() => {
-        enqueueSnackbar("Реєстрація пройшла успішно!", { variant: "success" });
+        enqueueSnackbar("Registration completed successfully!", {
+          variant: "success",
+        });
       })
       .catch((error) => showErrorMessage(enqueueSnackbar, error));
   };
 
-  const handleSignIn = (data) => {
-    AuthClient.post("/sign-in", data)
-      .then((res) => {
+  const handleSignIn = (payload) => {
+    AuthClient.post("/sign-in", payload)
+      .then(async (res) => {
         const { accessToken, accessTokenExpiration } = res.data;
 
         inMemoryJWT.setToken(accessToken, accessTokenExpiration);
 
         let decoded;
         try {
-          decoded = decodeJwtPayload(accessToken);
-        } catch (e) {
-          showErrorMessage(enqueueSnackbar, `Invalid token: ${e.message}`);
+          decoded = applyTokenUser(accessToken);
+        } catch (error) {
+          showErrorMessage(enqueueSnackbar, `Invalid token: ${error.message}`);
           return;
         }
 
-        setUserInfo({
-          userName: decoded.userName,
-          // userNameRaw: decoded.userName,
-          role: decoded.role,
-          city: decoded.city,
-          userID: decoded.id,
-        });
-
-        // Only mark user as logged in after userInfo is set to avoid race conditions
         setIsUserLogged(true);
+        await loadMe();
 
-        const message = `Welcome ${decoded.user_name || decoded.userName} (${
-          decoded.role
-        })`;
+        const message = `Welcome ${decoded.user_name || decoded.userName} (${decoded.role})`;
         enqueueSnackbar(message, { variant: "success" });
       })
       .catch((error) => {
         console.log(error);
-
         showErrorMessage(enqueueSnackbar, error);
       });
   };
 
-  const loadMe = async () => {
-    try {
-      const res = await AuthClient.get("/me");
+  const handleSwitchBranch = useCallback(
+    async (branchId) => {
+      if (!branchId || Number(branchId) === Number(userInfo?.branchId)) {
+        return;
+      }
 
-      setUserInfo((prev) => ({
-        ...prev,
-        displayName: res.data.displayName,
-      }));
-    } catch (e) {
-      console.error("Failed to load /me", e);
-    }
-  };
+      setIsSwitchingBranch(true);
+
+      try {
+        const res = await AuthClient.post("/switch-branch", {
+          branchId: Number(branchId),
+        });
+        const { accessToken, accessTokenExpiration } = res.data;
+
+        inMemoryJWT.setToken(accessToken, accessTokenExpiration);
+        applyTokenUser(accessToken);
+        await loadMe();
+        enqueueSnackbar("Branch switched successfully", { variant: "success" });
+      } catch (error) {
+        showErrorMessage(enqueueSnackbar, error);
+        throw error;
+      } finally {
+        setIsSwitchingBranch(false);
+      }
+    },
+    [applyTokenUser, enqueueSnackbar, loadMe, userInfo?.branchId],
+  );
 
   useEffect(() => {
+    if (!hasStoredAuthSession()) {
+      setIsAppReady(true);
+      setIsUserLogged(false);
+      return;
+    }
+
     AuthClient.post("/refresh")
-      .then((res) => {
+      .then(async (res) => {
         const { accessToken, accessTokenExpiration } = res.data;
         inMemoryJWT.setToken(accessToken, accessTokenExpiration);
 
-        let decoded;
         try {
-          decoded = decodeJwtPayload(accessToken);
-        } catch (e) {
-          inMemoryJWT.deleteToken();
-          setIsUserLogged(false);
+          applyTokenUser(accessToken);
+        } catch (error) {
+          clearAuthState();
           setIsAppReady(true);
           return;
         }
 
-        setUserInfo({
-          userName: decoded.userName,
-          // userNameRaw: decoded.userName,
-          role: decoded.role,
-          city: decoded.city,
-          userID: decoded.id,
-        });
-
         setIsUserLogged(true);
+        await loadMe();
         setIsAppReady(true);
       })
-      .catch(() => {
+      .catch((error) => {
+        clearAuthState();
         setIsAppReady(true);
-        setIsUserLogged(false);
-      });
-  }, []);
 
-  // Clean up any inline body styles that a preloader may have injected
-  // (some preloader libraries set document.body.style.overflow/height/position)
+        if (![401, 422].includes(error?.response?.status)) {
+          console.error("Failed to restore auth session", error);
+        }
+      });
+  }, [applyTokenUser, clearAuthState, hasStoredAuthSession, loadMe]);
+
   useEffect(() => {
     if (isAppReady) {
       try {
@@ -227,52 +252,42 @@ const AuthProvider = ({ children }) => {
         document.body.style.height = null;
         document.body.style.width = null;
         document.body.style.position = null;
-      } catch (e) {
-        // ignore (server-side rendering or restricted environment)
-      }
+      } catch (error) {}
     }
 
-    // also ensure cleanup on unmount
     return () => {
       try {
         document.body.style.overflow = null;
         document.body.style.height = null;
         document.body.style.width = null;
         document.body.style.position = null;
-      } catch (e) {}
+      } catch (error) {}
     };
   }, [isAppReady]);
 
   useEffect(() => {
     const handlePersistentLogOut = (event) => {
       if (event.key === config.LOGOUT_STORAGE_KEY) {
-        inMemoryJWT.deleteToken();
-        setIsUserLogged(false);
+        resetAuthState();
       }
     };
 
     window.addEventListener("storage", handlePersistentLogOut);
-
     return () => {
       window.removeEventListener("storage", handlePersistentLogOut);
     };
-  }, []);
-
-  useEffect(() => {
-    if (isUserLogged) {
-      loadMe();
-    }
-  }, [isUserLogged]);
+  }, [resetAuthState]);
 
   return (
     <AuthContext.Provider
       value={{
-        data,
         userInfo,
-        handleFetchProtected,
+        reloadUserInfo: loadMe,
         handleSignUp,
         handleSignIn,
         handleLogOut,
+        handleSwitchBranch,
+        isSwitchingBranch,
         isUserLogged,
         isAppReady,
       }}
@@ -281,7 +296,7 @@ const AuthProvider = ({ children }) => {
         children
       ) : (
         <div className={style.centered}>
-          <Zoom />
+          <progress className="progress is-small is-primary" max="100" />
         </div>
       )}
     </AuthContext.Provider>

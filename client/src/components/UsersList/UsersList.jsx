@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import style from "./UsersList.module.scss";
-import config from "../../config";
 import { ROLE_LABELS } from "../../utils/roles";
 import { ROLE_IDS } from "../../utils/roles";
+import { useAppConfig } from "../../context/AppConfigContext";
+import { AuthClient } from "../../context/AuthContext";
 
 export const UsersList = ({
   onUserSelect,
@@ -11,6 +11,7 @@ export const UsersList = ({
   reloadKey = 0,
   onCreateUser,
 }) => {
+  const { cities } = useAppConfig();
   const [users, setUsers] = useState([]);
   // const [salesAgents, setSalesAgents] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -26,7 +27,7 @@ export const UsersList = ({
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get(`${config.API_URL}/auth/users/tree/`);
+        const response = await AuthClient.get("/users/tree");
         setUsers(response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -91,7 +92,7 @@ export const UsersList = ({
     if (!userToDelete) return;
 
     try {
-      await axios.delete(`${config.API_URL}/auth/users/${userToDelete.id}`);
+      await AuthClient.delete(`/users/${userToDelete.id}`);
       setUsers(users.filter((user) => user.id !== userToDelete.id));
     } catch (error) {
       console.error(`Error deleting user ${userToDelete.name}:`, error);
@@ -188,11 +189,12 @@ export const UsersList = ({
     );
   });
 
-  const cityLabel = {
-    1: "ZP",
-    2: "DP",
-    3: "KR",
-  };
+  const cityLabel = React.useMemo(() => {
+    return cities.reduce((acc, city) => {
+      acc[city.id] = city.shortName || city.name;
+      return acc;
+    }, {});
+  }, [cities]);
 
   const getRowStyle = (user) => {
     // TA с назначенным SV
