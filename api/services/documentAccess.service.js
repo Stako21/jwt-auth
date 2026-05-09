@@ -1,4 +1,23 @@
 import pool from "../db.cjs";
+import { getUserBranchId, getUserVisibleBranchIds } from "./appConfig.service.js";
+
+async function getUserVisibleCityIds(user) {
+  const cityIds = new Set([Number(user.city)]);
+  const [rows] = await pool.query(
+    `
+    SELECT city_id
+    FROM user_city_access
+    WHERE user_id = ?
+    `,
+    [user.id],
+  );
+
+  for (const row of rows) {
+    cityIds.add(Number(row.city_id));
+  }
+
+  return Array.from(cityIds).filter(Boolean);
+}
 
 /**
  * Проверяет, имеет ли user доступ к документу
@@ -6,16 +25,22 @@ import pool from "../db.cjs";
  * Бросает Error("FORBIDDEN") или Error("NOT_FOUND")
  */
 export async function ensureDocumentAccess(user, documentId) {
+  const branchIds =
+    user.role === 1 || user.role === 2
+      ? await getUserVisibleBranchIds(user)
+      : [getUserBranchId(user)];
   const [rows] = await pool.query(
     `
     SELECT
       d.id,
       d.author_user_id,
-      d.city
+      d.city,
+      d.branch_id
     FROM documents d
     WHERE d.id = ?
+      AND d.branch_id IN (${branchIds.map(() => "?").join(", ")})
     `,
-    [documentId]
+    [documentId, ...branchIds],
   );
 
   if (!rows.length) {
@@ -39,7 +64,8 @@ export async function ensureDocumentAccess(user, documentId) {
 
   // 3️⃣ Accountant / Warehouse — только регион
   if ([6, 7].includes(user.role)) {
-    if (doc.city !== user.city) {
+    const cityIds = await getUserVisibleCityIds(user);
+    if (!cityIds.includes(Number(doc.city))) {
       throw new Error("FORBIDDEN");
     }
     return doc;
@@ -115,9 +141,10 @@ export async function ensureDocumentAccess(user, documentId) {
       LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
       WHERE u.id = ?
         AND u.role = 5
+        AND u.branch_id = ?
         AND h.parent_user_id IS NULL
       `,
-      [doc.author_user_id],
+      [doc.author_user_id, doc.branch_id],
     );
 
     if (!orphanTa) {

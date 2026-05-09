@@ -91,4 +91,18 @@ export async function retryFailedNotifications() {
     successCount,
     errorCount,
   });
+
+  return {
+    status: errorCount > 0 ? "completed_with_warnings" : "completed",
+    code: errorCount > 0 ? "partial_retry" : "retry_completed",
+    message:
+      errorCount > 0
+        ? "Notification retry finished with warnings"
+        : "Notification retry finished successfully",
+    details: {
+      recordsCount: rows.length,
+      successCount,
+      errorCount,
+    },
+  };
 }

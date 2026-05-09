@@ -3,31 +3,48 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pool from "../db.cjs";
 import { createTaskLogger } from "./taskLogger.js";
+import { getImportSourcePath } from "./appConfig.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const tradePointFile = path.join(
-  __dirname,
-  "..",
-  "..",
-  "client",
-  "public",
-  "Sorce",
-  "TradePoint.json"
-);
-
 const logger = createTaskLogger("loadTradePoints");
 
 export async function loadTradePoints() {
+  const source = await getImportSourcePath("loadTradePoints", "TradePoint.json");
+  const tradePointFile = source?.filePath;
   const runLog = logger.start("loader started", { file: tradePointFile });
 
   try {
+    if (!tradePointFile || !source?.isActive) {
+      runLog.warn("import source is inactive or not configured, skipping", {
+        sourceKey: "loadTradePoints",
+      });
+      return {
+        status: "skipped",
+        code: "source_inactive",
+        message: "Trade points import source is inactive or not configured",
+        details: {
+          sourceKey: "loadTradePoints",
+        },
+      };
+    }
+
+    const branch = source?.branch;
+    const branchId = Number(branch.id);
+
     try {
       await fs.access(tradePointFile);
     } catch {
       runLog.warn("source file not found, skipping", { file: tradePointFile });
-      return;
+      return {
+        status: "skipped",
+        code: "source_missing",
+        message: "Trade points source file not found",
+        details: {
+          file: tradePointFile,
+        },
+      };
     }
 
     const fileStat = await fs.stat(tradePointFile);
@@ -46,7 +63,14 @@ export async function loadTradePoints() {
       items = JSON.parse(raw);
     } catch (e) {
       runLog.fail(e, "json parse failed");
-      return;
+      return {
+        status: "failed",
+        code: "json_parse_failed",
+        message: "Trade points source JSON parse failed",
+        details: {
+          file: tradePointFile,
+        },
+      };
     }
 
     runLog.info("json parsed", {
@@ -56,7 +80,14 @@ export async function loadTradePoints() {
 
     if (!Array.isArray(items) || items.length === 0) {
       runLog.warn("source file is empty or invalid array, skipping");
-      return;
+      return {
+        status: "skipped",
+        code: "empty_source",
+        message: "Trade points source file is empty or invalid",
+        details: {
+          file: tradePointFile,
+        },
+      };
     }
 
     const usedTradePoints = new Set();
@@ -77,28 +108,36 @@ export async function loadTradePoints() {
 
         await pool.query(
           `
-          INSERT INTO contractors (id_1c, name)
-          VALUES (?, ?)
+          INSERT INTO contractors (id_1c, name, branch_id)
+          VALUES (?, ?, ?)
           ON DUPLICATE KEY UPDATE
             name = VALUES(name),
+            branch_id = VALUES(branch_id),
             is_active = 1
           `,
-          [row.contractor_id, row.contractor_name]
+          [row.contractor_id, row.contractor_name, branchId]
         );
 
         const [[contractor]] = await pool.query(
-          `SELECT id FROM contractors WHERE id_1c = ?`,
-          [row.contractor_id]
+          `
+          SELECT id
+          FROM contractors
+          WHERE id_1c = ?
+            AND branch_id = ?
+          LIMIT 1
+          `,
+          [row.contractor_id, branchId]
         );
 
         await pool.query(
           `
-          INSERT INTO trade_points (id_1c, name, address, contractor_id)
-          VALUES (?, ?, ?, ?)
+          INSERT INTO trade_points (id_1c, name, address, contractor_id, branch_id)
+          VALUES (?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE
             name = VALUES(name),
             address = VALUES(address),
             contractor_id = VALUES(contractor_id),
+            branch_id = VALUES(branch_id),
             is_active = 1
           `,
           [
@@ -106,6 +145,7 @@ export async function loadTradePoints() {
             row.trade_point_name,
             row.trade_point_address,
             contractor.id,
+            branchId,
           ]
         );
 
@@ -122,22 +162,46 @@ export async function loadTradePoints() {
       }
     }
 
+    if (usedTradePoints.size === 0 || usedContractors.size === 0) {
+      runLog.warn("no valid trade points were imported, deactivation sync skipped", {
+        recordsCount: items.length,
+        importedTradePoints: usedTradePoints.size,
+        importedContractors: usedContractors.size,
+        skippedInvalidRows,
+        rowErrorCount,
+      });
+      return {
+        status: "skipped",
+        code: "no_trade_points_imported",
+        message: "Trade points import did not produce valid trade points",
+        details: {
+          recordsCount: items.length,
+          importedTradePoints: usedTradePoints.size,
+          importedContractors: usedContractors.size,
+          skippedInvalidRows,
+          rowErrorCount,
+        },
+      };
+    }
+
     const [tradePointsDisabledRes] = await pool.query(
       `
-      UPDATE trade_points
-      SET is_active = 0
-      WHERE id_1c NOT IN (?)
-      `,
-      [Array.from(usedTradePoints)]
+        UPDATE trade_points
+        SET is_active = 0
+        WHERE id_1c NOT IN (?)
+          AND branch_id = ?
+        `,
+        [Array.from(usedTradePoints), branchId]
     );
 
     const [contractorsDisabledRes] = await pool.query(
       `
-      UPDATE contractors
-      SET is_active = 0
-      WHERE id_1c NOT IN (?)
-      `,
-      [Array.from(usedContractors)]
+        UPDATE contractors
+        SET is_active = 0
+        WHERE id_1c NOT IN (?)
+          AND branch_id = ?
+        `,
+        [Array.from(usedContractors), branchId]
     );
 
     runLog.info("deactivation sync completed", {
@@ -145,8 +209,38 @@ export async function loadTradePoints() {
       disabledContractors: contractorsDisabledRes.affectedRows,
     });
 
-    await fs.unlink(tradePointFile);
-    runLog.info("source file removed", { file: tradePointFile });
+    const hasUnresolvedRows = skippedInvalidRows > 0 || rowErrorCount > 0;
+
+    if (!source.deleteAfterSuccess) {
+      runLog.info("source file kept after successful import", {
+        file: tradePointFile,
+      });
+    } else if (hasUnresolvedRows) {
+      runLog.warn("source file kept after partial import", {
+        file: tradePointFile,
+        skippedInvalidRows,
+        rowErrorCount,
+      });
+    } else {
+      await fs.unlink(tradePointFile);
+      runLog.info("source file removed", { file: tradePointFile });
+    }
+
+    const result = {
+      status: hasUnresolvedRows ? "completed_with_warnings" : "completed",
+      code: hasUnresolvedRows ? "partial_import" : "import_completed",
+      message: hasUnresolvedRows
+        ? "Trade points imported with warnings"
+        : "Trade points imported successfully",
+      details: {
+        recordsCount: items.length,
+        importedTradePoints: usedTradePoints.size,
+        importedContractors: usedContractors.size,
+        skippedInvalidRows,
+        rowErrorCount,
+        keptSourceFile: !source.deleteAfterSuccess || hasUnresolvedRows,
+      },
+    };
 
     runLog.end("loader completed", {
       recordsCount: items.length,
@@ -154,8 +248,19 @@ export async function loadTradePoints() {
       importedContractors: usedContractors.size,
       skippedInvalidRows,
       rowErrorCount,
+      keptSourceFile: !source.deleteAfterSuccess || hasUnresolvedRows,
     });
+    return result;
   } catch (error) {
     runLog.fail(error, "loader failed", { file: tradePointFile });
+    return {
+      status: "failed",
+      code: "import_failed",
+      message: "Trade points import failed",
+      details: {
+        file: tradePointFile,
+        errorMessage: error.message,
+      },
+    };
   }
 }

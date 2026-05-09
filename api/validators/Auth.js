@@ -1,38 +1,48 @@
 import validateRequest from "../utils/ValidateRequest.js";
 import * as Yup from "yup";
 
+const positiveInteger = Yup.number()
+  .typeError("Value must be a number")
+  .integer("Value must be an integer")
+  .min(1, "Minimum value is 1");
+
 export const signInSchema = Yup.object({
   body: Yup.object({
     userName: Yup.string()
-      .required("Обов'язкове поле!")
-      .max(25, "Максимальная длина - 25 символов"),
+      .required("Required field")
+      .max(25, "Maximum length is 25 characters"),
     password: Yup.string()
-      .required("Обов'язкове поле!")
-      .min(3, "Пароль занадто короткий!")
-      .max(50, "Максимальная длина - 50 символов"),
+      .required("Required field")
+      .min(3, "Password is too short")
+      .max(50, "Maximum length is 50 characters"),
   }),
 });
 
 export const signUpSchema = Yup.object({
   body: Yup.object({
     userName: Yup.string()
-      .required("Обов'язкове поле!")
-      .max(25, "Максимальная длина - 25 символов"),
+      .required("Required field")
+      .max(25, "Maximum length is 25 characters"),
+    user_name: Yup.string().nullable().max(50, "Maximum length is 50 characters"),
     password: Yup.string()
-      .required("Обов'язкове поле!")
-      .min(3, "Пароль занадто короткий!")
-      .max(50, "Максимальная длина - 50 символов"),
-    role: Yup.number()
-      .required("Обов'язкове поле!")
-      .typeError("Значение должно быть числом!")
-      .min(1, "Минимальное значение - 1")
-      .max(7, "Максимальное значение - 7"),
+      .required("Required field")
+      .min(3, "Password is too short")
+      .max(50, "Maximum length is 50 characters"),
+    role: positiveInteger.max(7, "Maximum value is 7").required("Required field"),
+    city: positiveInteger.required("Required field"),
+    supervisorId: positiveInteger
+      .transform((value, originalValue) =>
+        originalValue === "" || originalValue === null ? null : value,
+      )
+      .nullable(),
+    branchAccessIds: Yup.array().of(positiveInteger),
+    cityAccessIds: Yup.array().of(positiveInteger),
   }),
 });
 
 export const logoutSchema = Yup.object({
   cookies: Yup.object({
-    refreshToken: Yup.string().required("Обов'язкове поле!"),
+    refreshToken: Yup.string().required("Required field"),
   }),
 });
 

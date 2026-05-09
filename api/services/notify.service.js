@@ -25,14 +25,16 @@ async function logNotification({
   );
 }
 
-async function loadRegionNtification(city) {
+async function loadRegionNtification(city, branchId) {
   const [rows] = await pool.query(
     `
     SELECT email, rocket_channel
     FROM region_notifications
-    WHERE city = ? AND is_active = 1
+    WHERE city = ?
+      AND branch_id = ?
+      AND is_active = 1
     `,
-    [city],
+    [city, branchId],
   );
 
   return {
@@ -227,7 +229,7 @@ async function getRoomIdByName(channelName) {
 export async function notifyDocumentSigned(user, documentId) {
   const doc = await getDocumentByIdService(user, documentId);
 
-  const { emails, rocketChannels } = await loadRegionNtification(doc.city);
+  const { emails, rocketChannels } = await loadRegionNtification(doc.city, doc.branchId);
 
   console.log("Emails", emails);
   console.log("rocketChannels", rocketChannels);

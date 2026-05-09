@@ -1,5 +1,10 @@
 ﻿import pool from "../db.cjs";
 import { notifyDocumentSigned } from "./notify.service.js";
+import {
+  getCityById,
+  getUserBranchId,
+  getUserVisibleBranchIds,
+} from "./appConfig.service.js";
 
 /**
  * user: { id, role, city }
@@ -48,6 +53,7 @@ export async function createDocumentService(user, payload) {
   }
 
   const connection = await pool.getConnection();
+  const branchId = getUserBranchId(user);
 
   try {
     await connection.beginTransaction();
@@ -57,9 +63,11 @@ export async function createDocumentService(user, payload) {
       `
       SELECT contractor_id
       FROM trade_points
-      WHERE id = ? AND is_active = 1
+      WHERE id = ?
+        AND is_active = 1
+        AND branch_id = ?
       `,
-      [tradePointId],
+      [tradePointId, branchId],
     );
 
     if (!tp) {
@@ -68,39 +76,44 @@ export async function createDocumentService(user, payload) {
 
     /** 2️⃣ Генерация номера */
     const city = user.city;
+    const cityConfig = await getCityById(city);
+
+    if (!cityConfig?.documentPrefix) {
+      throw new Error("Для міста не налаштований префікс документів");
+    }
 
     const [[seq]] = await connection.query(
       `
       SELECT last_number
       FROM document_sequences
       WHERE city = ?
+        AND branch_id = ?
       FOR UPDATE
       `,
-      [city],
+      [city, branchId],
     );
 
     let nextNumber = 1;
 
     if (!seq) {
       await connection.query(
-        `INSERT INTO document_sequences (city, last_number) VALUES (?, 1)`,
-        [city],
+        `INSERT INTO document_sequences (city, last_number, branch_id) VALUES (?, 1, ?)`,
+        [city, branchId],
       );
     } else {
       nextNumber = seq.last_number + 1;
       await connection.query(
-        `UPDATE document_sequences SET last_number = ? WHERE city = ?`,
-        [nextNumber, city],
+        `
+        UPDATE document_sequences
+        SET last_number = ?
+        WHERE city = ?
+          AND branch_id = ?
+        `,
+        [nextNumber, city, branchId],
       );
     }
 
-    const prefixMap = {
-      1: "ЗП",
-      2: "ДП",
-      3: "КР",
-    };
-
-    const prefix = prefixMap[city] ?? "XX";
+    const prefix = cityConfig.documentPrefix;
     const documentNumber = `${prefix}${String(nextNumber).padStart(6, "0")}`;
 
     /** 3️⃣ Создаём документ */
@@ -111,6 +124,7 @@ export async function createDocumentService(user, payload) {
         document_number,
         document_sequence,
         city,
+        branch_id,
         document_date,
         trade_point_id,
         contractor_id,
@@ -119,13 +133,14 @@ export async function createDocumentService(user, payload) {
         reason,
         comment
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'NEW', ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW', ?, ?)
       `,
       [
         documentType,
         documentNumber,
         nextNumber,
         city,
+        branchId,
         documentDate,
         tradePointId,
         tp.contractor_id,
@@ -161,9 +176,12 @@ export async function createDocumentService(user, payload) {
         SELECT p.name, g.id AS group_id, g.name AS group_name
         FROM products p
         JOIN product_groups g ON g.id = p.group_id
-        WHERE p.id = ? AND p.is_active = 1
+        WHERE p.id = ?
+          AND p.is_active = 1
+          AND p.branch_id = ?
+          AND g.branch_id = ?
         `,
-        [productId],
+        [productId, branchId, branchId],
       );
 
       if (!product) {
@@ -275,7 +293,26 @@ async function checkDirectSubordinate(conn, parentId, authorId) {
   return !!row;
 }
 
-async function isTaWithoutSupervisor(conn, authorId) {
+async function getUserVisibleCityIds(conn, user) {
+  const cityIds = new Set([Number(user.city)]);
+
+  const [rows] = await conn.query(
+    `
+    SELECT city_id
+    FROM user_city_access
+    WHERE user_id = ?
+    `,
+    [user.id],
+  );
+
+  for (const row of rows) {
+    cityIds.add(Number(row.city_id));
+  }
+
+  return Array.from(cityIds).filter(Boolean);
+}
+
+async function isTaWithoutSupervisor(conn, authorId, branchId) {
   const [[row]] = await conn.query(
     `
     SELECT 1
@@ -283,15 +320,16 @@ async function isTaWithoutSupervisor(conn, authorId) {
     LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
     WHERE u.id = ?
       AND u.role = 5
+      AND u.branch_id = ?
       AND h.parent_user_id IS NULL
     `,
-    [authorId],
+    [authorId, branchId],
   );
 
   return !!row;
 }
 
-async function canNtoAccessAuthor(conn, ntoUserId, authorId) {
+async function canNtoAccessAuthor(conn, ntoUserId, authorId, branchId) {
   const [rows] = await conn.query(
     `
     WITH RECURSIVE subordinates AS (
@@ -318,10 +356,11 @@ async function canNtoAccessAuthor(conn, ntoUserId, authorId) {
     return true;
   }
 
-  return isTaWithoutSupervisor(conn, authorId);
+  return isTaWithoutSupervisor(conn, authorId, branchId);
 }
 
 async function checkCanSignDocument(conn, user, documentId) {
+  const branchId = getUserBranchId(user);
   const [[doc]] = await conn.query(
     `
     SELECT
@@ -331,8 +370,9 @@ async function checkCanSignDocument(conn, user, documentId) {
       d.author_user_id
     FROM documents d
     WHERE d.id = ?
+      AND d.branch_id = ?
     `,
-    [documentId],
+    [documentId, branchId],
   );
 
   if (!doc) {
@@ -350,7 +390,12 @@ async function checkCanSignDocument(conn, user, documentId) {
 
   // NTO — иерархия + TA без руководителя
   if (user.role === 3) {
-    const allowed = await canNtoAccessAuthor(conn, user.id, doc.author_user_id);
+    const allowed = await canNtoAccessAuthor(
+      conn,
+      user.id,
+      doc.author_user_id,
+      branchId,
+    );
     if (!allowed) {
       throw new Error("NTO не может подписать этот документ");
     }
@@ -361,6 +406,7 @@ async function checkCanSignDocument(conn, user, documentId) {
 }
 
 async function checkCanChangeStatus(conn, user, documentId, nextStatus) {
+  const branchId = getUserBranchId(user);
   const [[doc]] = await conn.query(
     `
     SELECT
@@ -370,8 +416,9 @@ async function checkCanChangeStatus(conn, user, documentId, nextStatus) {
       d.author_user_id
     FROM documents d
     WHERE d.id = ?
+      AND d.branch_id = ?
     `,
-    [documentId],
+    [documentId, branchId],
   );
 
   if (!doc) {
@@ -623,9 +670,18 @@ export async function rejectDocumentService(user, documentId, comment) {
 
 export async function getDocumentsService(user, query) {
   const { status, from, to, limit = 20, offset = 0 } = query;
-
+  const branchId = getUserBranchId(user);
   const params = [];
   const where = [];
+
+  if (user.role === 1 || user.role === 2) {
+    const visibleBranchIds = await getUserVisibleBranchIds(user);
+    where.push(`d.branch_id IN (${visibleBranchIds.map(() => "?").join(", ")})`);
+    params.push(...visibleBranchIds);
+  } else {
+    where.push("d.branch_id = ?");
+    params.push(branchId);
+  }
 
   /** -----------------------------
    * 1️⃣ Ограничение по ролям
@@ -685,6 +741,7 @@ export async function getDocumentsService(user, query) {
           SELECT u.id
           FROM users u
           WHERE u.role = 5
+            AND u.branch_id = d.branch_id
             AND NOT EXISTS (
               SELECT 1
               FROM user_hierarchy h
@@ -698,8 +755,9 @@ export async function getDocumentsService(user, query) {
 
   // Accountant / Warehouse — регион, без иерархии
   else if ([6, 7].includes(user.role)) {
-    where.push("d.city = ?");
-    params.push(user.city);
+    const cityIds = await getUserVisibleCityIds(pool, user);
+    where.push(`d.city IN (${cityIds.map(() => "?").join(", ")})`);
+    params.push(...cityIds);
   }
 
   // fallback
@@ -732,6 +790,9 @@ export async function getDocumentsService(user, query) {
   const sql = `
     SELECT
       d.id,
+      d.branch_id AS branch_id,
+      b.name AS branch_name,
+      b.short_name AS branch_short_name,
       d.document_number,
       d.document_type,
       d.document_date,
@@ -741,6 +802,7 @@ export async function getDocumentsService(user, query) {
       u.user_name AS author,
       d.created_at
     FROM documents d
+    JOIN branches b ON b.id = d.branch_id
     JOIN trade_points tp ON tp.id = d.trade_point_id
     JOIN contractors c ON c.id = d.contractor_id
     JOIN users u ON u.id = d.author_user_id
@@ -760,6 +822,11 @@ export async function getDocumentsService(user, query) {
 }
 
 export async function getDocumentByIdService(user, documentId) {
+  const branchId = getUserBranchId(user);
+  const visibleBranchIds =
+    user.role === 1 || user.role === 2
+      ? await getUserVisibleBranchIds(user)
+      : [branchId];
   /** -----------------------------
    * 1️⃣ Заголовок + проверка доступа
    * ----------------------------- */
@@ -768,18 +835,23 @@ export async function getDocumentByIdService(user, documentId) {
     `
     SELECT
       d.*,
+      d.branch_id AS branch_id,
+      b.name AS branch_name,
+      b.short_name AS branch_short_name,
       d.city AS city,
       tp.name AS trade_point_name,
       tp.address AS trade_point_address,
       c.name AS contractor_name,
       u.user_name AS author_name
     FROM documents d
+    JOIN branches b ON b.id = d.branch_id
     JOIN trade_points tp ON tp.id = d.trade_point_id
     JOIN contractors c ON c.id = d.contractor_id
     JOIN users u ON u.id = d.author_user_id
     WHERE d.id = ?
+      AND d.branch_id IN (${visibleBranchIds.map(() => "?").join(", ")})
     `,
-    [documentId],
+    [documentId, ...visibleBranchIds],
   );
 
   if (rows.length === 0) {
@@ -866,7 +938,11 @@ export async function getDocumentByIdService(user, documentId) {
     allowed = allowedIds.includes(doc.author_user_id);
 
     if (!allowed) {
-      const orphanTa = await isTaWithoutSupervisor(pool, doc.author_user_id);
+      const orphanTa = await isTaWithoutSupervisor(
+        pool,
+        doc.author_user_id,
+        Number(doc.branch_id),
+      );
       if (!orphanTa) {
         throw new Error("FORBIDDEN");
       }
@@ -875,7 +951,8 @@ export async function getDocumentByIdService(user, documentId) {
 
   // Accountant / Warehouse — только регион
   else if ([6, 7].includes(user.role)) {
-    if (doc.city !== user.city) {
+    const cityIds = await getUserVisibleCityIds(pool, user);
+    if (!cityIds.includes(Number(doc.city))) {
       throw new Error("FORBIDDEN");
     }
   } else {
@@ -932,6 +1009,9 @@ export async function getDocumentByIdService(user, documentId) {
 
   return {
     id: doc.id,
+    branchId: doc.branch_id,
+    branchName: doc.branch_name,
+    branchShortName: doc.branch_short_name,
     city: doc.city,
     documentNumber: doc.document_number,
     documentType: doc.document_type,
@@ -1008,6 +1088,7 @@ export async function getDocumentNotificationHistoryService(user, documentId) {
 export async function updateDocumentService(user, documentId, payload) {
   const { documentType, documentDate, tradePointId, reason, comment, items } =
     payload;
+  const branchId = getUserBranchId(user);
 
   const connection = await pool.getConnection();
 
@@ -1020,9 +1101,10 @@ export async function updateDocumentService(user, documentId, payload) {
       SELECT id, status, author_user_id, city
       FROM documents
       WHERE id = ?
+        AND branch_id = ?
       FOR UPDATE
       `,
-      [documentId],
+      [documentId, branchId],
     );
 
     if (!doc) {
@@ -1051,8 +1133,9 @@ export async function updateDocumentService(user, documentId, payload) {
             SELECT role
             FROM users
             WHERE id = ?
+              AND branch_id = ?
             `,
-            [doc.author_user_id],
+            [doc.author_user_id, branchId],
           );
 
           canEditAsSv = author?.role === 5;
@@ -1111,9 +1194,11 @@ export async function updateDocumentService(user, documentId, payload) {
       `
       SELECT contractor_id
       FROM trade_points
-      WHERE id = ? AND is_active = 1
+      WHERE id = ?
+        AND is_active = 1
+        AND branch_id = ?
       `,
-      [tradePointId],
+      [tradePointId, branchId],
     );
 
     if (!tp) {
@@ -1133,6 +1218,7 @@ export async function updateDocumentService(user, documentId, payload) {
         comment = ?,
         status = 'NEW'
       WHERE id = ?
+        AND branch_id = ?
       `,
       [
         documentType,
@@ -1142,6 +1228,7 @@ export async function updateDocumentService(user, documentId, payload) {
         reason,
         comment ?? null,
         documentId,
+        branchId,
       ],
     );
 
@@ -1175,9 +1262,12 @@ export async function updateDocumentService(user, documentId, payload) {
         SELECT p.name, g.id AS group_id, g.name AS group_name
         FROM products p
         JOIN product_groups g ON g.id = p.group_id
-        WHERE p.id = ? AND p.is_active = 1
+        WHERE p.id = ?
+          AND p.is_active = 1
+          AND p.branch_id = ?
+          AND g.branch_id = ?
         `,
-        [productId],
+        [productId, branchId, branchId],
       );
 
       if (!product) {

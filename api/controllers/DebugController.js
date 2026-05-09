@@ -1,13 +1,20 @@
 import pool from "../db.cjs";
+import { getUserBranchId } from "../services/appConfig.service.js";
 
 export async function debugUserHierarchy(req, res) {
   try {
     const { userId } = req.params;
+    const branchId = getUserBranchId(req.user);
 
     // Получаем информацию о пользователе
     const [[user]] = await pool.query(
-      `SELECT id, user_name, role FROM users WHERE id = ?`,
-      [userId],
+      `
+      SELECT id, user_name, role
+      FROM users
+      WHERE id = ?
+        AND branch_id = ?
+      `,
+      [userId, branchId],
     );
 
     if (!user) {
@@ -21,8 +28,9 @@ export async function debugUserHierarchy(req, res) {
       FROM user_hierarchy uh
       JOIN users u ON u.id = uh.child_user_id
       WHERE uh.parent_user_id = ?
+        AND u.branch_id = ?
       `,
-      [userId],
+      [userId, branchId],
     );
 
     // Получаем всех подчиненных рекурсивно
@@ -42,8 +50,9 @@ export async function debugUserHierarchy(req, res) {
       SELECT u.id, u.user_name, u.role
       FROM subordinates
       JOIN users u ON u.id = subordinates.child_user_id
+      WHERE u.branch_id = ?
       `,
-      [userId],
+      [userId, branchId],
     );
 
     // Получаем документы подчиненных
@@ -68,8 +77,10 @@ export async function debugUserHierarchy(req, res) {
         UNION ALL
         SELECT ?
       )
+        AND d.branch_id = ?
+        AND u.branch_id = d.branch_id
       `,
-      [userId, userId],
+      [userId, userId, branchId],
     );
 
     res.json({

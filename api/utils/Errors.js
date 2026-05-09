@@ -5,6 +5,25 @@ class WebError {
   }
 }
 
+function getDefaultMessage(status) {
+  switch (status) {
+    case 400:
+      return "Bad Request";
+    case 401:
+      return "Unauthorized";
+    case 403:
+      return "Forbidden";
+    case 404:
+      return "Not Found";
+    case 409:
+      return "Conflict";
+    case 422:
+      return "Unprocessable Entity";
+    default:
+      return "Internal Server Error";
+  }
+}
+
 export class Unprocessable extends WebError {
   constructor(error) {
     super(422, error);
@@ -44,7 +63,9 @@ export class BadRequest extends WebError {
 class ErrorUtils {
   static catchError(res, error) {
     console.error(error);
-    return res.status(error.status || 500).json({ error: error.error || "Internal Server Error" });
+    const status = error?.status || 500;
+    const message = error?.error || getDefaultMessage(status);
+    return res.status(status).json({ error: message });
   }
 }
 

@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import TokenService from "./Token.js";
+import pool from "../db.cjs";
 import {
-  Conflict,
+  BadRequest,
   Forbidden,
   NotFound,
   Unauthorized,
@@ -10,13 +10,55 @@ import {
 import RefreshSessionsRepository from "../repositories/RefreshSession.js";
 import UserRepository from "../repositories/User.js";
 import { ACCESS_TOKEN_EXPIRATION } from "../constants.js";
+import { applyUserAccessConfig, canUserAccessBranch } from "./appConfig.service.js";
+import {
+  assertKnownRoleId,
+  assertSupervisorRoleForChildRole,
+  canRoleHaveSupervisor,
+} from "./userHierarchy.service.js";
+
+async function resolveActiveBranchId(userData, requestedBranchId = null) {
+  const fallbackBranchId = Number(userData.branch_id);
+  const nextBranchId = Number(requestedBranchId);
+
+  if (!Number.isInteger(nextBranchId) || nextBranchId <= 0) {
+    return fallbackBranchId;
+  }
+
+  if (nextBranchId === fallbackBranchId) {
+    return fallbackBranchId;
+  }
+
+  const canAccess = await canUserAccessBranch(
+    {
+      id: userData.id,
+      role: userData.role,
+      branchId: fallbackBranchId,
+    },
+    nextBranchId,
+  );
+
+  return canAccess ? nextBranchId : fallbackBranchId;
+}
+
+function getFingerprintHash(fingerprint) {
+  return fingerprint?.hash || null;
+}
 
 class AuthService {
   static async signIn({ userName, password, fingerprint }) {
     const userData = await UserRepository.getUserData(userName);
 
+    if (userData && (typeof userData.PASSWORD !== "string" || !userData.PASSWORD)) {
+      throw new Unauthorized("Invalid login or password");
+    }
+
     if (!userData) {
       throw new NotFound("Користувача не знайдено");
+    }
+
+    if (typeof userData.PASSWORD !== "string" || !userData.PASSWORD) {
+      throw new Unauthorized("РќРµРїСЂР°РІРёР»СЊРЅРёР№ Р»РѕРіС–РЅ Р°Р±Рѕ РїР°СЂРѕР»СЊ");
     }
 
     const isPasswordValid = bcrypt.compareSync(password, userData.PASSWORD);
@@ -30,6 +72,7 @@ class AuthService {
       role: userData.role,
       userName: userData.NAME,
       city: userData.city,
+      branchId: Number(userData.branch_id),
     };
     const accessToken = await TokenService.generateAccessToken(payload);
     const refreshToken = await TokenService.generateRefreshToken(payload);
@@ -48,45 +91,95 @@ class AuthService {
   }
 
   static async signUp({
+    currentUser,
     userName,
     user_name,
     password,
-    fingerprint,
     role,
     city,
+    branchId,
+    supervisorId,
+    branchAccessIds,
+    cityAccessIds,
   }) {
-    // Added city and user_name here
-    // Uniqueness checks handled in controller
+    const connection = await pool.getConnection();
 
-    const hashedPassword = bcrypt.hashSync(password, 8);
-    const user = await UserRepository.createUser({
-      userName,
-      user_name,
-      hashedPassword,
-      role,
-      city,
-    }); // Added user_name and city here
+    try {
+      await connection.beginTransaction();
+      assertKnownRoleId(role);
 
-    const payload = {
-      id: user.id,
-      userName,
-      role,
-      city,
-    }; // Added city and user_name here
-    const accessToken = await TokenService.generateAccessToken(payload);
-    const refreshToken = await TokenService.generateRefreshToken(payload);
+      const hashedPassword = bcrypt.hashSync(password, 8);
+      const user = await UserRepository.insertUser(connection, {
+        userName,
+        user_name,
+        hashedPassword,
+        role,
+        city,
+        branchId,
+      });
 
-    await RefreshSessionsRepository.createRefreshSession({
-      id: user.id,
-      refreshToken,
-      fingerprint,
-    });
+      await applyUserAccessConfig(
+        currentUser,
+        {
+          id: Number(user.id),
+          role: Number(user.role),
+          city: Number(user.city),
+          branchId: Number(user.branch_id),
+        },
+        {
+          branchAccessIds,
+          cityAccessIds,
+        },
+        connection,
+      );
 
-    return {
-      accessToken,
-      refreshToken,
-      accessTokenExpiration: ACCESS_TOKEN_EXPIRATION,
-    };
+      const normalizedSupervisorId =
+        supervisorId === null || typeof supervisorId === "undefined" || supervisorId === ""
+          ? null
+          : Number(supervisorId);
+
+      if (normalizedSupervisorId !== null) {
+        if (!Number.isInteger(normalizedSupervisorId) || normalizedSupervisorId <= 0) {
+          throw new BadRequest("supervisorId must be a positive integer");
+        }
+
+        if (!canRoleHaveSupervisor(role)) {
+          throw new BadRequest("Supervisor can be assigned only for SV and TA roles");
+        }
+
+        const supervisor = await UserRepository.getActiveUserByIdInBranch(
+          normalizedSupervisorId,
+          Number(branchId),
+        );
+
+        if (!supervisor) {
+          throw new NotFound("User or supervisor not found in current branch");
+        }
+
+        assertKnownRoleId(supervisor.role);
+        assertSupervisorRoleForChildRole(Number(user.role), Number(supervisor.role));
+
+        const result = await UserRepository.setParent(
+          Number(user.id),
+          normalizedSupervisorId,
+          branchId,
+          connection,
+        );
+
+        if (!result.affectedRows) {
+          throw new NotFound("User or supervisor not found in current branch");
+        }
+      }
+
+      await connection.commit();
+
+      return { user };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   static async logOut(refreshToken) {
@@ -106,7 +199,9 @@ class AuthService {
       throw new Unauthorized();
     }
 
-    if (refreshSession.finger_print !== fingerprint.hash) {
+    const fingerprintHash = getFingerprintHash(fingerprint);
+
+    if (!fingerprintHash || refreshSession.finger_print !== fingerprintHash) {
       throw new Forbidden();
     }
 
@@ -129,14 +224,58 @@ class AuthService {
       throw new Unauthorized();
     }
 
+    const activeBranchId = await resolveActiveBranchId(userData, payload.branchId);
     const { id, role, NAME: userName, city } = userData; // Added city and user_name here
-    const actualPayload = { id, userName, role, city }; // Added city and user_name here
+    const actualPayload = {
+      id,
+      userName,
+      role,
+      city,
+      branchId: activeBranchId,
+    }; // Added city and user_name here
 
     const accessToken = await TokenService.generateAccessToken(actualPayload);
     const refreshToken = await TokenService.generateRefreshToken(actualPayload);
 
     await RefreshSessionsRepository.createRefreshSession({
       id,
+      refreshToken,
+      fingerprint,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      accessTokenExpiration: ACCESS_TOKEN_EXPIRATION,
+    };
+  }
+
+  static async switchBranch({ currentUser, branchId, fingerprint }) {
+    const userData = await UserRepository.getUserById(currentUser.id);
+
+    if (!userData) {
+      throw new Unauthorized();
+    }
+
+    const activeBranchId = await resolveActiveBranchId(userData, branchId);
+
+    if (Number(activeBranchId) !== Number(branchId)) {
+      throw new Forbidden("No access to requested branch");
+    }
+
+    const payload = {
+      id: userData.id,
+      role: userData.role,
+      userName: userData.NAME,
+      city: userData.city,
+      branchId: activeBranchId,
+    };
+
+    const accessToken = await TokenService.generateAccessToken(payload);
+    const refreshToken = await TokenService.generateRefreshToken(payload);
+
+    await RefreshSessionsRepository.createRefreshSession({
+      id: userData.id,
       refreshToken,
       fingerprint,
     });

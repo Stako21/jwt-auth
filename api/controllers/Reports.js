@@ -2,11 +2,16 @@ import ReportsRepository from "../repositories/Reports.js";
 import ErrorsUtils from "../utils/Errors.js";
 import puppeteer from "puppeteer";
 import { renderSalesReportHtml } from "../pdf/salesReport.template.js";
+import { getImportDir, getUserBranchId } from "../services/appConfig.service.js";
+import fs from "fs/promises";
+import path from "path";
+import pool from "../db.cjs";
 
 class ReportsController {
   static async getSalesReport(req, res) {
     try {
       const { id, role } = req.user;
+      const branchId = getUserBranchId(req.user);
       const { date } = req.query;
 
       if (!date) {
@@ -17,9 +22,14 @@ class ReportsController {
         userId: id,
         role,
         reportDate: date,
+        branchId,
       });
 
-      const lastUpdate = await ReportsRepository.getLastImportDate();
+      const lastUpdate = await ReportsRepository.getLastImportDate({
+        userId: id,
+        role,
+        branchId,
+      });
 
       return res.json({
         meta: {
@@ -35,7 +45,11 @@ class ReportsController {
   }
 
   static async getReportDateRange(req, res) {
-    const range = await ReportsRepository.getReportDateRange();
+    const range = await ReportsRepository.getReportDateRange({
+      userId: req.user.id,
+      role: req.user.role,
+      branchId: getUserBranchId(req.user),
+    });
     
     return res.json({ data: range });
   }
@@ -43,6 +57,7 @@ class ReportsController {
   static async getSalesReportPdf(req, res) {
     try {
       const { id, role } = req.user;
+      const branchId = getUserBranchId(req.user);
       const { date } = req.query;
 
       if (!date) {
@@ -53,6 +68,7 @@ class ReportsController {
         userId: id,
         role,
         reportDate: date,
+        branchId,
       });
 
       const html = renderSalesReportHtml({
@@ -110,6 +126,46 @@ class ReportsController {
       );
 
       return res.end(pdf);
+    } catch (err) {
+      return ErrorsUtils.catchError(res, err);
+    }
+  }
+
+  static async getStaticReport(req, res) {
+    try {
+      const branchId = getUserBranchId(req.user);
+      const { reportKey } = req.params;
+
+      const [[report]] = await pool.query(
+        `
+        SELECT file_name
+        FROM report_definitions
+        WHERE branch_id = ?
+          AND report_key = ?
+          AND is_active = 1
+        LIMIT 1
+        `,
+        [branchId, reportKey],
+      );
+
+      if (!report?.file_name) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+
+      const safeFileName = path.basename(report.file_name);
+      const filePath = path.resolve(getImportDir(), safeFileName);
+
+      let raw;
+      try {
+        raw = await fs.readFile(filePath, "utf8");
+      } catch {
+        return res.status(404).json({
+          message: "Файл звіту не знайдено",
+          fileName: safeFileName,
+        });
+      }
+
+      return res.json(JSON.parse(raw.replace(/^\uFEFF/, "")));
     } catch (err) {
       return ErrorsUtils.catchError(res, err);
     }
