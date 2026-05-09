@@ -593,6 +593,10 @@ Frontend:
   - reviewed the remaining `git diff` after asset cleanup and found no further generated-file noise in `public/dist`
   - updated `README.md` so project documentation now matches the implemented branch-config/admin-config state
   - commit recommendation: keep branch-config app code and rollout scripts together, but separate `AGENTS.md`, `MEMORY.md`, and `.github/instructions/*` into an explicit docs/tooling commit if they are to be versioned at all
+- Push and PR-prep checkpoint on May 9, 2026:
+  - created four commits for backend foundation, backend hardening, frontend branch-config UI, and docs/tooling guidance
+  - pushed `branches-config` to `origin/branches-config` and set upstream tracking
+  - branch is now ready for PR creation with a grouped summary of branch-config rollout, access hardening, scheduler/config UI, and rollout helper scripts
 
 ## Workflow Notes
 
