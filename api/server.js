@@ -2,14 +2,18 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import Fingerprint from "express-fingerprint";
-import AuthRootRouter from "./routers/Auth.js";
-import TokenService from "./services/Token.js";
 import cookieParser from "cookie-parser";
+import AuthRootRouter from "./routers/Auth.js";
 import documentRoutes from "./routes/documents.js";
 import directoryRoutes from "./routes/directoryes.js";
+import reportRoutes from "./routes/reports.js";
+import regionNotificationsRoutes from "./routes/regionNotifications.js";
+import configRoutes from "./routes/config.js";
+import balanceRoutes from "./routes/balances.js";
 import securityHeaders from "./middlewares/securityHeaders.js";
 import { createRateLimit } from "./middlewares/rateLimit.js";
-import "./services/scheduler.js";
+import authMiddleware from "./middlewares/authMiddleware.js";
+import { startScheduler } from "./services/scheduler.js";
 
 dotenv.config();
 
@@ -73,14 +77,32 @@ const documentsRateLimit = createRateLimit({
 });
 
 app.use("/api/auth", authRateLimit, AuthRootRouter);
+app.use("/api/config", authMiddleware, configRoutes);
+app.use("/api/balances", authMiddleware, balanceRoutes);
+app.use("/api/reports", authMiddleware, reportRoutes);
+app.use("/api/region-notifications", authMiddleware, regionNotificationsRoutes);
+app.use("/api/documents", documentsRateLimit, authMiddleware, documentRoutes);
+app.use("/api/directories", authMiddleware, directoryRoutes);
 
-app.get("/resource/protected", TokenService.checkAccess, (req, res) => {
-  return res.status(200).json("Ласкаво прошу!" + Date.now());
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server started successfully on port ${PORT}`);
+
+  startScheduler()
+    .then(() => {
+      console.log("Scheduler started successfully");
+    })
+    .catch((error) => {
+      console.error("Scheduler startup failed:", error);
+      process.exit(1);
+    });
 });
 
-app.use("/api/documents", documentsRateLimit, documentRoutes);
-app.use("/api/directories", directoryRoutes);
+server.on("error", (error) => {
+  if (error?.code === "EADDRINUSE") {
+    console.error(`Server failed to start: port ${PORT} is already in use`);
+  } else {
+    console.error("Server failed to start:", error);
+  }
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("Сервер успішно запущено!!!");
+  process.exit(1);
 });

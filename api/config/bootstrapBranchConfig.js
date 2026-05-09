@@ -1,0 +1,90 @@
+export const DEFAULT_BRANCH_ID = 1;
+
+// Edit this file before a fresh rollout or bootstrap sync if the initial
+// branch/city/balance/report definitions must match production-ready values.
+export const defaultBootstrapBranchConfig = {
+  branch: {
+    id: DEFAULT_BRANCH_ID,
+    slug: "default",
+    name: "Default branch",
+    shortName: "Default",
+    isActive: true,
+  },
+  cities: [
+    {
+      id: 1,
+      slug: "zp",
+      name: "Запоріжжя",
+      shortName: "ЗП",
+      documentPrefix: "ЗП",
+      isActive: true,
+      sortOrder: 10,
+    },
+    {
+      id: 2,
+      slug: "dp",
+      name: "Дніпро",
+      shortName: "ДП",
+      documentPrefix: "ДП",
+      isActive: true,
+      sortOrder: 20,
+    },
+    {
+      id: 3,
+      slug: "kr",
+      name: "Кривий Ріг",
+      shortName: "КР",
+      documentPrefix: "КР",
+      isActive: true,
+      sortOrder: 30,
+    },
+  ],
+  balancePages: [
+    {
+      slug: "zp",
+      citySlug: "zp",
+      menuTitle: "ЗП",
+      headerTitle: "Запоріжжя",
+      fileName: "balanceZP.xlsx",
+      isActive: true,
+      sortOrder: 10,
+    },
+    {
+      slug: "dp",
+      citySlug: "dp",
+      menuTitle: "ДП",
+      headerTitle: "Дніпро",
+      fileName: "balanceDP.xlsx",
+      isActive: true,
+      sortOrder: 20,
+    },
+    {
+      slug: "kr",
+      citySlug: "kr",
+      menuTitle: "КР",
+      headerTitle: "Кривий Ріг",
+      fileName: "balanceKR.xlsx",
+      isActive: true,
+      sortOrder: 30,
+    },
+    {
+      slug: "ml",
+      citySlug: null,
+      menuTitle: "ML",
+      headerTitle: "ML",
+      fileName: "balanceML.xlsx",
+      isActive: false,
+      sortOrder: 40,
+    },
+  ],
+  reports: [
+    {
+      reportKey: "report-romashka",
+      route: "/report-romashka",
+      menuTitle: "Звіт Ромашка",
+      fileName: "report_romashka.json",
+      isActive: true,
+      sortOrder: 20,
+    },
+  ],
+};
