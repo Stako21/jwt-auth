@@ -1,0 +1,604 @@
+# MEMORY.md
+
+## Purpose Of Current Work
+
+The current branch `branches-config` is moving the application from hardcoded city-specific behavior toward configurable branch/city support.
+
+Primary goal: support one or multiple branches, each with its own cities, balance pages, reports, document prefixes, imports, scheduler settings, and access boundaries, while preserving existing role hierarchy and document/report behavior.
+
+## Current State
+
+Completed in the current workspace:
+
+- Branch/config migration exists:
+  - `api/migrations/001_branch_configuration.js`
+- Migration runner exists:
+  - `api/scripts/migrate.js`
+  - `api/package.json` has `npm run migrate`
+- App config backend exists:
+  - `api/services/appConfig.service.js`
+  - `api/controllers/configController.js`
+  - `api/routes/config.js`
+  - `api/server.js` mounts `/api/config`
+- Protected balance file backend exists:
+  - `api/controllers/balancesController.js`
+  - `api/routes/balances.js`
+  - `api/server.js` mounts `/api/balances`
+- Frontend app config loading exists:
+  - `client/src/context/AppConfigContext.jsx`
+  - `client/src/services/config.api.js`
+- Balance file API client exists:
+  - `client/src/services/balances.api.js`
+- Dynamic balance routes are in place:
+  - `client/src/App.jsx` uses `/balance/:slug`
+  - `client/src/components/Header/Header.jsx` builds balance menu items from config
+  - `client/src/components/ParseExcel/ParseExcel.jsx` loads balance files through backend by `balanceSlug`
+- Frontend config/admin UI is already connected:
+  - `client/src/pages/AdminPage.jsx` has the configuration tab
+  - `client/src/components/Configuration/BranchConfig.jsx`
+  - `client/src/components/Configuration/CitiesConfig.jsx`
+  - `client/src/components/Configuration/BalancePagesConfig.jsx`
+  - `client/src/components/Configuration/ReportsConfig.jsx`
+  - `client/src/components/Configuration/ImportSourcesConfig.jsx`
+  - `client/src/components/Configuration/SchedulerConfig.jsx`
+- City-driven data is already used in several frontend areas:
+  - `Sidebar.jsx`
+  - `UsersList.jsx`
+  - `RegionNotifications.jsx`
+  - `SignUp.jsx`
+- Document number prefixes now use `cities.document_prefix` instead of a hardcoded prefix map.
+- Reports repository/controller already include branch-aware filtering for sales report queries.
+- Scheduler settings are partially moved to DB through `scheduler_tasks`.
+- Import services use `IMPORT_DIR` through `getImportDir()` with legacy fallback to `client/public/Sorce`.
+- `ReportRomashka` now loads through authenticated backend report routes instead of public `/Sorce`.
+- Branch switching is implemented:
+  - `/api/auth/branches`
+  - `/api/auth/switch-branch`
+  - frontend support in `AuthContext` and header UI
+- User access tables are wired into the app:
+  - `user_branch_access`
+  - `user_city_access`
+- Admin-only user creation is enforced:
+  - public self-service signup remains disabled in UI
+  - `client/src/App.jsx` keeps the public `sign-up` route commented out
+  - new users are created only by protected `POST /api/auth/sign-up`
+- Auth payload bugs were fixed:
+  - `api/services/Auth.js` `signIn` no longer returns an undefined `user`
+  - `signUp` returns the created `user`
+- Admin user creation flow is transactional:
+  - user creation
+  - `user_branch_access` / `user_city_access`
+  - optional supervisor assignment
+  - all in one DB transaction
+- Admin create-user no longer creates refresh sessions or auth tokens for the newly created user.
+- Signup validation now matches the actual admin payload in `api/validators/Auth.js`.
+- Branch-scope audit completed for the most obvious backend leaks:
+  - `region_notifications` CRUD is now scoped by `branch_id`
+  - notification recipient loading in `notify.service.js` is now scoped by document branch
+  - `document_sequences` update now includes `branch_id`
+  - orphan-TA checks in document access flows now include branch scope
+  - sales report repository subqueries now restrict user lookups to the report branch
+  - debug hierarchy endpoint now reads users/documents only inside the current branch
+- Import architecture is now branch-aware without a schema change:
+  - `import_sources.file_name` supports `{branchSlug}`, `{branchId}`, `{branchShortName}`
+  - import source resolution now tries branch-specific paths under `IMPORT_DIR` before the legacy root path
+  - import path resolution is constrained to stay inside `IMPORT_DIR`
+  - `loadAgents`, `loadReports`, `loadProducts`, `loadTradePoints` now reuse one resolved source/branch context instead of calling `getSystemBranch()` separately
+  - `ImportSourcesConfig` now shows a UI hint for branch-aware file path patterns
+- Scheduler/background jobs are now aligned with branch configuration:
+  - branch-bound scheduler tasks declare `requiresSystemBranch`
+  - scheduler preflights `getSystemBranch()` before scheduling or manual task runs
+  - blocked tasks stay active in config but are not scheduled blindly
+  - scheduler API returns `blockedReason` for branch misconfiguration
+  - `SchedulerConfig.jsx` shows blocked state and prevents manual run while blocked
+- DB connection config is now environment-driven:
+  - `api/db.cjs` reads `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+  - optional pool settings now come from env as well
+  - `api/.env.example` documents the required DB variables
+  - local `api/.env` now provides the runtime DB variables expected by `api/db.cjs`
+- Route security hardening completed for remaining admin/user endpoints:
+  - `GET /api/auth/debug/hierarchy/:userId` is now admin-only
+  - protected route mounts in `api/server.js` now require `authMiddleware` at the mount level for `/api/config`, `/api/balances`, `/api/documents`, `/api/directories`
+  - `/api/auth/reports` is now also guarded at the mount level in `api/routers/Auth.js`
+- Branch management is now real CRUD instead of current-branch-only editing:
+  - config API now supports listing, creating, editing, and activating/deactivating branches
+  - branch creation automatically grants the creating admin access to the new branch
+  - branch deactivation is blocked for the current branch and for the last active branch
+  - `BranchConfig.jsx` now shows a branch list plus create/edit form
+  - `AuthContext` exposes `reloadUserInfo`, so header branch info refreshes after branch config changes
+- New branch creation can now bootstrap branch-scoped config:
+  - `BranchConfig.jsx` offers cloning from the current branch on create
+  - backend clones `cities`, `balance_pages`, and `report_definitions` in one transaction
+  - `import_sources` and `scheduler_tasks` stay global and are not duplicated
+- New branch creation UX is now guided:
+  - `BranchConfig.jsx` shows a post-create notice for the new branch
+  - admin can switch to the new branch immediately from the same panel
+  - the next setup step is now explicit after create instead of being implicit in the header switcher
+- Legacy route aliases for domain APIs were cleaned up:
+  - client `reports` calls now use top-level `/api/reports`
+  - client `region-notifications` calls now use top-level `/api/region-notifications`
+  - `api/server.js` mounts top-level `reports` and `region-notifications`
+  - duplicate `/api/auth/reports|documents|directories|region-notifications` mounts were removed from `api/routers/Auth.js`
+- Frontend API clients are now normalized:
+  - shared `client/src/services/createAuthenticatedApi.js` builds authenticated axios clients
+  - `documents`, `directories`, `config`, `reports`, `region-notifications`, and `balances` now share one refresh/retry pattern
+  - refresh retries are now consistent across services that previously behaved differently on `401`
+  - concurrent refresh attempts now reuse one in-flight refresh request
+- Legacy demo transport code was removed:
+  - deleted unused `client/src/pages/Demo.jsx`
+  - removed `ResourceClient`, `data`, and `handleFetchProtected` from `AuthContext`
+  - removed unused backend `/resource/protected` route from `api/server.js`
+- Scheduler now makes branch-bound runtime explicit:
+  - branch-bound scheduler tasks now expose resolved `systemBranch`
+  - `GET /api/auth/scheduler/tasks` refreshes branch resolution before returning task state
+  - scheduler UI shows which branch a task will run against instead of only `Ready/Blocked`
+- Loader runtime guards were hardened:
+  - `loadProducts` now aborts safely when no valid groups or no valid products are resolved
+  - `loadTradePoints` now aborts safely when no effective trade points/contractors were imported
+  - deactivation sync no longer runs after effectively empty imports in these loaders
+- Sales import loaders are now safer on partial failure:
+  - `loadAgents` now pre-validates rows, resolves users in bulk, and writes agent/user-name sync in one transaction
+  - `loadReports` now pre-validates rows before opening a transaction and rolls back the whole import on unexpected row failures
+  - sales-agent and sales-report JSON sources are now kept when unresolved rows were skipped instead of being deleted blindly
+- JSON import source retention is now consistent across loaders:
+  - `loadProducts` now keeps the source file when rows/groups were skipped or failed instead of deleting after a partial import
+  - `loadTradePoints` now keeps the source file when rows were skipped or failed instead of deleting after a partial import
+- Scheduler/manual-run APIs now expose structured task outcomes:
+  - import loaders and notification retry now return structured `status` / `message` / `details` summaries
+  - scheduler stores in-memory `lastRun` state with trigger and timestamp for each task
+  - scheduler run API now returns `runResult` plus the refreshed task snapshot
+  - `SchedulerConfig.jsx` now shows last run status in the table and uses run-result severity in snackbars
+- Scheduler `lastRun` now persists in `scheduler_tasks`:
+  - added migration `api/migrations/002_scheduler_last_run.js`
+  - scheduler loads persisted `lastRun` on startup when the new columns exist
+  - scheduler saves `lastRun` after manual and scheduled runs
+  - backend falls back safely to in-memory-only `lastRun` until the migration is applied
+- Test DB rollout is now executed on the approved test database:
+  - `001_branch_configuration.js` applied successfully on the restored test DB
+  - `002_scheduler_last_run.js` applied successfully on the restored test DB
+  - config tables now exist and are seeded (`branches`, `cities`, `balance_pages`, `report_definitions`, `import_sources`, `scheduler_tasks`)
+  - branch backfill completed with `branch_id` populated on existing business tables and no remaining `NULL` branch ids in the checked tables
+  - `user_branch_access` and `user_city_access` are still empty on the test DB, but current single-branch runtime remains functional because access checks include fallback to the user's own `branch_id` / `city`
+- Test-DB smoke test completed against the live backend:
+  - `/api/health`, `/api/auth/me`, `/api/auth/branches`, config endpoints, balances, reports, and documents responded successfully using an admin JWT for an existing test-DB user
+  - static balance XLSX and static report JSON loaded successfully through authenticated backend routes
+  - manual scheduler run for `loadSalesReports` completed safely with `source_missing`
+  - backend restart was performed and persisted `scheduler_tasks.lastRun` was confirmed after restart
+- Backend startup behavior is now safer on manual launch:
+  - scheduler no longer auto-starts as a side effect of importing `api/services/scheduler.js`
+  - `api/server.js` starts scheduler only after `app.listen` succeeds
+  - `EADDRINUSE` now exits the process cleanly instead of leaving scheduler intervals running without an HTTP listener
+  - `api/package.json` now includes an explicit `npm start` script
+- Frontend local dev proxy is now environment-friendly:
+  - `client/vite.config.js` no longer hardcodes `http://192.168.11.5:5000`
+  - local dev proxy now defaults to `http://localhost:5000`
+  - proxy target can be overridden with `VITE_API_PROXY_TARGET`
+- User-access branch scope hardening completed:
+  - user-access options now return only branches visible to the current admin instead of every active branch
+  - backend branch-access writes are now restricted to the current admin's visible branch scope
+  - out-of-scope branch grants are now rejected server-side during both user creation and user access updates
+  - existing hidden branch-access rows are preserved during updates instead of being accidentally dropped by a narrower admin session
+- Scheduler UI adaptive refresh completed:
+  - `SchedulerConfig.jsx` now auto-refreshes task state while the scheduler panel is open
+  - base polling runs every 30 seconds
+  - fast polling runs every 3 seconds for 30 seconds after `Run now`
+  - polling pauses while the browser tab is hidden and refreshes immediately when visibility returns
+  - scheduler interval draft inputs are preserved during background refresh instead of being reset by polling
+  - scheduler panel now shows refresh status, last updated time, and a manual `Refresh` button
+- Existing-user access seed rollout is now prepared:
+  - added `api/scripts/seedUserAccess.js` as a dry-run-first rollout helper
+  - the script seeds only primary access rows, not inferred extra permissions
+  - admin/director users get their own `branch_id` inserted into `user_branch_access` when missing
+  - accountant/warehouse users get their own `city` inserted into `user_city_access` when missing
+  - applying against a non-local DB host is blocked unless explicitly overridden with `--allow-non-local`
+- Bootstrap branch config is now externalized for cutover review:
+  - added `api/config/bootstrapBranchConfig.js` as the explicit input for initial branch/city/balance/report seed values
+  - migration `001_branch_configuration.js` now reads bootstrap branch data from that config instead of duplicating the values inline
+  - added `api/scripts/syncBootstrapBranchConfig.js` as a dry-run-first sync helper for branch `id=1`
+  - bootstrap sync is blocked on non-local DB hosts unless explicitly overridden with `--allow-non-local`
+- Final cleanup pass completed:
+  - `client/src/App.jsx` was simplified into smaller route helpers without changing the branch-config route behavior
+  - root-level temporary files from balance/smoke checks were removed (`tmp-balance*`, `tmp-smoke-server*.log`)
+  - generated/source branch assets under `client/public/Sorce` and `client/dist/Sorce` were intentionally left in place for explicit later review instead of being deleted blindly
+- Residual admin/user security follow-up completed:
+  - added `api/services/userHierarchy.service.js` as the shared source of truth for user-role hierarchy checks
+  - user update flow now validates role ids and rejects role changes that would leave incompatible supervisor/subordinate links behind
+  - supervisor assignment is now enforced server-side as `SV -> TA` and `NTO -> SV` during both admin user creation and later supervisor edits
+  - added `api/validators/User.js` so `updateUser`, `changePassword`, and `setSupervisor` validate params/body before reaching controller logic
+- Generated-asset finalization review completed:
+  - `client/public/Sorce/*.xlsx` and `client/public/Sorce/report_romashka.json` currently look like real source-data changes, not disposable generated noise
+  - `client/dist/Sorce/*.xlsx` mirrors the `client/public/Sorce` balance assets and should be treated as generated build output unless the branch intentionally versions built artifacts
+- Dist-asset scope cleanup completed:
+  - restored mirrored `client/dist/Sorce/balance*.xlsx` files back to git state so they no longer pollute the branch diff
+  - current asset diff is now limited to `client/public/Sorce/*.xlsx` and `client/public/Sorce/report_romashka.json`
+- Source-asset diff review completed:
+  - compared `client/public/Sorce/balance*.xlsx` and `client/public/Sorce/report_romashka.json` against `HEAD`
+  - all five changes were plain business-data snapshot refreshes dated `2026-04-27` instead of structural or branch-config-related asset changes
+  - restored all five source assets to `HEAD`, leaving no remaining `client/public/Sorce/*` or `client/dist/Sorce/*` diffs
+- Commit-scope review completed:
+  - remaining app diff is now concentrated in backend/frontend branch-config code, migrations, config scripts, and related UI/API changes
+  - `README.md` was updated to match the current branch-config state instead of the earlier stale description
+  - `AGENTS.md`, `MEMORY.md`, and `.github/instructions/*` should be treated as separate collaboration/docs material and not mixed blindly into the main product-code commit
+
+## Partial Or Unfinished
+
+- Background jobs still rely on one resolved system branch at runtime by design.
+- Full multi-branch parallel scheduler execution is not implemented; current design requires explicit system branch selection for branch-bound jobs.
+- Legacy backend leftovers still exist and should be cleaned up carefully:
+  - legacy cleanup has started; verify no further dead auth/user files remain
+
+## Roadmap
+
+1. Legacy Cleanup
+   - remove dead auth/user routes and controllers
+   - keep only branch-config aware user/admin flows
+2. Branch Scope Audit
+   - inspect backend SQL and service logic for missing `branch_id` isolation
+   - patch unsafe reads/writes before adding more multi-branch behavior
+3. Import Architecture
+   - define how `IMPORT_DIR` maps to branches and import sources
+   - remove remaining implicit default-branch assumptions in loaders
+4. Scheduler And Background Jobs
+   - decide how jobs select a branch when more than one branch is active
+   - align scheduler task config with the multi-branch import design
+5. Environment And Release Readiness
+   - move DB config to env
+   - confirm migration procedure on non-production DB
+   - keep `MEMORY.md` current after each completed slice
+
+## Active Step
+
+Initial roadmap is completed.
+
+Next concrete execution plan as of May 9, 2026:
+
+1. Branch finalization and commit prep
+   - review the remaining code/config diff for any other non-branch-config noise
+   - split product code/config changes from optional docs/collaboration files before commit
+
+Recommended commit grouping:
+
+1. Backend branch-config foundation
+   - intent: DB/config foundation, config endpoints, balances endpoints, scheduler persistence/runtime, rollout scripts
+   - suggested files:
+     - `api/constants.js`
+     - `api/db.cjs`
+     - `api/package.json`
+     - `api/server.js`
+     - `api/controllers/SchedulerController.js`
+     - `api/controllers/balancesController.js`
+     - `api/controllers/configController.js`
+     - `api/routes/balances.js`
+     - `api/routes/config.js`
+     - `api/services/appConfig.service.js`
+     - `api/services/scheduler.js`
+     - `api/migrations/001_branch_configuration.js`
+     - `api/migrations/002_scheduler_last_run.js`
+     - `api/config/bootstrapBranchConfig.js`
+     - `api/scripts/migrate.js`
+     - `api/scripts/seedUserAccess.js`
+     - `api/scripts/syncBootstrapBranchConfig.js`
+
+2. Backend auth, branch-scope, and loader hardening
+   - intent: branch-aware auth/user access, hierarchy validation, branch scoping, safer loaders, route cleanup
+   - suggested files:
+     - `api/controllers/Auth.js`
+     - `api/controllers/DebugController.js`
+     - `api/controllers/RegionNotificationsController.js`
+     - `api/controllers/Reports.js`
+     - `api/controllers/User.js`
+     - `api/controllers/directoriesController.js`
+     - `api/controllers/AuthController.js` (delete)
+     - `api/repositories/Reports.js`
+     - `api/repositories/User.js`
+     - `api/routers/Auth.js`
+     - `api/routes/reports.js`
+     - `api/routes/users.js` (delete)
+     - `api/services/Auth.js`
+     - `api/services/DocumentService.js`
+     - `api/services/documentAccess.service.js`
+     - `api/services/loadAgents.js`
+     - `api/services/loadProducts.js`
+     - `api/services/loadReports.js`
+     - `api/services/loadTradePoints.js`
+     - `api/services/notify.retry.service.js`
+     - `api/services/notify.service.js`
+     - `api/services/userHierarchy.service.js`
+     - `api/utils/Errors.js`
+     - `api/validators/Auth.js`
+     - `api/validators/User.js`
+
+3. Frontend branch-config UI and API integration
+   - intent: app config context, dynamic balance/report routes, admin configuration UI, auth/API normalization, scheduler UI
+   - suggested files:
+     - `client/src/App.jsx`
+     - `client/src/components/Configuration/BalancePagesConfig.jsx`
+     - `client/src/components/Configuration/BranchConfig.jsx`
+     - `client/src/components/Configuration/CitiesConfig.jsx`
+     - `client/src/components/Configuration/ImportSourcesConfig.jsx`
+     - `client/src/components/Configuration/ReportsConfig.jsx`
+     - `client/src/components/Configuration/SchedulerConfig.jsx`
+     - `client/src/components/Documents/DocumentRowAction.jsx`
+     - `client/src/components/Documents/DocumentsTable.jsx`
+     - `client/src/components/Header/Header.jsx`
+     - `client/src/components/Header/header.module.scss`
+     - `client/src/components/ParseExcel/ParseExcel.jsx`
+     - `client/src/components/RegionNotifications/RegionNotifications.jsx`
+     - `client/src/components/Reports/ReportRomashka.jsx`
+     - `client/src/components/SalesReport/SalesReport.jsx`
+     - `client/src/components/Sidebar/Sidebar.jsx`
+     - `client/src/components/UsersList/UsersList.jsx`
+     - `client/src/config.js`
+     - `client/src/context/AppConfigContext.jsx`
+     - `client/src/context/AuthContext.jsx`
+     - `client/src/pages/AdminPage.jsx`
+     - `client/src/pages/Demo.jsx` (delete)
+     - `client/src/pages/DocumentsPage.jsx`
+     - `client/src/pages/SignUp.jsx`
+     - `client/src/services/balances.api.js`
+     - `client/src/services/config.api.js`
+     - `client/src/services/createAuthenticatedApi.js`
+     - `client/src/services/directories.api.js`
+     - `client/src/services/documents.api.js`
+     - `client/src/services/inMemoryJWT.js`
+     - `client/src/services/regionNotifications.api.js`
+     - `client/src/services/reports.api.js`
+     - `client/src/services/scheduler.api.js`
+     - `client/vite.config.js`
+
+4. Optional docs and collaboration metadata
+   - intent: repository documentation and AI/collaboration guidance
+   - suggested files:
+     - `README.md`
+     - `AGENTS.md`
+     - `MEMORY.md`
+     - `.github/copilot-instructions.md`
+     - `.github/instructions/backend.instructions.md`
+
+Suggested staging commands:
+
+```bash
+git add api/constants.js api/db.cjs api/package.json api/server.js api/controllers/SchedulerController.js api/controllers/balancesController.js api/controllers/configController.js api/routes/balances.js api/routes/config.js api/services/appConfig.service.js api/services/scheduler.js api/migrations/001_branch_configuration.js api/migrations/002_scheduler_last_run.js api/config/bootstrapBranchConfig.js api/scripts/migrate.js api/scripts/seedUserAccess.js api/scripts/syncBootstrapBranchConfig.js
+
+git add api/controllers/Auth.js api/controllers/DebugController.js api/controllers/RegionNotificationsController.js api/controllers/Reports.js api/controllers/User.js api/controllers/directoriesController.js api/controllers/AuthController.js api/repositories/Reports.js api/repositories/User.js api/routers/Auth.js api/routes/reports.js api/routes/users.js api/services/Auth.js api/services/DocumentService.js api/services/documentAccess.service.js api/services/loadAgents.js api/services/loadProducts.js api/services/loadReports.js api/services/loadTradePoints.js api/services/notify.retry.service.js api/services/notify.service.js api/services/userHierarchy.service.js api/utils/Errors.js api/validators/Auth.js api/validators/User.js
+
+git add client/src/App.jsx client/src/components/Configuration/BalancePagesConfig.jsx client/src/components/Configuration/BranchConfig.jsx client/src/components/Configuration/CitiesConfig.jsx client/src/components/Configuration/ImportSourcesConfig.jsx client/src/components/Configuration/ReportsConfig.jsx client/src/components/Configuration/SchedulerConfig.jsx client/src/components/Documents/DocumentRowAction.jsx client/src/components/Documents/DocumentsTable.jsx client/src/components/Header/Header.jsx client/src/components/Header/header.module.scss client/src/components/ParseExcel/ParseExcel.jsx client/src/components/RegionNotifications/RegionNotifications.jsx client/src/components/Reports/ReportRomashka.jsx client/src/components/SalesReport/SalesReport.jsx client/src/components/Sidebar/Sidebar.jsx client/src/components/UsersList/UsersList.jsx client/src/config.js client/src/context/AppConfigContext.jsx client/src/context/AuthContext.jsx client/src/pages/AdminPage.jsx client/src/pages/Demo.jsx client/src/pages/DocumentsPage.jsx client/src/pages/SignUp.jsx client/src/services/balances.api.js client/src/services/config.api.js client/src/services/createAuthenticatedApi.js client/src/services/directories.api.js client/src/services/documents.api.js client/src/services/inMemoryJWT.js client/src/services/regionNotifications.api.js client/src/services/reports.api.js client/src/services/scheduler.api.js client/vite.config.js
+
+git add README.md AGENTS.md MEMORY.md .github/copilot-instructions.md .github/instructions/backend.instructions.md
+```
+
+Definition of done for the next slice:
+
+- asset noise is removed from the branch
+- branch changes are ready to group into intentional commits
+- `MEMORY.md` is updated again with outcomes and verification after each completed slice
+
+## Files Related To Current Task
+
+Backend:
+
+- `api/migrations/001_branch_configuration.js`
+- `api/scripts/migrate.js`
+- `api/services/appConfig.service.js`
+- `api/controllers/configController.js`
+- `api/routes/config.js`
+- `api/controllers/balancesController.js`
+- `api/routes/balances.js`
+- `api/services/DocumentService.js`
+- `api/services/documentAccess.service.js`
+- `api/repositories/Reports.js`
+- `api/controllers/Reports.js`
+- `api/routes/reports.js`
+- `api/services/scheduler.js`
+- `api/controllers/SchedulerController.js`
+- `api/services/loadAgents.js`
+- `api/services/loadReports.js`
+- `api/services/loadProducts.js`
+- `api/services/loadTradePoints.js`
+- `api/services/Auth.js`
+- `api/controllers/Auth.js`
+- `api/routers/Auth.js`
+- `api/server.js`
+
+Frontend:
+
+- `client/src/context/AppConfigContext.jsx`
+- `client/src/services/config.api.js`
+- `client/src/services/balances.api.js`
+- `client/src/App.jsx`
+- `client/src/components/Header/Header.jsx`
+- `client/src/components/ParseExcel/ParseExcel.jsx`
+- `client/src/components/Reports/ReportRomashka.jsx`
+- `client/src/components/RegionNotifications/RegionNotifications.jsx`
+- `client/src/components/Sidebar/Sidebar.jsx`
+- `client/src/components/UsersList/UsersList.jsx`
+- `client/src/context/AuthContext.jsx`
+- `client/src/pages/AdminPage.jsx`
+
+## Risks When Continuing
+
+- Running migrations on the wrong DB can alter production-like schema.
+- Missing `branch_id` filters can leak documents/reports across branches in a future shared DB.
+- Admin config mutations must stay restricted to Admin role.
+- Public signup must remain disabled; user creation should stay admin-only unless explicitly redesigned.
+- Existing user/admin routes may still need authentication hardening before multi-branch use.
+- File import behavior must preserve the current rule:
+  - JSON files loaded into DB may be deleted after success
+  - XLSX balance files must not be deleted
+- `IMPORT_DIR` fallback to `client/public/Sorce` is useful for local compatibility but should not be treated as final deployment design.
+- Frontend direct `/Sorce` usage must not be reintroduced.
+- Role IDs and hierarchy are business-critical and should remain stable unless explicitly redesigned.
+
+## Last Known Verification
+
+- Legacy cleanup completed:
+  - removed empty `GET /api/auth/adminPage` route from `api/routers/Auth.js`
+  - removed unused `api/controllers/AuthController.js`
+  - removed unused `api/routes/users.js`
+- Branch-scope audit completed:
+  - fixed branch leakage in `region_notifications`
+  - fixed branch leakage in report subqueries and document orphan-TA checks
+  - fixed `document_sequences` update to scope by branch
+  - fixed debug hierarchy endpoint to stay inside current branch
+- Import architecture update completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Scheduler/background jobs update completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Environment/release-readiness update completed:
+  - DB config moved out of hardcoded `api/db.cjs` values into env variables
+  - `api/.env.example` now documents required DB settings
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Route security hardening update completed:
+  - admin-only protection added to debug hierarchy endpoint
+  - protected route mounts now enforce `authMiddleware` at the top level as defense in depth
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Branch-management CRUD update completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Branch bootstrap update completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Branch creation UX polish completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Route alias cleanup completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Frontend API client normalization completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Demo transport cleanup completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Scheduler runtime branch visibility update completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Loader runtime guard hardening completed:
+  - backend syntax check passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Sales loader transaction/precheck hardening completed:
+  - `node --check api/services/loadAgents.js` passed
+  - `node --check api/services/loadReports.js` passed
+  - `node --check api/services/scheduler.js` passed
+- JSON loader retention-alignment completed:
+  - `node --check api/services/loadProducts.js` passed
+  - `node --check api/services/loadTradePoints.js` passed
+- Scheduler run-summary surfacing completed:
+  - `node --check api/services/scheduler.js` passed
+  - `node --check api/controllers/SchedulerController.js` passed
+  - `node --check api/services/loadAgents.js` passed
+  - `node --check api/services/loadReports.js` passed
+  - `node --check api/services/loadProducts.js` passed
+  - `node --check api/services/loadTradePoints.js` passed
+  - `node --check api/services/notify.retry.service.js` passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Scheduler lastRun persistence update completed:
+  - `node --check api/services/scheduler.js` passed
+  - `node --check api/migrations/002_scheduler_last_run.js` passed
+- Test DB migration rollout completed on April 26, 2026:
+  - `npm run migrate` in `api` passed against the approved restored test DB
+  - `schema_migrations` now contains `001_branch_configuration.js` and `002_scheduler_last_run.js`
+  - seeded config data and `scheduler_tasks.lastRun` columns verified by direct DB queries
+  - branch backfill verified: checked branch-scoped tables have `branch_id` and `NULL` count = 0
+- Test DB smoke test completed on April 27, 2026:
+  - authenticated smoke requests passed for health, auth, config, balances, reports, and documents
+  - manual scheduler run returned structured `source_missing` result as expected on the test DB
+  - backend restart passed and persisted `loadSalesReports.lastRun` remained visible after restart
+- Backend startup hardening completed on April 27, 2026:
+  - `node --check api/server.js` passed
+  - `node --check api/services/scheduler.js` passed
+  - scheduler startup is now bound to successful port binding instead of module import side effects
+- Frontend dev-proxy hardening completed on April 27, 2026:
+  - `npm run build` in `client` passed
+  - Vite proxy now uses `localhost:5000` by default instead of a stale LAN IP
+- Backend syntax check passed for the full `api` tree.
+- `npm run lint` in `client` passed.
+- `npm run build` in `client` passed.
+- Frontend build still emits Sass legacy API warnings and a bundle-size warning.
+- Planning checkpoint on May 9, 2026:
+  - reviewed current workspace state and `MEMORY.md`
+  - confirmed `npm run lint` passes in `client`
+  - confirmed `npm run build` passes in `client`
+  - confirmed backend syntax check passes across `api/*.js`
+- User-access hardening checkpoint on May 9, 2026:
+  - audited `Sidebar.jsx`, `Auth.js`, `User.js`, `configController.js`, and `appConfig.service.js`
+  - patched backend scope enforcement for `branchAccessIds` during both create-user and update-user-access flows
+  - `node --check api/services/appConfig.service.js` passed
+  - `node --check api/services/Auth.js` passed
+  - `node --check api/controllers/Auth.js` passed
+- Scheduler UI adaptive refresh checkpoint on May 9, 2026:
+  - implemented adaptive polling in `client/src/components/Configuration/SchedulerConfig.jsx`
+  - polling now pauses while the browser tab is hidden and resumes with an immediate refresh on return
+  - background refresh now preserves unsaved interval drafts
+  - manual `Refresh` button and `Updated ...` status were added to the scheduler panel
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Existing-user access seed checkpoint on May 9, 2026:
+  - inspected the local `auth` DB in read-only mode
+  - found 78 active users, 3 active branches, 2 existing extra `user_branch_access` rows, and 0 `user_city_access` rows
+  - dry-run identified 5 missing primary branch-access rows and 2 missing primary city-access rows
+  - rollout decision: seed only primary user scope rows; do not infer extra branch/city grants from legacy data
+  - added `api/scripts/seedUserAccess.js` and `npm run seed:user-access`
+  - `node --check api/scripts/seedUserAccess.js` passed
+  - `npm run seed:user-access` dry-run passed and made no DB changes
+- Bootstrap branch cutover checkpoint on May 9, 2026:
+  - inspected current local branch/city/balance/report config in the `auth` DB
+  - decision: bootstrap values should no longer live only as hardcoded migration SQL; they now live in `api/config/bootstrapBranchConfig.js`
+  - added `api/scripts/syncBootstrapBranchConfig.js` and `npm run sync:bootstrap-branch`
+  - dry-run confirmed current branch `id=1` mostly matches the bootstrap config, with 1 balance-page difference and 1 report difference still visible for explicit review before any apply
+  - `node --check api/config/bootstrapBranchConfig.js` passed
+  - `node --check api/scripts/syncBootstrapBranchConfig.js` passed
+  - `node --check api/migrations/001_branch_configuration.js` passed
+  - `npm run sync:bootstrap-branch` dry-run passed and made no DB changes
+- Final cleanup checkpoint on May 9, 2026:
+  - refactored `client/src/App.jsx` into smaller route helpers while keeping the current role-based route behavior
+  - removed temporary root files created for smoke/balance investigation
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+- Final review checkpoint on May 9, 2026:
+  - added backend hierarchy validation so admin APIs now enforce valid `NTO -> SV -> TA` supervisor chains during both create-user and edit-user flows
+  - added route-level request validation for `PUT /api/auth/users/:id`, `PUT /api/auth/users/:id/password`, and `PUT /api/auth/users/:id/supervisor`
+  - documented asset-finalization guidance: `client/public/Sorce/*` looks intentional, while `client/dist/Sorce/*` looks mirrored/generated
+  - `node --check api/controllers/User.js` passed
+  - `node --check api/services/Auth.js` passed
+  - `node --check api/services/userHierarchy.service.js` passed
+  - `node --check api/repositories/User.js` passed
+  - `node --check api/validators/User.js` passed
+  - `node --check api/routers/Auth.js` passed
+- Dist-asset cleanup checkpoint on May 9, 2026:
+  - restored mirrored `client/dist/Sorce/balanceDP.xlsx`, `balanceKR.xlsx`, `balanceML.xlsx`, and `balanceZP.xlsx`
+  - verified remaining asset diff now contains only `client/public/Sorce/*`
+- Source-asset review checkpoint on May 9, 2026:
+  - compared all changed `client/public/Sorce/*` files with `HEAD` and confirmed they were data-refresh snapshots, not branch-config asset changes
+  - restored `client/public/Sorce/balanceDP.xlsx`, `balanceKR.xlsx`, `balanceML.xlsx`, `balanceZP.xlsx`, and `report_romashka.json`
+  - verified no remaining diffs under `client/public/Sorce` or `client/dist/Sorce`
+- Commit-scope review checkpoint on May 9, 2026:
+  - reviewed the remaining `git diff` after asset cleanup and found no further generated-file noise in `public/dist`
+  - updated `README.md` so project documentation now matches the implemented branch-config/admin-config state
+  - commit recommendation: keep branch-config app code and rollout scripts together, but separate `AGENTS.md`, `MEMORY.md`, and `.github/instructions/*` into an explicit docs/tooling commit if they are to be versioned at all
+
+## Workflow Notes
+
+- After each completed implementation slice, update `MEMORY.md` with:
+  - what changed
+  - what remains
+  - latest verification status
+- Before moving to the next roadmap item, explicitly tell the user what the next step will be.
+- This file is the primary resume point for continuing work without re-scanning the whole repo.
