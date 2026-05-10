@@ -71,7 +71,7 @@ export const Table = ({ data }) => {
     return true;
   };
 
-  const level3Rows = flatData.filter((row) => row.level === 3);
+  const leafRows = flatData.filter((row) => !row.hasChildren);
 
   return (
     <div className={style.wraperTable}>
@@ -85,9 +85,9 @@ export const Table = ({ data }) => {
           </thead>
           <tbody>
             {flatData.map((row) => {
-              const isLevel3 = row.level === 3;
-              const level3Index = isLevel3
-                ? level3Rows.findIndex((item) => item.id === row.id)
+              const isLeafRow = !row.hasChildren;
+              const leafRowIndex = isLeafRow
+                ? leafRows.findIndex((item) => item.id === row.id)
                 : -1;
 
               // Проверяем видимость по всем родителям
@@ -97,8 +97,8 @@ export const Table = ({ data }) => {
                 <tr
                   key={row.id}
                   className={cn(style[`level${row.level}`], {
-                    [style.evenRow]: isLevel3 && level3Index % 2 === 0,
-                    [style.oddRow]: isLevel3 && level3Index % 2 !== 0,
+                    [style.evenRow]: isLeafRow && leafRowIndex % 2 === 0,
+                    [style.oddRow]: isLeafRow && leafRowIndex % 2 !== 0,
                   })}
                 >
                   <td
