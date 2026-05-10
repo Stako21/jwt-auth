@@ -10,7 +10,7 @@ export default (maybeEnqueueOrError, maybeError) => {
   const error = isFn ? maybeError : maybeEnqueueOrError;
 
   if (!error) {
-    enqueue("Неизвестная ошибка", { variant: "error" });
+    enqueue("Невідома помилка", { variant: "error" });
     return;
   }
 

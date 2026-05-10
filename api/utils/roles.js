@@ -1,11 +1,11 @@
 export const ROLE_LABELS = {
-  1: "Admin",
-  2: "Director",
-  3: "NTO",
+  1: "Адміністратор",
+  2: "Директор",
+  3: "НТО",
   4: "SV",
   5: "TA",
-  6: "Accountant",
-  7: "Warehouse",
+  6: "Бухгалтер",
+  7: "Склад",
 };
 
 export const ROLE_IDS = {

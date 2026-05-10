@@ -50,7 +50,7 @@ class AuthService {
     const userData = await UserRepository.getUserData(userName);
 
     if (userData && (typeof userData.PASSWORD !== "string" || !userData.PASSWORD)) {
-      throw new Unauthorized("Invalid login or password");
+      throw new Unauthorized("Неправильний логін або пароль");
     }
 
     if (!userData) {
@@ -140,11 +140,11 @@ class AuthService {
 
       if (normalizedSupervisorId !== null) {
         if (!Number.isInteger(normalizedSupervisorId) || normalizedSupervisorId <= 0) {
-          throw new BadRequest("supervisorId must be a positive integer");
+          throw new BadRequest("supervisorId має бути додатним цілим числом");
         }
 
         if (!canRoleHaveSupervisor(role)) {
-          throw new BadRequest("Supervisor can be assigned only for SV and TA roles");
+          throw new BadRequest("Керівника можна призначати лише для ролей SV та TA");
         }
 
         const supervisor = await UserRepository.getActiveUserByIdInBranch(
@@ -153,7 +153,7 @@ class AuthService {
         );
 
         if (!supervisor) {
-          throw new NotFound("User or supervisor not found in current branch");
+          throw new NotFound("Користувача або керівника не знайдено в поточній філії");
         }
 
         assertKnownRoleId(supervisor.role);
@@ -167,7 +167,7 @@ class AuthService {
         );
 
         if (!result.affectedRows) {
-          throw new NotFound("User or supervisor not found in current branch");
+          throw new NotFound("Користувача або керівника не знайдено в поточній філії");
         }
       }
 
@@ -260,7 +260,7 @@ class AuthService {
     const activeBranchId = await resolveActiveBranchId(userData, branchId);
 
     if (Number(activeBranchId) !== Number(branchId)) {
-      throw new Forbidden("No access to requested branch");
+      throw new Forbidden("Немає доступу до запитаної філії");
     }
 
     const payload = {

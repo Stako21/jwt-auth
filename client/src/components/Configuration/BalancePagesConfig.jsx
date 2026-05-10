@@ -182,7 +182,7 @@ export function BalancePagesConfig() {
               <table className="table is-fullwidth is-striped is-hoverable">
                 <thead>
                   <tr>
-                    <th>Slug</th>
+                    <th>Слаг</th>
                     <th>Меню</th>
                     <th>Заголовок</th>
                     <th>Файл</th>
@@ -204,7 +204,9 @@ export function BalancePagesConfig() {
                       <td>
                         <span
                           className={`tag ${
-                            page.isActive ? "is-success" : "is-light"
+                            page.isActive
+                              ? "is-success"
+                              : "is-light has-text-grey-light"
                           }`}
                         >
                           {page.isActive ? "Активна" : "Неактивна"}
@@ -257,7 +259,7 @@ export function BalancePagesConfig() {
           </h3>
           <form onSubmit={handleSubmit}>
             <div className="field">
-              <label className="label">Slug *</label>
+              <label className="label">Слаг *</label>
               <div className="control">
                 <input
                   className={`input ${errors.slug ? "is-danger" : ""}`}

@@ -10,6 +10,8 @@
     "auth": "nodemon server.js",
     "both": "nodemon main.js",
     "migrate": "node scripts/migrate.js",
+    "bootstrap:env": "node scripts/bootstrapEnvironment.js",
+    "bootstrap:doctor": "node scripts/bootstrapDoctor.js",
     "seed:user-access": "node scripts/seedUserAccess.js",
     "sync:bootstrap-branch": "node scripts/syncBootstrapBranchConfig.js",
     "test": "echo \"Error: no test specified\" && exit 1"

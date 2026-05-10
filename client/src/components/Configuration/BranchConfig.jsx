@@ -55,7 +55,7 @@ export function BranchConfig() {
       setBranches(nextBranches);
     } catch (error) {
       console.error("Failed to load branches config:", error);
-      enqueueSnackbar("Failed to load branches", { variant: "error" });
+      enqueueSnackbar("Не вдалося завантажити філії", { variant: "error" });
     } finally {
       setLoading(false);
     }
@@ -78,13 +78,13 @@ export function BranchConfig() {
   const validate = () => {
     const nextErrors = {};
 
-    if (!form.slug.trim()) nextErrors.slug = "Required";
+    if (!form.slug.trim()) nextErrors.slug = "Обов'язкове поле";
     else if (!/^[a-z0-9-]+$/.test(form.slug.trim().toLowerCase())) {
-      nextErrors.slug = "Use only a-z, 0-9, and hyphen";
+      nextErrors.slug = "Лише a-z, 0-9 та дефіс";
     }
 
-    if (!form.name.trim()) nextErrors.name = "Required";
-    if (!form.shortName.trim()) nextErrors.shortName = "Required";
+    if (!form.name.trim()) nextErrors.name = "Обов'язкове поле";
+    if (!form.shortName.trim()) nextErrors.shortName = "Обов'язкове поле";
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -118,7 +118,7 @@ export function BranchConfig() {
 
       if (editingBranchId) {
         await updateBranchByIdConfig(editingBranchId, payload);
-        enqueueSnackbar("Branch updated", { variant: "success" });
+        enqueueSnackbar("Філію оновлено", { variant: "success" });
       } else {
         const branch = await createBranchConfig(payload);
         setCreatedBranch({
@@ -126,7 +126,7 @@ export function BranchConfig() {
           name: branch.name || branch.shortName || branch.slug,
           clonedFromCurrentBranch: Boolean(payload.templateBranchId),
         });
-        enqueueSnackbar("Branch created", { variant: "success" });
+        enqueueSnackbar("Філію створено", { variant: "success" });
       }
 
       await reloadBranchViews();
@@ -134,7 +134,7 @@ export function BranchConfig() {
     } catch (error) {
       console.error("Failed to save branch config:", error);
       enqueueSnackbar(
-        error.response?.data?.error || "Failed to save branch",
+        error.response?.data?.error || "Не вдалося зберегти філію",
         { variant: "error" },
       );
     } finally {
@@ -147,7 +147,7 @@ export function BranchConfig() {
     try {
       await setBranchConfigActive(branch.id, !branch.isActive);
       enqueueSnackbar(
-        branch.isActive ? "Branch deactivated" : "Branch activated",
+        branch.isActive ? "Філію деактивовано" : "Філію активовано",
         { variant: "success" },
       );
       await reloadBranchViews();
@@ -157,7 +157,7 @@ export function BranchConfig() {
     } catch (error) {
       console.error("Failed to toggle branch active:", error);
       enqueueSnackbar(
-        error.response?.data?.error || "Failed to change branch status",
+        error.response?.data?.error || "Не вдалося змінити статус філії",
         { variant: "error" },
       );
     } finally {
@@ -184,10 +184,10 @@ export function BranchConfig() {
           <div className="level mb-3">
             <div className="level-left">
               <div>
-                <h3 className="title is-5 mb-1">Branches</h3>
+                <h3 className="title is-5 mb-1">Філії</h3>
                 <p className="is-size-7 has-text-grey">
-                  New branches are automatically added to the current admin's
-                  branch access.
+                  Нові філії автоматично додаються до списку доступних філій
+                  поточного адміністратора.
                 </p>
               </div>
             </div>
@@ -197,12 +197,12 @@ export function BranchConfig() {
             <div className="notification is-info is-light">
               <div className="content">
                 <p className="mb-2">
-                  <strong>{createdBranch.name}</strong> was created successfully.
+                  <strong>{createdBranch.name}</strong> успішно створено.
                 </p>
                 <p className="mb-2">
                   {createdBranch.clonedFromCurrentBranch
-                    ? "Switch to it now and review the copied cities, balance pages, and reports."
-                    : "Switch to it now and continue setup with cities, balance pages, and reports."}
+                    ? "Перейдіть до неї зараз і перевірте скопійовані міста, сторінки залишків і звіти."
+                    : "Перейдіть до неї зараз і продовжуйте налаштування міст, сторінок залишків і звітів."}
                 </p>
                 <div className="buttons">
                   <button
@@ -213,7 +213,7 @@ export function BranchConfig() {
                     onClick={handleSwitchToCreatedBranch}
                     disabled={saving || isSwitchingBranch}
                   >
-                    Switch Now
+                    Перейти зараз
                   </button>
                   <button
                     type="button"
@@ -221,7 +221,7 @@ export function BranchConfig() {
                     onClick={() => setCreatedBranch(null)}
                     disabled={saving || isSwitchingBranch}
                   >
-                    Later
+                    Пізніше
                   </button>
                 </div>
               </div>
@@ -229,19 +229,19 @@ export function BranchConfig() {
           )}
 
           {loading ? (
-            <p>Loading...</p>
+            <p>Завантаження...</p>
           ) : (
             <div className="table-container">
               <table className="table is-fullwidth is-striped is-hoverable">
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Slug</th>
-                    <th>Name</th>
-                    <th>Short</th>
-                    <th>Status</th>
-                    <th>Current</th>
-                    <th className="has-text-right">Actions</th>
+                    <th>Слаг</th>
+                    <th>Назва</th>
+                    <th>Коротко</th>
+                    <th>Статус</th>
+                    <th>Поточна</th>
+                    <th className="has-text-right">Дії</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -254,15 +254,17 @@ export function BranchConfig() {
                       <td>
                         <span
                           className={`tag ${
-                            branch.isActive ? "is-success" : "is-light"
+                            branch.isActive
+                              ? "is-success"
+                              : "is-light has-text-grey-light"
                           }`}
                         >
-                          {branch.isActive ? "Active" : "Inactive"}
+                          {branch.isActive ? "Активна" : "Неактивна"}
                         </span>
                       </td>
                       <td>
                         {Number(branch.id) === currentBranchId ? (
-                          <span className="tag is-info is-light">Yes</span>
+                          <span className="tag is-info is-light">Так</span>
                         ) : (
                           <span className="has-text-grey">-</span>
                         )}
@@ -279,7 +281,7 @@ export function BranchConfig() {
                             }}
                             disabled={saving}
                           >
-                            Edit
+                            Редагувати
                           </button>
                           <button
                             type="button"
@@ -289,7 +291,7 @@ export function BranchConfig() {
                             onClick={() => handleToggleActive(branch)}
                             disabled={saving}
                           >
-                            {branch.isActive ? "Deactivate" : "Activate"}
+                            {branch.isActive ? "Деактивувати" : "Активувати"}
                           </button>
                         </div>
                       </td>
@@ -298,7 +300,7 @@ export function BranchConfig() {
                   {!sortedBranches.length && (
                     <tr>
                       <td colSpan="7" className="has-text-centered has-text-grey">
-                        No branches configured yet
+                        Філії ще не налаштовані
                       </td>
                     </tr>
                   )}
@@ -310,11 +312,11 @@ export function BranchConfig() {
 
         <div className="column is-5">
           <h3 className="title is-5">
-            {editingBranchId ? "Edit Branch" : "New Branch"}
+            {editingBranchId ? "Картка філії" : "Нова філія"}
           </h3>
           <form onSubmit={handleSubmit}>
             <div className="field">
-              <label className="label">Slug *</label>
+              <label className="label">Слаг *</label>
               <div className="control">
                 <input
                   className={`input ${errors.slug ? "is-danger" : ""}`}
@@ -329,7 +331,7 @@ export function BranchConfig() {
             </div>
 
             <div className="field">
-              <label className="label">Full Name *</label>
+              <label className="label">Повна назва *</label>
               <div className="control">
                 <input
                   className={`input ${errors.name ? "is-danger" : ""}`}
@@ -337,14 +339,14 @@ export function BranchConfig() {
                   onChange={(e) =>
                     setForm((current) => ({ ...current, name: e.target.value }))
                   }
-                  placeholder="Default branch"
+                  placeholder="Філія за замовчуванням"
                 />
               </div>
               {errors.name && <p className="help is-danger">{errors.name}</p>}
             </div>
 
             <div className="field">
-              <label className="label">Short Name *</label>
+              <label className="label">Коротка назва *</label>
               <div className="control">
                 <input
                   className={`input ${errors.shortName ? "is-danger" : ""}`}
@@ -355,7 +357,7 @@ export function BranchConfig() {
                       shortName: e.target.value,
                     }))
                   }
-                  placeholder="Default"
+                  placeholder="За замовчуванням"
                 />
               </div>
               {errors.shortName && (
@@ -377,12 +379,11 @@ export function BranchConfig() {
                     }
                     disabled={saving || !currentBranchId}
                   />{" "}
-                  Clone cities, balance pages, and reports from the current
-                  branch
+                  Клонувати міста, сторінки залишків і звіти з поточної філії
                 </label>
                 <p className="help">
-                  Import sources and scheduler settings stay global and are not
-                  duplicated.
+                  Джерела імпорту й налаштування планувальника залишаються
+                  глобальними та не дублюються.
                 </p>
               </div>
             )}
@@ -393,7 +394,7 @@ export function BranchConfig() {
                 className={`button is-primary ${saving ? "is-loading" : ""}`}
                 disabled={saving}
               >
-                {editingBranchId ? "Save" : "Create"}
+                {editingBranchId ? "Зберегти" : "Створити"}
               </button>
               <button
                 type="button"
@@ -401,7 +402,7 @@ export function BranchConfig() {
                 onClick={resetForm}
                 disabled={saving}
               >
-                Reset
+                Скинути
               </button>
             </div>
           </form>

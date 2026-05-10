@@ -169,7 +169,9 @@ export function ImportSourcesConfig() {
                       <td>
                         <span
                           className={`tag ${
-                            source.isActive ? "is-success" : "is-light"
+                            source.isActive
+                              ? "is-success"
+                              : "is-light has-text-grey-light"
                           }`}
                         >
                           {source.isActive ? "Активне" : "Неактивне"}

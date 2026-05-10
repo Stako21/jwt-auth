@@ -13,7 +13,7 @@ import {
 async function ensureCityInBranch(cityId, branchId) {
   const city = await getCityById(cityId);
   if (!city || Number(city.branchId) !== Number(branchId)) {
-    throw new BadRequest("Selected city does not belong to current branch");
+    throw new BadRequest("Вибране місто не належить до поточної філії");
   }
 }
 
@@ -132,7 +132,7 @@ class AuthController {
       const userId = req.user.id;
       const user = await UserRepository.getUserById(userId);
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ error: "Користувача не знайдено" });
       }
 
       const currentBranchId = Number(getUserBranchId(req.user));
@@ -178,12 +178,12 @@ class AuthController {
 
     try {
       if (!Number.isInteger(Number(branchId)) || Number(branchId) <= 0) {
-        throw new BadRequest("branchId is required");
+        throw new BadRequest("Необхідно передати branchId");
       }
 
       const canAccess = await canUserAccessBranch(req.user, Number(branchId));
       if (!canAccess) {
-        throw new Forbidden("Selected branch is not available for current user");
+        throw new Forbidden("Обрана філія недоступна для поточного користувача");
       }
 
       if (currentRefreshToken) {

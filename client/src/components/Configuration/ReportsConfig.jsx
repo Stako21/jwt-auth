@@ -186,7 +186,9 @@ export function ReportsConfig() {
                       <td>
                         <span
                           className={`tag ${
-                            report.isActive ? "is-success" : "is-light"
+                            report.isActive
+                              ? "is-success"
+                              : "is-light has-text-grey-light"
                           }`}
                         >
                           {report.isActive ? "Активний" : "Неактивний"}

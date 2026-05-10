@@ -175,7 +175,7 @@ export function CitiesConfig() {
               <table className="table is-fullwidth is-striped is-hoverable">
                 <thead>
                   <tr>
-                    <th>Slug</th>
+                    <th>Слаг</th>
                     <th>Назва</th>
                     <th>Коротко</th>
                     <th>Префікс</th>
@@ -195,7 +195,9 @@ export function CitiesConfig() {
                       <td>
                         <span
                           className={`tag ${
-                            city.isActive ? "is-success" : "is-light"
+                            city.isActive
+                              ? "is-success"
+                              : "is-light has-text-grey-light"
                           }`}
                         >
                           {city.isActive ? "Активне" : "Неактивне"}
@@ -248,7 +250,7 @@ export function CitiesConfig() {
           </h3>
           <form onSubmit={handleSubmit}>
             <div className="field">
-              <label className="label">Slug *</label>
+              <label className="label">Слаг *</label>
               <div className="control">
                 <input
                   className={`input ${errors.slug ? "is-danger" : ""}`}

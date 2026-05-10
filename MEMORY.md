@@ -597,6 +597,61 @@ Frontend:
   - created four commits for backend foundation, backend hardening, frontend branch-config UI, and docs/tooling guidance
   - pushed `branches-config` to `origin/branches-config` and set upstream tracking
   - branch is now ready for PR creation with a grouped summary of branch-config rollout, access hardening, scheduler/config UI, and rollout helper scripts
+- Frontend route-regression fix checkpoint on May 9, 2026:
+  - fixed `client/src/App.jsx` so custom helper wrappers no longer appear directly under `<Routes>`
+  - `RomashkaRoute` / balance-route helpers now return route elements through plain render helpers instead of custom route components
+  - this removes the runtime error: `is not a <Route> component. All component children of <Routes> must be a <Route> or <React.Fragment>`
+  - `npm run build` in `client` passed
+  - `npm run lint` in `client` passed
+- Manual-QA follow-up checkpoint on May 9, 2026:
+  - fixed branch visibility logic so branch-switch lists include both the user’s primary `users.branch_id` and the currently active branch token scope; this addresses the “can switch away from Default branch but cannot return” issue
+  - persisted `AdminPage` tab state in `localStorage` and added safe tab click handling, so edits in `Конфігурація` no longer bounce the UI back to `Користувачі`
+  - translated the remaining branch/scheduler/user-management admin UI strings and related snackbars to Ukrainian
+  - translated residual backend/user-management validation and success messages that surface in admin flows
+  - `node --check api/services/appConfig.service.js` passed
+  - `node --check api/services/Auth.js` passed
+  - `node --check api/controllers/Auth.js` passed
+  - `node --check api/controllers/User.js` passed
+  - `node --check api/services/userHierarchy.service.js` passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+  - note: `vite build` again touched mirrored `client/dist/Sorce/*`; keep them out of the final commit unless a generated-asset refresh is explicitly intended
+- Users hierarchy UX checkpoint on May 9, 2026:
+  - added `Список / Ієрархія` toggle to `client/src/components/UsersList/UsersList.jsx`
+  - hierarchy mode now renders a multi-level `NTO -> SV -> TA` tree while preserving the same per-user row actions as the flat list: password change, edit, and delete
+  - added a Font Awesome unlink action for `TA` rows that are attached to an `SV`; it calls the existing supervisor endpoint with `supervisorId: null`
+  - hierarchy mode also separates `SV без NTO`, `TA без керівника`, and non-hierarchy roles into their own sections instead of hiding them
+  - added success/error snackbars for detach and delete actions in the users list
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed
+  - mirrored `client/dist/Sorce/*` was restored again after build
+- Inactive-tag readability checkpoint on May 9, 2026:
+  - added `has-text-grey-light` to inactive status tags across branch/city/balance/report/import configuration tables
+  - this improves readability for `Неактивна / Неактивне / Неактивний` tags rendered with Bulma `is-light`
+  - `npm run lint` in `client` passed
+- Fresh-deploy bootstrap checkpoint on May 9, 2026:
+  - added `api/scripts/bootstrapEnvironment.js` and `npm run bootstrap:env`
+  - the bootstrap script now:
+    - creates the target MySQL database if it does not exist
+    - runs the current migration set
+    - seeds a default admin user (`admin` / `ChangeMe123!`) when the legacy `users` table is already present
+    - warns explicitly when the remaining legacy runtime tables are still missing
+  - updated `README.md` with a fresh-environment deployment flow and current limitations
+  - important limitation recorded in docs: the repository still does not contain a full migration history for the entire legacy schema, so a truly clean bootstrap still requires either importing the legacy base schema or continuing the migration effort
+  - `node --check api/scripts/bootstrapEnvironment.js` passed
+- Bootstrap doctor checkpoint on May 9, 2026:
+  - added `api/scripts/bootstrapDoctor.js` and `npm run bootstrap:doctor`
+  - the doctor script now checks:
+    - required and recommended env vars
+    - MySQL server connectivity
+    - target database existence
+    - pending migrations
+    - core branch-config table presence/shape
+    - legacy runtime table presence/shape
+    - admin-user readiness
+    - branch runtime readiness, including `BRANCH_ID` / `BRANCH_SLUG` expectations for scheduler
+  - updated `README.md` to document the new diagnostics command
+  - `node --check api/scripts/bootstrapDoctor.js` passed
 
 ## Workflow Notes
 
@@ -606,3 +661,95 @@ Frontend:
   - latest verification status
 - Before moving to the next roadmap item, explicitly tell the user what the next step will be.
 - This file is the primary resume point for continuing work without re-scanning the whole repo.
+## 2026-05-09 - Documentation guides checkpoint
+
+- Created new root folder `documentation/` for end-user operational docs.
+- Added `documentation/deployment-ubuntu-clean-server.md` with a detailed beginner-friendly guide for deploying the project on a clean Ubuntu server:
+  - server preparation
+  - Node.js / MySQL / Nginx / PM2 installation
+  - repository setup
+  - backend `.env` configuration
+  - MySQL database and user creation
+  - `bootstrap:doctor` and `bootstrap:env` usage
+  - current limitation around missing full legacy schema migration history
+  - frontend build
+  - PM2 and Nginx configuration
+  - HTTPS setup with Certbot
+  - verification and troubleshooting
+- Added `documentation/administrator-guide.md` with a detailed beginner-friendly administrator manual:
+  - login and role overview
+  - branch switching
+  - user management
+  - hierarchy mode and `TA -> SV -> NTO` relationships
+  - detach flow for subordinate users
+  - notifications
+  - scheduler management and blocked-state meaning
+  - configuration sections overview
+  - sales reports caveats
+  - documents workflow overview
+  - daily admin checklist and common mistakes
+- This documentation slice did not change runtime code.
+
+## 2026-05-10 - Existing server upgrade guide checkpoint
+
+- Reviewed server-specific deployment details gathered from `documentation/old-setings.txt` and `documentation/old-setings2.txt`.
+- Confirmed current legacy server shape:
+  - host: `ubserv` on Ubuntu 24.04
+  - app repo path: `/var/www/apps/jwt-auth`
+  - docker runtime path: `/var/www/apps/jwt-auth-docker`
+  - current server git branch: `resbr6`
+  - target branch for upgrade: `origin/branches-config`
+  - deployment mode: in-place Docker update with acceptable short downtime
+  - Rocket.Chat and app share external Docker network `rocketchat_default`
+- Identified important deployment nuances that must be reflected in the upgrade plan:
+  - Docker image is built from `/var/www/apps/jwt-auth-docker/app`, not directly from the git repo
+  - frontend for `balance.sweetglobal.com.ua` is served by `rocketchat-nginx-1` from `/usr/share/nginx/html/balance`
+  - backend container healthcheck currently points to `/health` instead of the real `/api/health`, which explains the false `unhealthy` status
+  - current production DB still has legacy runtime tables only and requires branch-config migration rollout during upgrade
+  - server repo contains local changes in `api/db.cjs` and generated `client/dist/Sorce/*.xlsx`, so the guide must preserve/inspect them before branch switching
+- Added server-specific upgrade manual:
+  - `documentation/update-existing-docker-server-to-branches-config.md`
+  - includes backup, git branch switch, env update, compose healthcheck fix, repo-to-build-context sync, migration/doctor/bootstrap flow, frontend publish flow, verification, and rollback.
+
+## 2026-05-10 - Existing server guide refinement checkpoint
+
+- Reviewed and shortened `documentation/update-existing-docker-server-to-branches-config.md` to reduce repetition while keeping explanations of why each command is needed.
+- Expanded the guide around production import-file handling:
+  - explicit creation of host-side `IMPORT_DIR` at `/var/www/data/excel`
+  - explanation that the Docker container sees the same path through the existing bind mount
+  - Windows SMB/CIFS share mounting via `cifs-utils`
+  - secure credentials file for SMB access
+  - `/etc/fstab` example for persistent mount
+  - sync script `/usr/local/bin/jwt-auth-import-sync.sh` that copies files from the mounted share into `IMPORT_DIR`
+  - cron-based scheduled synchronization example
+- The updated guide now reflects the real server-side file flow:
+  - Windows source folder -> mounted Ubuntu share -> `/var/www/data/excel` -> Docker bind mount -> app imports/scheduler
+
+## 2026-05-10 - Existing server quick-runbook checkpoint
+
+- Added a compact "Короткий бойовий сценарій" section to the end of `documentation/update-existing-docker-server-to-branches-config.md`.
+- The runbook keeps the same server-specific deployment path but compresses it into a practical execution checklist:
+  - backup
+  - stash and branch switch
+  - `.env` update
+  - `IMPORT_DIR` creation
+  - Windows share mount
+  - scheduled sync setup
+  - compose healthcheck fix
+  - repo-to-build-context sync
+  - Docker rebuild
+  - migrations and rollout scripts
+  - frontend publish
+  - final verification
+  - rollback
+## 2026-05-10 - Production commit prep checkpoint
+
+- Re-checked the current `branches-config` workspace before release commit preparation.
+- Verification re-run passed on the current code/docs package:
+  - `npm run lint` in `client`
+  - `npm run build` in `client`
+  - `node --check` for the touched backend controller/service/bootstrap files
+- Release-commit scope decision:
+  - include current backend/frontend/docs/runtime-config changes
+  - exclude `client/dist/Sorce/*` mirrored build artifacts from the commit
+  - exclude current `client/public/Sorce/*` business-data snapshot changes from the commit, because they are operational/source-data refreshes rather than product-code changes

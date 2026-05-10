@@ -1,6 +1,5 @@
-import React, { useContext, useState } from "react";
-import { AuthClient, AuthContext } from "../context/AuthContext";
-import style from "./style.module.scss";
+import React, { useEffect, useState } from "react";
+import { AuthClient } from "../context/AuthContext";
 import { useSnackbar } from "notistack";
 import { UsersList } from "../components/UsersList/UsersList";
 import { Sidebar } from "../components/Sidebar/Sidebar";
@@ -12,16 +11,32 @@ import { ReportsConfig } from "../components/Configuration/ReportsConfig";
 import { ImportSourcesConfig } from "../components/Configuration/ImportSourcesConfig";
 import { SchedulerConfig } from "../components/Configuration/SchedulerConfig";
 import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton";
-import { ROLE_LABELS } from "../utils/roles";
+
+const ADMIN_PAGE_TAB_STORAGE_KEY = "admin-page-active-tab";
+const DEFAULT_ADMIN_TAB = "users";
+const ALLOWED_ADMIN_TABS = new Set([
+  "users",
+  "settings",
+  "scheduler",
+  "configuration",
+]);
+
+function getStoredAdminTab() {
+  if (typeof window === "undefined") {
+    return DEFAULT_ADMIN_TAB;
+  }
+
+  const storedTab = window.localStorage.getItem(ADMIN_PAGE_TAB_STORAGE_KEY);
+  return ALLOWED_ADMIN_TABS.has(storedTab) ? storedTab : DEFAULT_ADMIN_TAB;
+}
 
 export default function AdminPage() {
-  const { userInfo, handleLogOut } = useContext(AuthContext);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [editUser, setEditUser] = useState(null);
   const [newUserModalOpen, setNewUserModalOpen] = useState(false);
   const [usersReloadKey, setUsersReloadKey] = useState(0);
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState(getStoredAdminTab);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -30,6 +45,19 @@ export default function AdminPage() {
       setEditUser(null);
       setNewUserModalOpen(false);
     }
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(ADMIN_PAGE_TAB_STORAGE_KEY, activeTab);
+  }, [activeTab]);
+
+  const handleTabClick = (event, tab) => {
+    event.preventDefault();
+    handleTabChange(tab);
   };
 
   const { enqueueSnackbar } = useSnackbar();
@@ -79,18 +107,31 @@ export default function AdminPage() {
       >
         <ul>
           <li className={activeTab === "users" ? "is-active" : ""}>
-            <a onClick={() => handleTabChange("users")}>Користувачі</a>
+            <a href="#users" onClick={(event) => handleTabClick(event, "users")}>
+              Користувачі
+            </a>
           </li>
           <li className={activeTab === "settings" ? "is-active" : ""}>
-            <a onClick={() => handleTabChange("settings")}>
+            <a
+              href="#settings"
+              onClick={(event) => handleTabClick(event, "settings")}
+            >
               Сповіщення
             </a>
           </li>
           <li className={activeTab === "scheduler" ? "is-active" : ""}>
-            <a onClick={() => handleTabChange("scheduler")}>Планувальник</a>
+            <a
+              href="#scheduler"
+              onClick={(event) => handleTabClick(event, "scheduler")}
+            >
+              Планувальник
+            </a>
           </li>
           <li className={activeTab === "configuration" ? "is-active" : ""}>
-            <a onClick={() => handleTabChange("configuration")}>
+            <a
+              href="#configuration"
+              onClick={(event) => handleTabClick(event, "configuration")}
+            >
               Конфігурація
             </a>
           </li>

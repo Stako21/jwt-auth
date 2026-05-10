@@ -18,15 +18,17 @@ function getRunStatusTagClass(status) {
 }
 
 function getRunStatusLabel(status) {
-  if (status === "completed_with_warnings") return "Warnings";
-  if (status === "skipped") return "Skipped";
-  if (status === "failed") return "Failed";
-  return "Completed";
+  if (status === "completed_with_warnings") return "Із попередженнями";
+  if (status === "skipped") return "Пропущено";
+  if (status === "failed") return "Помилка";
+  return "Виконано";
 }
 
 function getRunSnackbarVariant(status) {
   if (status === "failed") return "error";
-  if (status === "completed_with_warnings" || status === "skipped") return "warning";
+  if (status === "completed_with_warnings" || status === "skipped") {
+    return "warning";
+  }
   return "success";
 }
 
@@ -36,10 +38,10 @@ function formatRunTimestamp(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
 
-  return date.toLocaleString();
+  return date.toLocaleString("uk-UA");
 }
 
-export function SchedulerConfig({ title = "Scheduler" }) {
+export function SchedulerConfig({ title = "Планувальник" }) {
   const { enqueueSnackbar } = useSnackbar();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -91,12 +93,9 @@ export function SchedulerConfig({ title = "Scheduler" }) {
         } catch (error) {
           console.error("Failed to load scheduler tasks:", error);
           if (notifyOnError) {
-            enqueueSnackbar(
-              "РќРµ РІРґР°Р»РѕСЃСЏ Р·Р°РІР°РЅС‚Р°Р¶РёС‚Рё Р·Р°РґР°С‡С– scheduler",
-              {
-                variant: "error",
-              },
-            );
+            enqueueSnackbar("Не вдалося завантажити задачі планувальника", {
+              variant: "error",
+            });
           }
         } finally {
           setHasLoadedOnce(true);
@@ -184,8 +183,8 @@ export function SchedulerConfig({ title = "Scheduler" }) {
       const baseMessage =
         runResult?.message ||
         (branchLabel
-          ? `Task ${taskKey} started for ${branchLabel}`
-          : `Task ${taskKey} started`);
+          ? `Задачу ${taskKey} запущено для філії ${branchLabel}`
+          : `Задачу ${taskKey} запущено`);
 
       enqueueSnackbar(
         branchLabel && runResult?.status === "completed"
@@ -206,7 +205,7 @@ export function SchedulerConfig({ title = "Scheduler" }) {
         error.response?.data?.runResult?.message ||
           error.response?.data?.blockedReason ||
           error.response?.data?.error ||
-          `Failed to run ${taskKey}`,
+          `Не вдалося запустити задачу ${taskKey}`,
         { variant: "error" },
       );
     } finally {
@@ -226,10 +225,12 @@ export function SchedulerConfig({ title = "Scheduler" }) {
           prev.map((task) => (task.key === taskKey ? updatedTask : task)),
         );
       }
-      enqueueSnackbar(`Task ${taskKey} updated`, { variant: "success" });
+      enqueueSnackbar(`Задачу ${taskKey} оновлено`, { variant: "success" });
     } catch (error) {
       console.error(`Error updating scheduler task ${taskKey}:`, error);
-      enqueueSnackbar(`Failed to update ${taskKey}`, { variant: "error" });
+      enqueueSnackbar(`Не вдалося оновити задачу ${taskKey}`, {
+        variant: "error",
+      });
     } finally {
       setSavingTaskKey("");
     }
@@ -240,7 +241,7 @@ export function SchedulerConfig({ title = "Scheduler" }) {
     const intervalSeconds = Number(rawValue);
 
     if (!Number.isInteger(intervalSeconds) || intervalSeconds <= 0) {
-      enqueueSnackbar("Interval must be a positive integer (seconds)", {
+      enqueueSnackbar("Інтервал має бути додатним цілим числом у секундах", {
         variant: "error",
       });
       return;
@@ -261,10 +262,12 @@ export function SchedulerConfig({ title = "Scheduler" }) {
           [taskKey]: String(Math.max(1, Math.round(updatedTask.intervalMs / 1000))),
         }));
       }
-      enqueueSnackbar(`Interval for ${taskKey} updated`, { variant: "success" });
+      enqueueSnackbar(`Інтервал для ${taskKey} оновлено`, {
+        variant: "success",
+      });
     } catch (error) {
       console.error(`Error updating interval for scheduler task ${taskKey}:`, error);
-      enqueueSnackbar(`Failed to update interval for ${taskKey}`, {
+      enqueueSnackbar(`Не вдалося оновити інтервал для ${taskKey}`, {
         variant: "error",
       });
     } finally {
@@ -281,12 +284,12 @@ export function SchedulerConfig({ title = "Scheduler" }) {
   };
 
   const autoRefreshLabel = !isDocumentVisible
-    ? "Auto-refresh paused while the browser tab is hidden"
+    ? "Автооновлення призупинено, поки вкладка браузера прихована"
     : fastPollingUntil > Date.now()
-      ? `Fast auto-refresh active (${Math.round(
+      ? `Швидке автооновлення активне (${Math.round(
           FAST_POLL_INTERVAL_MS / 1000,
-        )} sec)`
-      : `Auto-refresh every ${Math.round(BASE_POLL_INTERVAL_MS / 1000)} sec`;
+        )} с)`
+      : `Автооновлення кожні ${Math.round(BASE_POLL_INTERVAL_MS / 1000)} с`;
 
   return (
     <div style={{ padding: 16 }}>
@@ -295,7 +298,7 @@ export function SchedulerConfig({ title = "Scheduler" }) {
           <h3 className="title is-5 mb-1">{title}</h3>
           <p className="help mb-0">
             {autoRefreshLabel}
-            {lastUpdatedAt ? ` | Updated ${formatRunTimestamp(lastUpdatedAt)}` : ""}
+            {lastUpdatedAt ? ` | Оновлено ${formatRunTimestamp(lastUpdatedAt)}` : ""}
           </p>
         </div>
         <button
@@ -311,22 +314,24 @@ export function SchedulerConfig({ title = "Scheduler" }) {
             void loadTasks({ background: true });
           }}
         >
-          Refresh
+          Оновити
         </button>
       </div>
-      {loading && <p>Loading tasks...</p>}
-      {!loading && tasks.length === 0 && <p>No scheduler tasks available.</p>}
+      {loading && <p>Завантаження задач...</p>}
+      {!loading && tasks.length === 0 && (
+        <p>Немає доступних задач планувальника.</p>
+      )}
       {!loading && tasks.length > 0 && (
         <table className="table is-fullwidth is-striped is-hoverable">
           <thead>
             <tr>
-              <th>Active</th>
-              <th>Task</th>
-              <th>Interval (sec)</th>
-              <th>Status</th>
-              <th>Runtime branch</th>
-              <th>Save interval</th>
-              <th>Run now</th>
+              <th>Активна</th>
+              <th>Задача</th>
+              <th>Інтервал (с)</th>
+              <th>Статус</th>
+              <th>Філія виконання</th>
+              <th>Зберегти інтервал</th>
+              <th>Запустити</th>
             </tr>
           </thead>
           <tbody>
@@ -345,7 +350,9 @@ export function SchedulerConfig({ title = "Scheduler" }) {
                 <td>
                   <div>{task.label}</div>
                   {task.requiresSystemBranch && (
-                    <p className="help mb-0">Requires configured system branch</p>
+                    <p className="help mb-0">
+                      Потребує налаштованої системної філії
+                    </p>
                   )}
                 </td>
                 <td style={{ maxWidth: 180 }}>
@@ -363,7 +370,7 @@ export function SchedulerConfig({ title = "Scheduler" }) {
                 <td style={{ minWidth: 220 }}>
                   {task.blockedReason ? (
                     <>
-                      <span className="tag is-warning is-light">Blocked</span>
+                      <span className="tag is-warning is-light">Заблоковано</span>
                       <p className="help mb-0">{task.blockedReason}</p>
                     </>
                   ) : task.lastRun ? (
@@ -375,14 +382,16 @@ export function SchedulerConfig({ title = "Scheduler" }) {
                         <p className="help mb-0">{task.lastRun.message}</p>
                       ) : null}
                       <p className="help mb-0">
-                        {task.lastRun.trigger === "scheduled" ? "Scheduled" : "Manual"}
+                        {task.lastRun.trigger === "scheduled"
+                          ? "За розкладом"
+                          : "Вручну"}
                         {task.lastRun.finishedAt
-                          ? ` at ${formatRunTimestamp(task.lastRun.finishedAt)}`
+                          ? ` о ${formatRunTimestamp(task.lastRun.finishedAt)}`
                           : ""}
                       </p>
                     </>
                   ) : (
-                    <span className="tag is-success is-light">Ready</span>
+                    <span className="tag is-success is-light">Готово</span>
                   )}
                 </td>
                 <td style={{ minWidth: 220 }}>
@@ -394,10 +403,10 @@ export function SchedulerConfig({ title = "Scheduler" }) {
                           task.systemBranch.slug}
                       </span>
                     ) : (
-                      <span className="tag is-light">Not resolved</span>
+                      <span className="tag is-light">Не визначено</span>
                     )
                   ) : (
-                    <span className="has-text-grey">Global</span>
+                    <span className="has-text-grey">Глобальна</span>
                   )}
                 </td>
                 <td>
@@ -409,7 +418,7 @@ export function SchedulerConfig({ title = "Scheduler" }) {
                     disabled={Boolean(savingTaskKey) || Boolean(runningTaskKey)}
                     onClick={() => handleSaveInterval(task.key)}
                   >
-                    Save
+                    Зберегти
                   </button>
                 </td>
                 <td>
@@ -425,7 +434,7 @@ export function SchedulerConfig({ title = "Scheduler" }) {
                     }
                     onClick={() => handleRunTask(task.key)}
                   >
-                    Run
+                    Запустити
                   </button>
                 </td>
               </tr>

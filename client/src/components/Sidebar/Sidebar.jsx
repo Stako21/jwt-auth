@@ -537,7 +537,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
                   className="button is-danger is-dark is-fullwidth"
                   onClick={() => onCancel && onCancel()}
                 >
-                  Cancel
+                  Скасувати
                 </button>
               </div>
             )}

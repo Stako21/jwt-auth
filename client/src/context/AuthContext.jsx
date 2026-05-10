@@ -5,6 +5,7 @@ import style from "../app.module.scss";
 import showErrorMessage from "../utils/showErrorMessage";
 import inMemoryJWT from "../services/inMemoryJWT";
 import { useSnackbar } from "notistack";
+import { ROLE_LABELS } from "../utils/roles";
 
 export const AuthClient = axios.create({
   baseURL: `${config.API_URL}/auth`,
@@ -149,7 +150,7 @@ const AuthProvider = ({ children }) => {
   const handleSignUp = (payload) => {
     AuthClient.post("/sign-up", payload)
       .then(() => {
-        enqueueSnackbar("Registration completed successfully!", {
+        enqueueSnackbar("Реєстрацію завершено успішно", {
           variant: "success",
         });
       })
@@ -167,14 +168,15 @@ const AuthProvider = ({ children }) => {
         try {
           decoded = applyTokenUser(accessToken);
         } catch (error) {
-          showErrorMessage(enqueueSnackbar, `Invalid token: ${error.message}`);
+          showErrorMessage(enqueueSnackbar, `Некоректний токен: ${error.message}`);
           return;
         }
 
         setIsUserLogged(true);
         await loadMe();
 
-        const message = `Welcome ${decoded.user_name || decoded.userName} (${decoded.role})`;
+        const roleLabel = ROLE_LABELS[decoded.role] || decoded.role;
+        const message = `Вітаємо, ${decoded.user_name || decoded.userName} (${roleLabel})`;
         enqueueSnackbar(message, { variant: "success" });
       })
       .catch((error) => {
@@ -200,7 +202,7 @@ const AuthProvider = ({ children }) => {
         inMemoryJWT.setToken(accessToken, accessTokenExpiration);
         applyTokenUser(accessToken);
         await loadMe();
-        enqueueSnackbar("Branch switched successfully", { variant: "success" });
+        enqueueSnackbar("Філію успішно перемкнено", { variant: "success" });
       } catch (error) {
         showErrorMessage(enqueueSnackbar, error);
         throw error;

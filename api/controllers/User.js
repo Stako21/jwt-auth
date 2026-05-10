@@ -14,7 +14,7 @@ import {
 async function ensureCityInBranch(cityId, branchId) {
   const city = await getCityById(cityId);
   if (!city || Number(city.branchId) !== Number(branchId)) {
-    throw new BadRequest("Selected city does not belong to current branch");
+    throw new BadRequest("Вибране місто не належить до поточної філії");
   }
 }
 
@@ -73,7 +73,7 @@ class UserController {
     if (!newPassword || newPassword.length < 6) {
       return res
         .status(400)
-        .json({ error: "Password must be at least 6 characters long" });
+        .json({ error: "Пароль має містити щонайменше 6 символів" });
     }
 
     try {
@@ -85,10 +85,10 @@ class UserController {
       );
 
       if (!result.affectedRows) {
-        throw new NotFound("User not found");
+        throw new NotFound("Користувача не знайдено");
       }
 
-      return res.status(200).json({ message: "Password updated successfully" });
+      return res.status(200).json({ message: "Пароль успішно оновлено" });
     } catch (err) {
       return ErrorsUtils.catchError(res, err);
     }
@@ -139,10 +139,10 @@ class UserController {
       );
 
       if (!result.affectedRows) {
-        throw new NotFound("User not found");
+        throw new NotFound("Користувача не знайдено");
       }
 
-      return res.status(200).json({ message: "User updated successfully" });
+      return res.status(200).json({ message: "Користувача успішно оновлено" });
     } catch (err) {
       return ErrorsUtils.catchError(res, err);
     }
@@ -154,7 +154,9 @@ class UserController {
     const branchId = getUserBranchId(req.user);
 
     if (Number(id) === Number(supervisorId)) {
-      return res.status(400).json({ message: "User cannot supervise himself" });
+      return res
+        .status(400)
+        .json({ message: "Користувач не може бути керівником самого себе" });
     }
 
     try {
@@ -166,7 +168,7 @@ class UserController {
       }
 
       if (!canRoleHaveSupervisor(user.role)) {
-        throw new BadRequest("Supervisor can be assigned only for SV and TA roles");
+        throw new BadRequest("Керівника можна призначати лише для ролей SV та TA");
       }
 
       await assertSupervisorAssignmentAllowed({
@@ -182,7 +184,7 @@ class UserController {
       );
 
       if (!result.affectedRows) {
-        throw new NotFound("User or supervisor not found in current branch");
+        throw new NotFound("Користувача або керівника не знайдено в поточній філії");
       }
 
       return res.status(200).json({ success: true });

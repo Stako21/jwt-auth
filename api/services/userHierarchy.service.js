@@ -23,7 +23,7 @@ export function canRoleHaveSupervisor(roleId) {
 
 export function assertKnownRoleId(roleId) {
   if (!isKnownRoleId(roleId)) {
-    throw new BadRequest("Invalid role");
+    throw new BadRequest("Некоректна роль");
   }
 }
 
@@ -34,13 +34,13 @@ export function assertSupervisorRoleForChildRole(childRole, supervisorRole) {
 
   if (!expectedSupervisorRole) {
     throw new BadRequest(
-      `Role ${roleName(normalizedChildRole)} cannot have a supervisor`,
+      `Роль ${roleName(normalizedChildRole)} не може мати керівника`,
     );
   }
 
   if (normalizedSupervisorRole !== expectedSupervisorRole) {
     throw new BadRequest(
-      `${roleName(normalizedChildRole)} can be assigned only to ${roleName(expectedSupervisorRole)}`,
+      `Для ролі ${roleName(normalizedChildRole)} можна призначити лише керівника з роллю ${roleName(expectedSupervisorRole)}`,
     );
   }
 }
@@ -55,7 +55,7 @@ export function assertRoleChangeKeepsHierarchyValid({
   if (supervisor) {
     if (!canRoleHaveSupervisor(normalizedNextRole)) {
       throw new BadRequest(
-        `Remove the current supervisor before changing role to ${roleName(normalizedNextRole)}`,
+        `Перед зміною ролі на ${roleName(normalizedNextRole)} потрібно прибрати поточного керівника`,
       );
     }
 
@@ -70,7 +70,7 @@ export function assertRoleChangeKeepsHierarchyValid({
 
   if (!expectedSubordinateRole) {
     throw new BadRequest(
-      `Reassign current subordinates before changing role to ${roleName(normalizedNextRole)}`,
+      `Перед зміною ролі на ${roleName(normalizedNextRole)} потрібно перепризначити поточних підлеглих`,
     );
   }
 
@@ -80,7 +80,7 @@ export function assertRoleChangeKeepsHierarchyValid({
 
   if (incompatibleChild) {
     throw new BadRequest(
-      `${roleName(normalizedNextRole)} cannot supervise ${roleName(Number(incompatibleChild.role))}`,
+      `${roleName(normalizedNextRole)} не може керувати роллю ${roleName(Number(incompatibleChild.role))}`,
     );
   }
 }
@@ -88,7 +88,7 @@ export function assertRoleChangeKeepsHierarchyValid({
 export async function getBranchUserOrThrow(userId, branchId) {
   const user = await UserRepository.getActiveUserByIdInBranch(userId, branchId);
   if (!user) {
-    throw new NotFound("User not found in current branch");
+    throw new NotFound("Користувача не знайдено в поточній філії");
   }
   return user;
 }

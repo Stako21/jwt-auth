@@ -9,12 +9,9 @@ import { AuthContext } from "./context/AuthContext";
 import { SalesReport } from "./components/SalesReport/SalesReport";
 import { ReportRomashka } from "./components/Reports/ReportRomashka";
 import { ROLE_IDS } from "./utils/roles";
-import {
-  AppConfigProvider,
-  useAppConfig,
-} from "./context/AppConfigContext";
+import { AppConfigProvider, useAppConfig } from "./context/AppConfigContext";
 
-function BalanceRoutes({ activeBalancePages, setLastUpdateTime }) {
+function renderBalanceRoutes(activeBalancePages, setLastUpdateTime) {
   return activeBalancePages.map((page) => (
     <Route
       key={page.id}
@@ -29,7 +26,7 @@ function BalanceRoutes({ activeBalancePages, setLastUpdateTime }) {
   ));
 }
 
-function RomashkaRoute({
+function renderRomashkaRoute({
   isEnabled,
   route,
   fallbackPath,
@@ -76,13 +73,6 @@ const AppContent = () => {
     return "/documents";
   }, [activeBalancePages, isAdmin, userInfo]);
 
-  const balanceRoutes = (
-    <BalanceRoutes
-      activeBalancePages={activeBalancePages}
-      setLastUpdateTime={setLastUpdateTime}
-    />
-  );
-
   return (
     <>
       <Header
@@ -103,24 +93,24 @@ const AppContent = () => {
                   path="/sales-report"
                   element={<SalesReport setLastUpdateTime={setLastUpdateTime} />}
                 />
-                <RomashkaRoute
-                  isEnabled={isRomashkaEnabled}
-                  route={romashkaRoute}
-                  fallbackPath="/admin-page"
-                  setLastUpdateTime={setLastUpdateTime}
-                />
+                {renderRomashkaRoute({
+                  isEnabled: isRomashkaEnabled,
+                  route: romashkaRoute,
+                  fallbackPath: "/admin-page",
+                  setLastUpdateTime,
+                })}
                 <Route path="/admin-page" element={<AdminPage />} />
-                {balanceRoutes}
+                {renderBalanceRoutes(activeBalancePages, setLastUpdateTime)}
               </>
             ) : (
               <>
                 {isDirector ? (
-                  <RomashkaRoute
-                    isEnabled={isRomashkaEnabled}
-                    route={romashkaRoute}
-                    fallbackPath="/documents"
-                    setLastUpdateTime={setLastUpdateTime}
-                  />
+                  renderRomashkaRoute({
+                    isEnabled: isRomashkaEnabled,
+                    route: romashkaRoute,
+                    fallbackPath: "/documents",
+                    setLastUpdateTime,
+                  })
                 ) : null}
                 <Route
                   path="/sales-report"
@@ -131,7 +121,7 @@ const AppContent = () => {
                     />
                   }
                 />
-                {balanceRoutes}
+                {renderBalanceRoutes(activeBalancePages, setLastUpdateTime)}
                 <Route path="/documents" element={<DocumentsPage />} />
               </>
             )

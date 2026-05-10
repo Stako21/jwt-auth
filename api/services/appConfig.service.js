@@ -12,6 +12,28 @@ export function getUserBranchId(user) {
   return Number(user?.branchId || user?.branch_id || 1);
 }
 
+async function getPrimaryBranchIdForUser(user) {
+  const fallbackBranchId = getUserBranchId(user);
+  const userId = Number(user?.id);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return fallbackBranchId;
+  }
+
+  const [[row]] = await pool.query(
+    `
+    SELECT branch_id AS branchId
+    FROM users
+    WHERE id = ?
+      AND is_active = 1
+    LIMIT 1
+    `,
+    [userId],
+  );
+
+  return Number(row?.branchId || fallbackBranchId);
+}
+
 export async function getSystemBranch() {
   const envBranchId = Number(process.env.BRANCH_ID);
   if (Number.isInteger(envBranchId) && envBranchId > 0) {
@@ -205,7 +227,8 @@ export async function getAllActiveBranches() {
 
 export async function getVisibleBranchesForUser(user) {
   const currentBranchId = getUserBranchId(user);
-  const branchIds = new Set([currentBranchId]);
+  const primaryBranchId = await getPrimaryBranchIdForUser(user);
+  const branchIds = new Set([primaryBranchId, currentBranchId]);
 
   if ([ROLE_IDS.Admin, ROLE_IDS.Director].includes(Number(user?.role))) {
     const [rows] = await pool.query(
@@ -299,7 +322,7 @@ async function getTargetUserForAccess(currentUser, targetUserId) {
   );
 
   if (!targetUser) {
-    throw new NotFound("User not found");
+    throw new NotFound("Користувача не знайдено");
   }
 
   return targetUser;
@@ -322,7 +345,7 @@ async function validateBranchAccessIds(branchAccessIds) {
   const invalidIds = branchAccessIds.filter((id) => !foundIds.has(Number(id)));
 
   if (invalidIds.length) {
-    throw new BadRequest("Some branch access ids are invalid");
+    throw new BadRequest("Деякі ідентифікатори доступу до філій некоректні");
   }
 
   return branchAccessIds;
@@ -346,7 +369,7 @@ async function validateCityAccessIds(branchId, cityAccessIds) {
   const invalidIds = cityAccessIds.filter((id) => !foundIds.has(Number(id)));
 
   if (invalidIds.length) {
-    throw new BadRequest("Some city access ids are invalid");
+    throw new BadRequest("Деякі ідентифікатори доступу до міст некоректні");
   }
 
   return cityAccessIds;
@@ -432,7 +455,8 @@ async function getStoredUserBranchAccessIds(userId, executor = pool) {
 }
 
 export async function getUserVisibleBranchIds(user) {
-  const branchIds = new Set([getUserBranchId(user)]);
+  const primaryBranchId = await getPrimaryBranchIdForUser(user);
+  const branchIds = new Set([primaryBranchId, getUserBranchId(user)]);
 
   if (![ROLE_IDS.Admin, ROLE_IDS.Director].includes(Number(user?.role))) {
     return Array.from(branchIds);
@@ -543,7 +567,7 @@ export async function resolveUserAccessConfig(
 
     if (outOfScopeBranchIds.length) {
       throw new BadRequest(
-        "Some branch access ids are outside the current admin branch scope",
+        "Деякі ідентифікатори доступу до філій виходять за межі доступу поточного адміністратора",
       );
     }
 
@@ -656,27 +680,27 @@ function normalizeBranchPayload(payload = {}) {
 }
 
 function validateCityPayload(city) {
-  if (!city.slug) throw new BadRequest("slug is required");
+  if (!city.slug) throw new BadRequest("Поле slug є обов'язковим");
   if (!/^[a-z0-9-]+$/.test(city.slug)) {
-    throw new BadRequest("slug may contain only lowercase latin letters, digits, and hyphen");
+    throw new BadRequest("Slug може містити лише малі латинські літери, цифри та дефіс");
   }
-  if (!city.name) throw new BadRequest("name is required");
-  if (!city.shortName) throw new BadRequest("shortName is required");
-  if (!city.documentPrefix) throw new BadRequest("documentPrefix is required");
+  if (!city.name) throw new BadRequest("Поле назви є обов'язковим");
+  if (!city.shortName) throw new BadRequest("Поле короткої назви є обов'язковим");
+  if (!city.documentPrefix) throw new BadRequest("Поле префікса документів є обов'язковим");
   if (!Number.isInteger(city.sortOrder)) {
-    throw new BadRequest("sortOrder must be an integer");
+    throw new BadRequest("Порядок сортування має бути цілим числом");
   }
 }
 
 function validateBranchPayload(branch) {
-  if (!branch.slug) throw new BadRequest("slug is required");
+  if (!branch.slug) throw new BadRequest("Поле slug є обов'язковим");
   if (!/^[a-z0-9-]+$/.test(branch.slug)) {
     throw new BadRequest(
-      "slug may contain only lowercase latin letters, digits, and hyphen",
+      "Slug може містити лише малі латинські літери, цифри та дефіс",
     );
   }
-  if (!branch.name) throw new BadRequest("name is required");
-  if (!branch.shortName) throw new BadRequest("shortName is required");
+  if (!branch.name) throw new BadRequest("Поле назви є обов'язковим");
+  if (!branch.shortName) throw new BadRequest("Поле короткої назви є обов'язковим");
 }
 
 async function ensureCityUniqueness({ branchId, slug, documentPrefix, excludeId = null }) {
@@ -695,14 +719,14 @@ async function ensureCityUniqueness({ branchId, slug, documentPrefix, excludeId 
 
   const conflictingSlug = rows.find((row) => row.slug === slug);
   if (conflictingSlug) {
-    throw new Conflict("City slug must be unique within branch");
+    throw new Conflict("Slug міста має бути унікальним у межах філії");
   }
 
   const conflictingPrefix = rows.find(
     (row) => row.documentPrefix === documentPrefix,
   );
   if (conflictingPrefix) {
-    throw new Conflict("City document prefix must be unique within branch");
+    throw new Conflict("Префікс документів міста має бути унікальним у межах філії");
   }
 }
 
@@ -719,7 +743,7 @@ async function ensureBranchUniqueness({ slug, excludeId = null }) {
   );
 
   if (rows.length > 0) {
-    throw new Conflict("Branch slug must be unique");
+    throw new Conflict("Slug філії має бути унікальним");
   }
 }
 
@@ -735,7 +759,7 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
   );
 
   if (!sourceBranch) {
-    throw new NotFound("Template branch not found");
+    throw new NotFound("Філію-шаблон не знайдено");
   }
 
   const [sourceCities] = await executor.query(
@@ -1010,7 +1034,7 @@ export async function updateBranch(branchId, payload) {
   await ensureBranchUniqueness({ slug: branch.slug, excludeId: branchId });
 
   const existing = await getBranchById(branchId);
-  if (!existing) throw new NotFound("Branch not found");
+  if (!existing) throw new NotFound("Філію не знайдено");
 
   await pool.query(
     `
@@ -1029,14 +1053,14 @@ export async function updateBranch(branchId, payload) {
 
 export async function setBranchActive(currentUser, branchId, isActive) {
   const existing = await getBranchById(branchId);
-  if (!existing) throw new NotFound("Branch not found");
+  if (!existing) throw new NotFound("Філію не знайдено");
 
   const nextIsActive = Boolean(isActive);
   const currentBranchId = getUserBranchId(currentUser);
 
   if (!nextIsActive) {
     if (Number(branchId) === Number(currentBranchId)) {
-      throw new BadRequest("Current branch cannot be deactivated");
+      throw new BadRequest("Поточну філію не можна деактивувати");
     }
 
     const [[stats]] = await pool.query(
@@ -1048,7 +1072,7 @@ export async function setBranchActive(currentUser, branchId, isActive) {
     );
 
     if (Number(existing.isActive) && Number(stats?.activeCount || 0) <= 1) {
-      throw new BadRequest("At least one active branch must remain");
+      throw new BadRequest("Має залишитися щонайменше одна активна філія");
     }
   }
 
@@ -1080,7 +1104,7 @@ export async function updateCity(user, cityId, payload) {
     [cityId, branchId],
   );
 
-  if (!existing) throw new NotFound("City not found");
+  if (!existing) throw new NotFound("Місто не знайдено");
 
   await ensureCityUniqueness({
     branchId,
@@ -1130,7 +1154,7 @@ export async function setCityActive(user, cityId, isActive) {
     [cityId, branchId],
   );
 
-  if (!existing) throw new NotFound("City not found");
+  if (!existing) throw new NotFound("Місто не знайдено");
 
   await pool.query(
     `
@@ -1250,20 +1274,20 @@ function normalizeBalancePagePayload(payload = {}) {
 }
 
 function validateBalancePagePayload(page) {
-  if (!page.slug) throw new BadRequest("slug is required");
+  if (!page.slug) throw new BadRequest("Поле slug є обов'язковим");
   if (!/^[a-z0-9-]+$/.test(page.slug)) {
     throw new BadRequest(
-      "slug may contain only lowercase latin letters, digits, and hyphen",
+      "Slug може містити лише малі латинські літери, цифри та дефіс",
     );
   }
-  if (!page.menuTitle) throw new BadRequest("menuTitle is required");
-  if (!page.headerTitle) throw new BadRequest("headerTitle is required");
-  if (!page.fileName) throw new BadRequest("fileName is required");
+  if (!page.menuTitle) throw new BadRequest("Назва в меню є обов'язковою");
+  if (!page.headerTitle) throw new BadRequest("Заголовок сторінки є обов'язковим");
+  if (!page.fileName) throw new BadRequest("Назва файлу є обов'язковою");
   if (!Number.isInteger(page.sortOrder)) {
-    throw new BadRequest("sortOrder must be an integer");
+    throw new BadRequest("Порядок сортування має бути цілим числом");
   }
   if (page.cityId !== null && (!Number.isInteger(page.cityId) || page.cityId <= 0)) {
-    throw new BadRequest("cityId must be a positive integer or null");
+    throw new BadRequest("Ідентифікатор міста має бути додатним цілим числом або null");
   }
 }
 
@@ -1298,19 +1322,19 @@ function normalizeReportPayload(payload = {}) {
 }
 
 function validateReportPayload(report) {
-  if (!report.reportKey) throw new BadRequest("reportKey is required");
+  if (!report.reportKey) throw new BadRequest("Ключ звіту є обов'язковим");
   if (!/^[a-z0-9-]+$/.test(report.reportKey)) {
     throw new BadRequest(
-      "reportKey may contain only lowercase latin letters, digits, and hyphen",
+      "Ключ звіту може містити лише малі латинські літери, цифри та дефіс",
     );
   }
-  if (!report.route) throw new BadRequest("route is required");
+  if (!report.route) throw new BadRequest("Маршрут є обов'язковим");
   if (!report.route.startsWith("/")) {
-    throw new BadRequest("route must start with /");
+    throw new BadRequest("Маршрут має починатися з /");
   }
-  if (!report.menuTitle) throw new BadRequest("menuTitle is required");
+  if (!report.menuTitle) throw new BadRequest("Назва в меню є обов'язковою");
   if (!Number.isInteger(report.sortOrder)) {
-    throw new BadRequest("sortOrder must be an integer");
+    throw new BadRequest("Порядок сортування має бути цілим числом");
   }
 }
 
@@ -1337,7 +1361,7 @@ function normalizeImportSourcePayload(payload = {}) {
 }
 
 function validateImportSourcePayload(source) {
-  if (!source.fileName) throw new BadRequest("fileName is required");
+  if (!source.fileName) throw new BadRequest("Назва файлу є обов'язковою");
 }
 
 async function ensureBalancePageCityBelongsToBranch(branchId, cityId) {
@@ -1355,7 +1379,7 @@ async function ensureBalancePageCityBelongsToBranch(branchId, cityId) {
   );
 
   if (!city) {
-    throw new BadRequest("Selected city does not belong to current branch");
+    throw new BadRequest("Вибране місто не належить до поточної філії");
   }
 }
 
@@ -1380,12 +1404,12 @@ async function ensureBalancePageUniqueness({
 
   const conflictingSlug = rows.find((row) => row.slug === slug);
   if (conflictingSlug) {
-    throw new Conflict("Balance page slug must be unique within branch");
+    throw new Conflict("Slug сторінки залишків має бути унікальним у межах філії");
   }
 
   const conflictingFile = rows.find((row) => row.fileName === fileName);
   if (conflictingFile) {
-    throw new Conflict("Balance page fileName must be unique within branch");
+    throw new Conflict("Назва файлу сторінки залишків має бути унікальною у межах філії");
   }
 }
 
@@ -1410,12 +1434,12 @@ async function ensureReportUniqueness({
 
   const conflictingKey = rows.find((row) => row.reportKey === reportKey);
   if (conflictingKey) {
-    throw new Conflict("Report key must be unique within branch");
+    throw new Conflict("Ключ звіту має бути унікальним у межах філії");
   }
 
   const conflictingRoute = rows.find((row) => row.route === route);
   if (conflictingRoute) {
-    throw new Conflict("Report route must be unique within branch");
+    throw new Conflict("Маршрут звіту має бути унікальним у межах філії");
   }
 }
 
@@ -1475,7 +1499,7 @@ export async function updateBalancePage(user, pageId, payload) {
     [pageId, branchId],
   );
 
-  if (!existing) throw new NotFound("Balance page not found");
+  if (!existing) throw new NotFound("Сторінку залишків не знайдено");
 
   await ensureBalancePageCityBelongsToBranch(branchId, page.cityId);
   await ensureBalancePageUniqueness({
@@ -1528,7 +1552,7 @@ export async function setBalancePageActive(user, pageId, isActive) {
     [pageId, branchId],
   );
 
-  if (!existing) throw new NotFound("Balance page not found");
+  if (!existing) throw new NotFound("Сторінку залишків не знайдено");
 
   await pool.query(
     `
@@ -1559,7 +1583,7 @@ export async function updateReportDefinition(user, reportId, payload) {
     [reportId, branchId],
   );
 
-  if (!existing) throw new NotFound("Report definition not found");
+  if (!existing) throw new NotFound("Налаштування звіту не знайдено");
 
   await ensureReportUniqueness({
     branchId,
@@ -1609,7 +1633,7 @@ export async function setReportDefinitionActive(user, reportId, isActive) {
     [reportId, branchId],
   );
 
-  if (!existing) throw new NotFound("Report definition not found");
+  if (!existing) throw new NotFound("Налаштування звіту не знайдено");
 
   await pool.query(
     `
@@ -1638,7 +1662,7 @@ export async function updateImportSource(sourceId, payload) {
     [sourceId],
   );
 
-  if (!existing) throw new NotFound("Import source not found");
+  if (!existing) throw new NotFound("Джерело імпорту не знайдено");
 
   await pool.query(
     `
@@ -1671,7 +1695,7 @@ export async function setImportSourceActive(sourceId, isActive) {
     [sourceId],
   );
 
-  if (!existing) throw new NotFound("Import source not found");
+  if (!existing) throw new NotFound("Джерело імпорту не знайдено");
 
   await pool.query(
     `
