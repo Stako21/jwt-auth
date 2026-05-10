@@ -753,3 +753,40 @@ Frontend:
   - include current backend/frontend/docs/runtime-config changes
   - exclude `client/dist/Sorce/*` mirrored build artifacts from the commit
   - exclude current `client/public/Sorce/*` business-data snapshot changes from the commit, because they are operational/source-data refreshes rather than product-code changes
+
+## 2026-05-10 - Production rollout commit pushed checkpoint
+
+- Created commit `f67c045` with message:
+  - `feat: finalize production rollout tooling and admin qa fixes`
+- Pushed `branches-config` to `origin/branches-config`.
+- Commit contains:
+  - backend/frontend branch-config QA and admin-flow fixes
+  - `bootstrapDoctor` and `bootstrapEnvironment`
+  - deployment and administrator documentation
+  - server-specific production upgrade guide with Windows-share import sync flow
+- Intentionally not included in the commit:
+  - `client/public/Sorce/*` business-data snapshots
+  - `client/dist/Sorce/*` mirrored build artifacts
+  - `documentation/old-setings.txt`
+  - `documentation/old-setings2.txt`
+
+## 2026-05-10 - Server guide .env example checkpoint
+
+- Updated `documentation/update-existing-docker-server-to-branches-config.md` to include a full production `.env` example for the existing Docker server layout.
+- The example now documents:
+  - `CLIENT_URL`
+  - `BRANCH_SLUG`
+  - `IMPORT_DIR`
+  - Docker-network DB connection values (`DB_HOST=mysql`)
+  - SMTP / Rocket.Chat placeholders
+  - `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`
+
+## 2026-05-10 - SMB credentials clarification checkpoint
+
+- Expanded `documentation/update-existing-docker-server-to-branches-config.md` with a practical clarification for `/root/.smb-credentials-sweetglobal`.
+- Added both variants:
+  - with `domain=...`
+  - without `domain` for a plain local Windows user
+- Documented the practical recommendation:
+  - start without `domain` if unsure
+  - add it only if the CIFS mount requires domain/workgroup context

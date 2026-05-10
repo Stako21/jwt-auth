@@ -229,6 +229,51 @@ env_file:
 nano /var/www/apps/jwt-auth/.env
 ```
 
+### Повний приклад `.env`
+
+Нижче приклад production `.env` саме для вашої docker-схеми. Значення секретів потрібно замінити на реальні.
+
+```env
+PORT=5000
+CLIENT_URL=https://balance.sweetglobal.com.ua
+
+BRANCH_SLUG=default
+IMPORT_DIR=/var/www/data/excel
+
+DB_HOST=mysql
+DB_PORT=3306
+DB_NAME=auth
+DB_USER=stako
+DB_PASSWORD=REPLACE_WITH_DB_PASSWORD
+DB_CHARSET=utf8mb4
+DB_CONNECTION_LIMIT=10
+DB_QUEUE_LIMIT=0
+
+ACCESS_TOKEN_SECRET=REPLACE_WITH_ACCESS_TOKEN_SECRET
+REFRESH_TOKEN_SECRET=REPLACE_WITH_REFRESH_TOKEN_SECRET
+
+SMTP_HOST=mail.sweetglobal.com.ua
+SMTP_USER=documents@sweetglobal.com.ua
+SMTP_PASS=REPLACE_WITH_SMTP_PASSWORD
+
+ROCKET_URL=https://rchat.roshen.zp.ua
+ROCKET_USER_ID=REPLACE_WITH_ROCKET_USER_ID
+ROCKET_TOKEN=REPLACE_WITH_ROCKET_TOKEN
+
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+```
+
+### Що означають головні значення у цьому прикладі
+
+- `DB_HOST=mysql`:
+  backend працює в Docker і підключається до MySQL не через `localhost`, а через ім'я сервісу `mysql` у compose-мережі.
+- `IMPORT_DIR=/var/www/data/excel`:
+  це папка на хості, яка змонтована в контейнер і буде отримувати файли зі Windows-шари.
+- `BRANCH_SLUG=default`:
+  це системна філія для scheduler, якщо активних філій більше однієї.
+- `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`:
+  потрібно для генерації PDF всередині контейнера, бо Chromium встановлюється в образі.
+
 ### Що там обов’язково перевірити
 
 ```env
@@ -311,6 +356,22 @@ username=YOUR_WINDOWS_USER
 password=YOUR_WINDOWS_PASSWORD
 domain=YOUR_DOMAIN_OR_WORKGROUP
 ```
+
+### Якщо `domain` не використовується
+
+У багатьох невеликих мережах або на окремому Windows-ПК домену немає. Тоді файл може бути простішим:
+
+```ini
+username=YOUR_WINDOWS_USER
+password=YOUR_WINDOWS_PASSWORD
+```
+
+Тобто:
+
+- якщо у вас Active Directory або робоча група з окремим доменним входом, залишайте `domain=...`
+- якщо це звичайний локальний Windows-користувач, `domain` часто не потрібен
+
+Якщо не впевнені, почніть без `domain`, а якщо mount не спрацює, тоді вже додайте його.
 
 Потім обмежте права:
 
