@@ -102,6 +102,7 @@ export async function loadSalesReports() {
         runLog.warn("sales report row skipped: invalid data", {
           documentNumber: report?.number,
           loginAgent: report?.loginAgent,
+          salesAgent: report?.salesAgent,
           reportDate: report?.date,
         });
         continue;
@@ -152,10 +153,6 @@ export async function loadSalesReports() {
     runLog.info("report_imports row created", { importId });
 
     const incomingKeys = new Set();
-    for (const report of validReports) {
-      incomingKeys.add(`${report.number}||${report.loginAgent}`);
-    }
-    runLog.info("incoming keys prepared", { incomingKeys: incomingKeys.size });
 
     let insertedCount = 0;
     let updatedCount = 0;
@@ -164,26 +161,21 @@ export async function loadSalesReports() {
 
     for (const report of validReports) {
       try {
-        const [[user]] = await connection.query(
-          `
-          SELECT id
-          FROM users
-          WHERE NAME = ?
-            AND is_active = 1
-            AND branch_id = ?
-          LIMIT 1
-          `,
-          [report.loginAgent, branchId],
-        );
+        const user = await resolveReportUser(connection, report, branchId);
         const userId = user?.id ?? null;
+        const resolvedLoginAgent = user?.loginAgent || report.loginAgent || report.salesAgent;
+        const resolvedSalesAgentName = report.salesAgent || user?.salesAgentName || null;
 
         if (!userId) {
           missingUserCount += 1;
           runLog.warn("user not found for sales report row", {
             documentNumber: report.number,
-            loginAgent: report.loginAgent,
+            loginAgent: report.loginAgent || null,
+            salesAgent: report.salesAgent || null,
           });
         }
+
+        incomingKeys.add(`${report.number}||${resolvedLoginAgent}`);
 
         const [[existing]] = await connection.query(
           `
@@ -201,7 +193,7 @@ export async function loadSalesReports() {
             created_at DESC
           LIMIT 1
           `,
-          [report.number, report.loginAgent, branchId],
+          [report.number, resolvedLoginAgent, branchId],
         );
 
         if (!existing) {
@@ -229,9 +221,9 @@ export async function loadSalesReports() {
               report.docDate,
               report.number,
               report.originalDate,
-              report.loginAgent,
+              resolvedLoginAgent,
               userId,
-              report.salesAgent,
+              resolvedSalesAgentName,
               report.amount,
               report.pointOfSale,
               report.customer,
@@ -254,10 +246,20 @@ export async function loadSalesReports() {
             SET status = 'ACTIVE',
                 change_comment = NULL,
                 amount = ?,
+                login_agent = ?,
+                user_id = ?,
+                sales_agent_name = ?,
                 import_id = ?
             WHERE id = ?
             `,
-            [report.amount, importId, existing.id],
+            [
+              report.amount,
+              resolvedLoginAgent,
+              userId,
+              resolvedSalesAgentName,
+              importId,
+              existing.id,
+            ],
           );
           updatedCount += 1;
           continue;
@@ -300,9 +302,9 @@ export async function loadSalesReports() {
             report.docDate,
             report.number,
             report.originalDate,
-            report.loginAgent,
+            resolvedLoginAgent,
             userId,
-            report.salesAgent,
+            resolvedSalesAgentName,
             report.amount,
             report.pointOfSale,
             report.customer,
@@ -333,6 +335,8 @@ export async function loadSalesReports() {
         throw rowError;
       }
     }
+
+    runLog.info("incoming keys prepared", { incomingKeys: incomingKeys.size });
 
     runLog.info("rows processed", {
       processedCount: validReports.length,
@@ -446,13 +450,14 @@ export async function loadSalesReports() {
 }
 
 function normalizeReportRow(report) {
-  if (!report || !report.number || !report.loginAgent || !report.date) {
+  if (!report || !report.number || !report.date) {
     return null;
   }
 
   const number = String(report.number).trim();
-  const loginAgent = String(report.loginAgent).trim();
-  if (!number || !loginAgent) {
+  const loginAgent = String(report.loginAgent || "").trim();
+  const salesAgent = String(report.salesAgent || "").trim();
+  if (!number || (!loginAgent && !salesAgent)) {
     return null;
   }
 
@@ -466,11 +471,77 @@ function normalizeReportRow(report) {
     loginAgent,
     originalDate: report.date,
     docDate: parsedDate.toISOString().slice(0, 10),
-    salesAgent: report.salesAgent,
+    salesAgent,
     amount: report.amount,
     pointOfSale: report.pointOfSale,
     customer: report.customer,
     comment: report.comment,
     form2: Boolean(report.form2),
   };
+}
+
+async function resolveReportUser(connection, report, branchId) {
+  if (report.loginAgent) {
+    const [[userByLogin]] = await connection.query(
+      `
+      SELECT
+        u.id,
+        u.NAME AS loginAgent,
+        COALESCE(NULLIF(u.user_name, ''), NULLIF(sa.full_name, ''), u.NAME) AS salesAgentName
+      FROM users u
+      LEFT JOIN sales_agents sa
+        ON sa.user_id = u.id
+       AND sa.branch_id = u.branch_id
+      WHERE u.NAME = ?
+        AND u.is_active = 1
+        AND u.branch_id = ?
+      LIMIT 1
+      `,
+      [report.loginAgent, branchId],
+    );
+
+    if (userByLogin) {
+      return userByLogin;
+    }
+  }
+
+  if (!report.salesAgent) {
+    return null;
+  }
+
+  const [[userByName]] = await connection.query(
+    `
+    SELECT
+      u.id,
+      u.NAME AS loginAgent,
+      COALESCE(NULLIF(sa.full_name, ''), NULLIF(u.user_name, ''), u.NAME) AS salesAgentName
+    FROM users u
+    LEFT JOIN sales_agents sa
+      ON sa.user_id = u.id
+     AND sa.branch_id = u.branch_id
+    WHERE u.is_active = 1
+      AND u.branch_id = ?
+      AND (
+        u.user_name = ?
+        OR sa.full_name = ?
+      )
+    ORDER BY
+      CASE
+        WHEN sa.full_name = ? THEN 1
+        WHEN u.user_name = ? THEN 2
+        ELSE 3
+      END,
+      u.id
+    LIMIT 1
+    `,
+    [
+      branchId,
+      report.salesAgent,
+      report.salesAgent,
+      report.salesAgent,
+      report.salesAgent,
+    ],
+  );
+
+  return userByName || null;
 }

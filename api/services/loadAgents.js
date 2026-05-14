@@ -147,18 +147,22 @@ export async function loadSalesAgents() {
 
     for (const agent of candidateAgents) {
       const login = String(agent.login).trim();
+      const fullName = String(agent.currentAgent || "").trim();
       const userId = userIdByLogin.get(login);
 
       if (!userId) {
         skippedUserNotFound += 1;
-        runLog.warn("user not found for sales agent", { login });
+        runLog.warn("user not found for sales agent", {
+          login,
+          currentAgent: fullName || null,
+        });
         continue;
       }
 
       importableAgents.push({
         login,
         userId,
-        fullName: agent.currentAgent,
+        fullName,
         supervisorName: agent.supervisor,
         city: agent.regionalDivision,
       });

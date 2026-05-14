@@ -349,8 +349,8 @@ export function SchedulerConfig({ title = "Планувальник" }) {
                 </td>
                 <td>
                   <div>{task.label}</div>
-                  {task.requiresSystemBranch && (
-                    <p className="help mb-0">
+                  {task.requiresSystemBranch && task.blockedReason && (
+                    <p className="help mb-0 has-text-warning">
                       Потребує налаштованої системної філії
                     </p>
                   )}
