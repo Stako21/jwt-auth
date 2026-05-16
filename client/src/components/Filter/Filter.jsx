@@ -13,13 +13,13 @@ export const Filter = ({
     <section className={style.panel}>
       <div className={style.panelTop}>
         <div>
-          <p className={style.eyebrow}>Навігація по залишках</p>
-          <h2 className={style.title}>Пошук і швидкий фільтр</h2>
+          <p className={style.eyebrow}>Залишки товарів</p>
+          <h2 className={style.title}>Пошук і фільтр</h2>
         </div>
 
         <div className={style.stats}>
           <span className={style.statChip}>Показано: {visibleCount}</span>
-          <span className={style.statChipMuted}>Усього позицій: {totalCount}</span>
+          <span className={style.statChipMuted}>Усього: {totalCount}</span>
         </div>
       </div>
 

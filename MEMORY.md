@@ -858,3 +858,22 @@ Frontend:
   - rebuilding frontend
   - copying frontend into `rocketchat-nginx-1`
   - final health/smoke verification
+
+## 2026-05-16 - Balance UI compaction checkpoint
+
+- Reworked the balance filter/search panel to make it noticeably smaller and calmer:
+  - reduced padding, title size, chip size, field height, and overall visual weight
+  - kept the same search + `ВІП / ОПТ / увесь товар` behavior
+  - mobile layout still stacks cleanly into one column
+- Reworked the balance table back toward readability:
+  - restored a light table surface instead of heavy dark gradients
+  - brought back clearer row separation and calmer alternating leaf rows
+  - preserved hierarchy coloring for group rows while improving text contrast
+  - tightened indentation, button size, and quantity column width for better density
+  - kept horizontal scrolling behavior for phones and narrower screens
+- Small table runtime cleanup:
+  - row visibility lookup now uses a memoized `rowMap` instead of repeated linear parent searches
+  - leaf-row striping order is precomputed once per render
+- Verification:
+  - `npm run build` in `client` passed
+  - build still reports the known Sass legacy API deprecation warnings and large-chunk warning

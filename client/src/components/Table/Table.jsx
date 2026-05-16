@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import cn from "classnames";
 import style from "./Table.module.scss";
 import ScrollToTopButton from "../ScrollToTopButton/ScrollToTopButton";
@@ -44,7 +44,11 @@ export const Table = ({ data }) => {
     setVisibility(buildVisibilityMap(data));
   }, [data]);
 
-  const flatData = flattenData(data);
+  const flatData = useMemo(() => flattenData(data), [data]);
+  const rowMap = useMemo(
+    () => Object.fromEntries(flatData.map((row) => [row.id, row])),
+    [flatData],
+  );
 
   const toggleVisibility = (id) => {
     setVisibility((prev) => ({
@@ -59,15 +63,25 @@ export const Table = ({ data }) => {
     let parentId = row.parentId;
     while (parentId) {
       if (visibility[parentId] === false) return false;
-
-      const parentRow = flatData.find((item) => item.id === parentId);
-      parentId = parentRow ? parentRow.parentId : "";
+      parentId = rowMap[parentId]?.parentId || "";
     }
 
     return true;
   };
 
-  const leafRows = flatData.filter((row) => !row.hasChildren);
+  const leafRowOrder = useMemo(() => {
+    const result = {};
+    let index = 0;
+
+    flatData.forEach((row) => {
+      if (!row.hasChildren) {
+        result[row.id] = index;
+        index += 1;
+      }
+    });
+
+    return result;
+  }, [flatData]);
 
   return (
     <div className={style.wraperTable}>
@@ -83,9 +97,7 @@ export const Table = ({ data }) => {
             <tbody>
               {flatData.map((row) => {
                 const isLeafRow = !row.hasChildren;
-                const leafRowIndex = isLeafRow
-                  ? leafRows.findIndex((item) => item.id === row.id)
-                  : -1;
+                const leafRowIndex = isLeafRow ? leafRowOrder[row.id] : -1;
 
                 if (!isRowVisible(row)) return null;
 
@@ -99,7 +111,7 @@ export const Table = ({ data }) => {
                   >
                     <td
                       className={style.productCell}
-                      style={{ paddingLeft: `${18 + row.level * 18}px` }}
+                      style={{ paddingLeft: `${16 + row.level * 14}px` }}
                     >
                       {row.hasChildren && (
                         <button
@@ -107,7 +119,9 @@ export const Table = ({ data }) => {
                           className={style.toggleButton}
                           type="button"
                           aria-label={
-                            visibility[row.id] ? "Згорнути групу товарів" : "Розгорнути групу товарів"
+                            visibility[row.id]
+                              ? "Згорнути групу товарів"
+                              : "Розгорнути групу товарів"
                           }
                         >
                           <i
