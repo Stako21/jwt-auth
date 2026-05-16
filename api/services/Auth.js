@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+﻿import bcrypt from "bcryptjs";
 import TokenService from "./Token.js";
 import pool from "../db.cjs";
 import {
@@ -58,7 +58,7 @@ class AuthService {
     }
 
     if (typeof userData.PASSWORD !== "string" || !userData.PASSWORD) {
-      throw new Unauthorized("РќРµРїСЂР°РІРёР»СЊРЅРёР№ Р»РѕРіС–РЅ Р°Р±Рѕ РїР°СЂРѕР»СЊ");
+      throw new Unauthorized("Неправильний логін або пароль");
     }
 
     const isPasswordValid = bcrypt.compareSync(password, userData.PASSWORD);
@@ -289,3 +289,5 @@ class AuthService {
 }
 
 export default AuthService;
+
+

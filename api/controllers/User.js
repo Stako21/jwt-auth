@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+﻿import bcrypt from "bcryptjs";
 import UserRepository from "../repositories/User.js";
 import ErrorsUtils from "../utils/Errors.js";
 import { BadRequest, Conflict, NotFound } from "../utils/Errors.js";
@@ -107,7 +107,7 @@ class UserController {
       if (userName) {
         const existingByName = await UserRepository.getUserData(userName);
         if (existingByName && Number(existingByName.id) !== Number(id)) {
-          throw new Conflict("РљРѕСЂРёСЃС‚СѓРІР°С‡ Р· С‚Р°РєРёРј Р»РѕРіС–РЅРѕРј РІР¶Рµ С–СЃРЅСѓС”");
+          throw new Conflict("Користувач з таким логіном вже існує");
         }
       }
 
@@ -116,7 +116,7 @@ class UserController {
           user_name,
         );
         if (existingByUserName && Number(existingByUserName.id) !== Number(id)) {
-          throw new Conflict("РљРѕСЂРёСЃС‚СѓРІР°С‡ Р· С‚Р°РєРёРј user_name РІР¶Рµ С–СЃРЅСѓС”");
+          throw new Conflict("Користувач з таким user_name вже існує");
         }
       }
 
@@ -195,3 +195,5 @@ class UserController {
 }
 
 export default UserController;
+
+

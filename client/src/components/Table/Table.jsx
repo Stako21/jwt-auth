@@ -1,26 +1,50 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import cn from "classnames";
 import style from "./Table.module.scss";
 import ScrollToTopButton from "../ScrollToTopButton/ScrollToTopButton";
 
-export const Table = ({ data }) => {
-  // Инициализируем состояние с видимыми элементами
-  const [visibility, setVisibility] = useState(() => {
-    const initialVisibility = {};
-
-    const initializeVisibility = (items, parentId = "") => {
-      items.forEach((item, index) => {
-        const itemId = `${parentId}-${index}`;
-        if (item.children && item.children.length > 0) {
-          initialVisibility[itemId] = true; // По умолчанию видим
-          initializeVisibility(item.children, itemId);
-        }
-      });
-    };
-
-    initializeVisibility(data);
-    return initialVisibility;
+function buildVisibilityMap(items, parentId = "", result = {}) {
+  items.forEach((item, index) => {
+    const itemId = `${parentId}-${index}`;
+    if (item.children?.length) {
+      result[itemId] = true;
+      buildVisibilityMap(item.children, itemId, result);
+    }
   });
+
+  return result;
+}
+
+function flattenData(data, level = 0, parentId = "") {
+  let flatData = [];
+
+  data.forEach((item, index) => {
+    const itemId = `${parentId}-${index}`;
+    flatData.push({
+      id: itemId,
+      productNameCell: item.productNameCell,
+      productQuantityCell: item.productQuantityCell,
+      level,
+      parentId,
+      hasChildren: !!(item.children && item.children.length > 0),
+    });
+
+    if (item.children?.length) {
+      flatData = flatData.concat(flattenData(item.children, level + 1, itemId));
+    }
+  });
+
+  return flatData;
+}
+
+export const Table = ({ data }) => {
+  const [visibility, setVisibility] = useState(() => buildVisibilityMap(data));
+
+  useEffect(() => {
+    setVisibility(buildVisibilityMap(data));
+  }, [data]);
+
+  const flatData = flattenData(data);
 
   const toggleVisibility = (id) => {
     setVisibility((prev) => ({
@@ -29,45 +53,17 @@ export const Table = ({ data }) => {
     }));
   };
 
-  // flatData строим без проверки видимости
-  const flattenData = (data, level = 0, parentId = "") => {
-    let flatData = [];
-    data.forEach((item, index) => {
-      const itemId = `${parentId}-${index}`;
-      flatData.push({
-        id: itemId,
-        productNameCell: item.productNameCell,
-        productQuantityCell: item.productQuantityCell,
-        level,
-        parentId,
-        hasChildren: !!(item.children && item.children.length > 0),
-      });
-
-      if (item.children && item.children.length > 0) {
-        flatData = flatData.concat(
-          flattenData(item.children, level + 1, itemId)
-        );
-      }
-    });
-
-    return flatData;
-  };
-
-  const flatData = flattenData(data);
-
-  // Функция для проверки видимости строки по всем родителям
   const isRowVisible = (row) => {
     if (!row.parentId) return true;
 
     let parentId = row.parentId;
     while (parentId) {
-      // Используем текущее состояние visibility
       if (visibility[parentId] === false) return false;
 
-      // Получаем следующий parentId
-      const parentRow = flatData.find((r) => r.id === parentId);
+      const parentRow = flatData.find((item) => item.id === parentId);
       parentId = parentRow ? parentRow.parentId : "";
     }
+
     return true;
   };
 
@@ -75,68 +71,71 @@ export const Table = ({ data }) => {
 
   return (
     <div className={style.wraperTable}>
-      <div className={style.scrollContainer}>
-        <table className={style.balanceTable}>
-          <thead>
-            <tr>
-              <th className={style.productCell}></th>
-              <th className={style.quantityCell}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {flatData.map((row) => {
-              const isLeafRow = !row.hasChildren;
-              const leafRowIndex = isLeafRow
-                ? leafRows.findIndex((item) => item.id === row.id)
-                : -1;
+      <div className={style.tableShell}>
+        <div className={style.scrollContainer}>
+          <table className={style.balanceTable}>
+            <thead>
+              <tr>
+                <th className={style.productHeader}>Товар</th>
+                <th className={style.quantityHeader}>Залишок</th>
+              </tr>
+            </thead>
+            <tbody>
+              {flatData.map((row) => {
+                const isLeafRow = !row.hasChildren;
+                const leafRowIndex = isLeafRow
+                  ? leafRows.findIndex((item) => item.id === row.id)
+                  : -1;
 
-              // Проверяем видимость по всем родителям
-              if (!isRowVisible(row)) return null;
+                if (!isRowVisible(row)) return null;
 
-              return (
-                <tr
-                  key={row.id}
-                  className={cn(style[`level${row.level}`], {
-                    [style.evenRow]: isLeafRow && leafRowIndex % 2 === 0,
-                    [style.oddRow]: isLeafRow && leafRowIndex % 2 !== 0,
-                  })}
-                >
-                  <td
-                    className={cn(style.productCell)}
-                    style={{ paddingLeft: `${row.level * 5}px` }}
+                return (
+                  <tr
+                    key={row.id}
+                    className={cn(style[`level${row.level}`], {
+                      [style.evenRow]: isLeafRow && leafRowIndex % 2 === 0,
+                      [style.oddRow]: isLeafRow && leafRowIndex % 2 !== 0,
+                    })}
                   >
-                    {row.hasChildren && (
-                      <button
-                        onClick={() => toggleVisibility(row.id)}
-                        className={`${style.toggleButton}`}
-                      >
-                        <i
-                          className={cn(
-                            style.toggleIcon,
-                            visibility[row.id]
-                              ? "fa-regular fa-minus-square fa-lg"
-                              : "fa-regular fa-plus-square fa-lg"
-                          )}
-                        ></i>
-                        {/* {visibility[row.id] ? "-" : "+"} */}
-                      </button>
-                    )}
-                    {row.productNameCell}
-                  </td>
-                  <td
-                    className={cn(
-                      style.quantityCell,
-                      row.productQuantityCell.some((value) => value < 0) &&
-                        style.negative
-                    )}
-                  >
-                    {row.productQuantityCell.join(", ")}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <td
+                      className={style.productCell}
+                      style={{ paddingLeft: `${18 + row.level * 18}px` }}
+                    >
+                      {row.hasChildren && (
+                        <button
+                          onClick={() => toggleVisibility(row.id)}
+                          className={style.toggleButton}
+                          type="button"
+                          aria-label={
+                            visibility[row.id] ? "Згорнути групу товарів" : "Розгорнути групу товарів"
+                          }
+                        >
+                          <i
+                            className={cn(
+                              style.toggleIcon,
+                              visibility[row.id]
+                                ? "fa-regular fa-minus-square"
+                                : "fa-regular fa-plus-square",
+                            )}
+                          ></i>
+                        </button>
+                      )}
+                      <span className={style.productText}>{row.productNameCell}</span>
+                    </td>
+                    <td
+                      className={cn(
+                        style.quantityCell,
+                        row.productQuantityCell.some((value) => value < 0) && style.negative,
+                      )}
+                    >
+                      {row.productQuantityCell.join(", ")}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
       <ScrollToTopButton />
     </div>

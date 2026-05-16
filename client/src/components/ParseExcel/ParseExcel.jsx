@@ -3,10 +3,75 @@ import { Filter } from "../Filter/Filter";
 import { Table } from "../Table/Table";
 import { fetchBalanceFile } from "../../services/balances.api";
 import { parseBalanceWorkbookData } from "../../utils/balanceWorkbookParser";
+import style from "./ParseExcel.module.scss";
+
+function matchesProductFilter(productName, selectedFilter) {
+  if (selectedFilter === "all") {
+    return true;
+  }
+
+  if (selectedFilter === "vip") {
+    return productName.includes("ВІП");
+  }
+
+  if (selectedFilter === "opt") {
+    return productName.includes("ОПТ");
+  }
+
+  return true;
+}
+
+function filterHierarchy(items, selectedFilter, searchQuery, forceIncludeByParent = false) {
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+
+  return items
+    .map((item) => {
+      const name = String(item.productNameCell || "");
+      const normalizedName = name.toLocaleLowerCase();
+      const matchesSearch = !normalizedQuery || normalizedName.includes(normalizedQuery);
+      const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+
+      if (hasChildren) {
+        const filteredChildren = filterHierarchy(
+          item.children,
+          selectedFilter,
+          searchQuery,
+          forceIncludeByParent || matchesSearch,
+        );
+
+        if (!filteredChildren.length) {
+          return null;
+        }
+
+        return {
+          ...item,
+          children: filteredChildren,
+        };
+      }
+
+      const allowedByFilter = matchesProductFilter(name, selectedFilter);
+      const allowedBySearch = forceIncludeByParent || !normalizedQuery || matchesSearch;
+
+      return allowedByFilter && allowedBySearch ? item : null;
+    })
+    .filter(Boolean);
+}
+
+function countLeafRows(items) {
+  return items.reduce((total, item) => {
+    if (item.children?.length) {
+      return total + countLeafRows(item.children);
+    }
+
+    return total + 1;
+  }, 0);
+}
 
 export const ParseExcel = ({ fileName, balanceSlug, setLastUpdateTime }) => {
   const [parsedData, setParsedData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
+  const [selectedFilter, setSelectedFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isRendered, setIsRendered] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -27,15 +92,14 @@ export const ParseExcel = ({ fileName, balanceSlug, setLastUpdateTime }) => {
       const { hierarchy, lastUpdateTime } = parseBalanceWorkbookData(data);
       setLastUpdateTime(lastUpdateTime);
       setParsedData(hierarchy);
-      setFilteredData(hierarchy);
     } catch (error) {
       console.error("Error loading file:", error);
       const status = error.response?.status;
       const fileNotFoundMessage = error.response?.data?.message;
       setErrorMessage(
         status === 404
-          ? fileNotFoundMessage || "Р¤Р°Р№Р» Р·Р°Р»РёС€РєС–РІ РЅРµ Р·РЅР°Р№РґРµРЅРѕ"
-          : "РџРѕРјРёР»РєР° Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ С„Р°Р№Р»Сѓ Р·Р°Р»РёС€РєС–РІ",
+          ? fileNotFoundMessage || "Файл залишків не знайдено"
+          : "Помилка завантаження файлу залишків",
       );
       setParsedData([]);
       setFilteredData([]);
@@ -51,51 +115,42 @@ export const ParseExcel = ({ fileName, balanceSlug, setLastUpdateTime }) => {
   }, [loadFile]);
 
   useEffect(() => {
-    if (parsedData.length > 0) {
-      setIsRendered(true);
-    }
-  }, [parsedData]);
+    setSelectedFilter("all");
+    setSearchQuery("");
+  }, [balanceSlug, fileName]);
 
-  const handleFilterChange = (selectedFilter) => {
-    if (selectedFilter === "all") {
-      setFilteredData(parsedData);
-      return;
-    }
+  useEffect(() => {
+    setFilteredData(filterHierarchy(parsedData, selectedFilter, searchQuery));
+  }, [parsedData, searchQuery, selectedFilter]);
 
-    const filterHierarchy = (data) => {
-      return data
-        .map((item) => {
-          if (item.children?.length) {
-            const filteredChildren = filterHierarchy(item.children);
-            return filteredChildren.length
-              ? { ...item, children: filteredChildren }
-              : null;
-          }
-
-          const matchesFilter =
-            selectedFilter === "vip"
-              ? item.productNameCell.includes("Р’Р†Рџ")
-              : item.productNameCell.includes("РћРџРў");
-          return matchesFilter ? item : null;
-        })
-        .filter(Boolean);
-    };
-
-    setFilteredData(filterHierarchy(parsedData));
-  };
+  const totalRows = countLeafRows(parsedData);
+  const visibleRows = countLeafRows(filteredData);
 
   return (
-    <div>
-      <Filter onFilterChange={handleFilterChange} />
+    <div className={style.pageSection}>
+      <Filter
+        searchQuery={searchQuery}
+        selectedFilter={selectedFilter}
+        onSearchChange={setSearchQuery}
+        onFilterChange={setSelectedFilter}
+        totalCount={totalRows}
+        visibleCount={visibleRows}
+      />
 
       {!isRendered ? (
-        <p>Р—Р°РіСЂСѓР·РєР°...</p>
+        <div className={style.stateCard}>
+          <p className={style.stateText}>Завантаження залишків...</p>
+        </div>
       ) : errorMessage ? (
-        <p>{errorMessage}</p>
+        <div className={`${style.stateCard} ${style.errorState}`}>
+          <p className={style.stateText}>{errorMessage}</p>
+        </div>
       ) : filteredData.length > 0 ? (
         <Table data={filteredData} />
       ) : (
-        <p>РќРµС‚ РґР°РЅРЅС‹С… РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ</p>
+        <div className={style.stateCard}>
+          <p className={style.stateText}>Нічого не знайдено за поточним пошуком або фільтром</p>
+        </div>
       )}
     </div>
   );

@@ -1,14 +1,165 @@
 @use "../../variables.scss" as *;
 
-.wrapperFilter {
-  // height: $filter-height;
-  margin: 5px 10px;
+.panel {
+  margin: 6px 20px 0;
+  padding: 20px 22px 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(194, 194, 194, 0.14);
+  background:
+    radial-gradient(circle at top left, rgba(78, 105, 221, 0.18), transparent 32%),
+    linear-gradient(145deg, rgba(34, 50, 73, 0.96), rgba(21, 28, 39, 0.98));
+  box-shadow:
+    0 18px 45px rgba(7, 11, 19, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.panelTop {
   display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #8ea9ff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: #f7f9fc;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 10px;
+}
 
-  // & select {
-  //   color: $light-text-color;
-  //   background: $evenRowDarc;
+.statChip,
+.statChipMuted {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 
-  // }
+.statChip {
+  color: #f3f6ff;
+  background: rgba(78, 105, 221, 0.28);
+  border: 1px solid rgba(135, 155, 255, 0.3);
+}
+
+.statChipMuted {
+  color: #dbe3f1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.controlsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(220px, 0.9fr);
+  gap: 16px;
+}
+
+.searchField,
+.selectField {
+  display: grid;
+  gap: 8px;
+}
+
+.fieldLabel {
+  color: #dce4f3;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.inputShell,
+.selectShell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  border-radius: 16px;
+  border: 1px solid rgba(194, 194, 194, 0.12);
+  background: rgba(10, 16, 28, 0.36);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.inputShell:focus-within,
+.selectShell:focus-within {
+  border-color: rgba(78, 105, 221, 0.65);
+  box-shadow:
+    0 0 0 3px rgba(78, 105, 221, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.inputIcon {
+  position: absolute;
+  left: 16px;
+  color: #97a8cb;
+  font-size: 14px;
+}
+
+.searchInput,
+.selectControl {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f3f7ff;
+  font-size: 15px;
+}
+
+.searchInput {
+  padding: 0 16px 0 42px;
+}
+
+.searchInput::placeholder {
+  color: #92a0ba;
+}
+
+.selectControl {
+  padding: 0 16px;
+  appearance: none;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .panel {
+    margin: 0;
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .panelTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats {
+    justify-content: flex-start;
+  }
+
+  .title {
+    font-size: 21px;
+  }
+
+  .controlsRow {
+    grid-template-columns: 1fr;
+  }
 }

@@ -8,10 +8,10 @@ import {
 } from "./notify.service.js";
 
 export async function retryDocumentNotifications(user, documentId) {
-  // рџ”’ РџСЂРѕРІРµСЂРєР° РґРѕСЃС‚СѓРїР°
+  // Перевірка доступу
   await ensureDocumentAccess(user, documentId);
 
-  // вќЊ Р‘РµСЂС‘Рј С‚РѕР»СЊРєРѕ РѕС€РёР±РєРё
+  // Беремо тільки помилки
   const [logs] = await pool.query(
     `
     SELECT *
@@ -28,10 +28,10 @@ export async function retryDocumentNotifications(user, documentId) {
     return { retried: 0 };
   }
 
-  // рџ“„ Р—Р°РіСЂСѓР¶Р°РµРј РїРѕР»РЅС‹Р№ РґРѕРєСѓРјРµРЅС‚
+  // Завантажуємо повний документ
   const doc = await getDocumentByIdService(user, documentId);
 
-  // рџ“Ћ Р“РµРЅРµСЂРёСЂСѓРµРј PDF РћР”РРќ СЂР°Р·
+  // Генеруємо PDF один раз
   const pdfBuffer = await generatePdfBuffer(doc);
 
   let successCount = 0;
@@ -46,7 +46,7 @@ export async function retryDocumentNotifications(user, documentId) {
         await sendRocketMessage(doc, log.target, pdfBuffer);
       }
 
-      // вњ… СѓСЃРїРµС…
+      // Успіх
       await pool.query(
         `
         UPDATE notification_log
@@ -59,7 +59,7 @@ export async function retryDocumentNotifications(user, documentId) {
 
       successCount++;
     } catch (err) {
-      // вќЊ РѕС€РёР±РєР° в†’ СѓРІРµР»РёС‡РёРІР°РµРј attempt
+      // Помилка: збільшуємо attempt
       await pool.query(
         `
         UPDATE notification_log

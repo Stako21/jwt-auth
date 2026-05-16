@@ -250,6 +250,36 @@ Completed in the current workspace:
 
 Initial roadmap is completed.
 
+Recent completed slice on May 16, 2026:
+
+- Sales report import logic was updated in `api/services/loadReports.js`:
+  - imports now accept the whole allowed lower-bounded window `report_date >= today - 5 days`
+  - future-dated rows are allowed and are not capped by an upper date bound
+  - missing rows are no longer auto-marked `CANCELLED` just because they disappeared from the latest file
+  - sales reports are now marked `CANCELLED` only when the incoming JSON row has `isDeleted: true`
+  - `MOVED` behavior remains in place for same document number/login moved to another day
+- Added SQL cleanup helpers under `api/scripts/sql/`:
+  - `clear_products_catalog_safe.sql`
+  - `clear_products_catalog_hard.sql`
+  - `preview_return_exchange_documents_cleanup.sql`
+  - `clear_return_exchange_documents_by_numbers.sql`
+- UTF-8/mojibake cleanup completed in user-facing strings:
+  - fixed broken Ukrainian text in `client/src/components/ParseExcel/ParseExcel.jsx`
+  - fixed broken auth/user error messages in `api/services/Auth.js` and `api/controllers/User.js`
+  - fixed broken comments in `api/services/notificationRetry.service.js`
+- Balance pages UX refresh completed:
+  - added free-text search before the existing VIP/OPT filter on the product balance pages
+  - search now works through the parsed hierarchy and preserves matching parent groups
+  - filter and search state are now controlled from `ParseExcel.jsx`
+  - added polished control-panel styling for search, filter, and visible/total counts
+  - refreshed balance table styling with labeled headers, improved spacing, better hierarchy presentation, and responsive card layout
+- Return/exchange cleanup scripts were designed for production-safe targeted deletion by explicit `document_number` list:
+  - preview script shows candidate `documents`, dependent row counts, and sequence impact
+  - delete script removes dependent rows from `notification_log`, `document_history`, `document_items`, then deletes `documents`
+  - delete script recalculates `document_sequences.last_number` for affected cities and removes empty sequence rows when no documents remain
+- These changes were committed and pushed on branch `branches-config`:
+  - commit `d002d52` `Update sales report cancellations and add cleanup SQL scripts`
+
 Next concrete execution plan as of May 9, 2026:
 
 1. Branch finalization and commit prep
@@ -790,3 +820,41 @@ Frontend:
 - Documented the practical recommendation:
   - start without `domain` if unsure
   - add it only if the CIFS mount requires domain/workgroup context
+
+## 2026-05-10 - Balance parser unification checkpoint
+
+- Reworked balance XLSX parsing to reduce dependence on the old `balanceZP.xlsx`-specific category-name lists.
+- Added shared helper:
+  - `client/src/utils/balanceWorkbookParser.js`
+- Updated:
+  - `client/src/components/ParseExcel/ParseExcel.jsx`
+  - `client/src/utils/dataLoader.js`
+  - `client/src/components/Table/Table.jsx`
+- New parsing approach:
+  - reads last-update time from the report header dynamically
+  - finds the actual data-start row dynamically instead of relying on a hardcoded row offset only
+  - builds hierarchy primarily from Excel row outline metadata (`sheet['!rows'][i].level`)
+  - uses light text heuristics for group rows where outline levels are inconsistent between bases
+  - normalizes top wrapper groups like `ТОВАР` / `ТОВАРЫ ДЛЯ ТОРГОВЛИ`
+  - stripes all leaf rows in the table instead of only `level === 3`, so deeper hierarchies still render cleanly
+- Manual parser validation succeeded against:
+  - `E:/1/balanceCH.xlsx`
+  - `E:/1/balanceZP.xlsx`
+- Validation outcome:
+  - `balanceCH.xlsx` now parses into a sensible hierarchy rooted at `1. ТОВАРЫ ДЛЯ ТОРГОВЛИ -> РОШЕН -> ...`
+  - `balanceZP.xlsx` now parses into a sensible hierarchy rooted at `ТОВАР -> МРІЯ/РОШЕН -> ...`
+- Verification:
+  - `npm run lint` in `client` passed
+  - local `npm run build` attempt was blocked by environment disk exhaustion (`ENOSPC`), not by a parser/runtime syntax error
+
+## 2026-05-11 - Server guide incremental-update checkpoint
+
+- Extended `documentation/update-existing-docker-server-to-branches-config.md` with a short end-of-file section for routine follow-up updates after the server is already migrated to `branches-config`.
+- The new section covers:
+  - updating the git repo
+  - syncing code into `/var/www/apps/jwt-auth-docker/app`
+  - rebuilding and recreating the backend container
+  - optional migration/doctor rerun
+  - rebuilding frontend
+  - copying frontend into `rocketchat-nginx-1`
+  - final health/smoke verification

@@ -1,141 +1,170 @@
 @use "../../variables.scss" as *;
 
-// .wraperTable {
-//   margin: 20px 20px 10px ;
-//   height: 100%;
-//   overflow: hidden; /* Убираем прокрутку */
-// }
-
-.scrollContainer {
-  /* allow page to grow vertically; allow horizontal scroll if needed */
-  overflow-y: visible;
-  overflow-x: auto;
-}
-
-// .table {
-//   width: 100%;
-//   border-collapse: collapse;
-//   text-align: center;
-// }
-
-// .table th, .table td {
-//   width: 100%;
-//   padding: 5px 10px;
-//   text-align: left;
-// }
-
 .wraperTable {
-  margin: 20px 20px 10px;
-  overflow-x: auto;
+  margin: 0 20px 10px;
+}
+
+.tableShell {
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(194, 194, 194, 0.12);
+  background:
+    linear-gradient(180deg, rgba(26, 35, 50, 0.98), rgba(18, 23, 33, 0.98));
+  box-shadow:
+    0 20px 48px rgba(6, 10, 18, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .scrollContainer {
   overflow-x: auto;
 }
 
-// .table {
-//   width: 100%;
-//   border-collapse: collapse;
-//   table-layout: auto;
-//   /* Фиксированная ширина колонок */
-// }
-
-// th,
-// th {
-//   // display: none;
-//   background-color: $main-background-color;
-// }
-
-td {
-  border: none;
-  text-align: left;
-  padding: 5px;
-  vertical-align: middle !important;
+.balanceTable {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
-// tr td:nth-child(1) {
-//   border-right: $border-color solid 1px;
-// }
+.balanceTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(194, 194, 194, 0.12);
+  background:
+    linear-gradient(180deg, rgba(17, 23, 34, 0.98), rgba(22, 28, 39, 0.98));
+  color: #eef3ff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
 
-tr .productCell {
-  border-right: $border-color solid 1px;
+.productHeader {
+  text-align: left;
+}
+
+.quantityHeader {
+  width: 180px;
+  text-align: right;
+}
+
+.balanceTable td {
+  border: 0;
+  vertical-align: middle;
+}
+
+.productCell,
+.quantityCell {
+  padding: 14px 18px;
+}
+
+.productCell {
+  border-right: 1px solid rgba(77, 84, 95, 0.45);
+  color: $rowTextColor;
+}
+
+.productText {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.quantityCell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #1e2430;
+  font-weight: 600;
 }
 
 .toggleButton {
-  // margin-right: 5px;
-  width: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   margin-right: 10px;
+  border: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  color: $light-text-color;
   cursor: pointer;
-  border: none;
-  background: $border-color;
-  box-shadow: -5px -5px 15px rgba(255, 255, 255, 0.1),
-    5px 5px 15px rgba(0, 0, 0, 0.35),
-    inset -5px -5px 15px rgba(255, 255, 255, 0.1),
-    inset 5px 5px 15px rgba(0, 0, 0, 0.35);
-  color: #f4f4f4;
-  font-size: 14px;
-  border-radius: 10%;
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .toggleButton:hover {
-  margin-right: 10px;
-  background: $evenRow;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .toggleButton:active {
-  background: $button-dark;
+  transform: translateY(0);
 }
 
 .toggleIcon {
-  color: $light-text-color;
+  font-size: 16px;
 }
-
-// tbody tr:nth-child(even) {
-//   background: $header-background-color;
-// }
 
 .negative {
   color: $error-color;
 }
 
-// tbody tr.level3:nth-child(even) {
-//   background-color: #f9f9f9; /* Цвет для четных строк */
-// }
-
-// tbody tr.level3:nth-child(odd) {
-//   background-color: #ffffff; /* Цвет для нечетных строк */
-// }
 .level1 {
-  padding-left: 10px;
   background: $tableLevel1;
+}
+
+.level1 .productCell,
+.level1 .quantityCell {
+  color: #f4f7ff;
+  font-weight: 600;
 }
 
 .level2 {
   background: $tableLevel2;
-  border-bottom: 1px solid $border-color;
 }
 
-.balanceTable tbody tr:nth-child(1) {
-  background: $header-background-color;
+.level2 .productCell,
+.level2 .quantityCell {
+  color: #ecf2ff;
 }
 
 .evenRow {
-  color: $button-dark;
-  background: $evenRow;
+  background: linear-gradient(180deg, rgba(221, 224, 228, 0.98), rgba(213, 218, 224, 0.98));
 }
 
 .oddRow {
-  color: $button-dark;
-  background: $oddRow;
+  background: linear-gradient(180deg, rgba(205, 207, 211, 0.98), rgba(199, 203, 210, 0.98));
+}
+
+.balanceTable tbody tr {
+  transition: background-color 0.18s ease;
+}
+
+.balanceTable tbody tr:hover {
+  filter: brightness(0.985);
 }
 
 @media (max-width: 768px) {
   .wraperTable {
-    margin: 0;
-    margin-bottom: 10px;
+    margin: 0 0 10px;
   }
 
-  .scrollContainer {
-    scrollbar-width: none;
+  .tableShell {
+    border-radius: 18px;
+  }
+
+  .balanceTable {
+    min-width: 620px;
+  }
+
+  .balanceTable thead th,
+  .productCell,
+  .quantityCell {
+    padding: 12px 14px;
   }
 }
