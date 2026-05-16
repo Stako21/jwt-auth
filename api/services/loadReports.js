@@ -92,8 +92,11 @@ export async function loadSalesReports() {
       };
     }
 
+    const importDate = new Date().toISOString().split("T")[0];
+    const minAllowedReportDate = shiftIsoDate(importDate, -5);
     const validReports = [];
     let skippedInvalidRows = 0;
+    let skippedOutOfRangeRows = 0;
 
     for (const report of reports) {
       const normalized = normalizeReportRow(report);
@@ -108,6 +111,18 @@ export async function loadSalesReports() {
         continue;
       }
 
+      if (normalized.docDate < minAllowedReportDate) {
+        skippedOutOfRangeRows += 1;
+        runLog.info("sales report row skipped: earlier than allowed import window", {
+          documentNumber: normalized.number,
+          loginAgent: normalized.loginAgent || null,
+          salesAgent: normalized.salesAgent || null,
+          reportDate: normalized.docDate,
+          minAllowedReportDate,
+        });
+        continue;
+      }
+
       validReports.push(normalized);
     }
 
@@ -115,6 +130,8 @@ export async function loadSalesReports() {
       runLog.warn("no valid sales report rows remained after precheck, skipping import", {
         recordsCount: reports.length,
         skippedInvalidRows,
+        skippedOutOfRangeRows,
+        minAllowedReportDate,
       });
       return {
         status: "skipped",
@@ -123,17 +140,21 @@ export async function loadSalesReports() {
         details: {
           recordsCount: reports.length,
           skippedInvalidRows,
+          skippedOutOfRangeRows,
+          minAllowedReportDate,
         },
       };
     }
 
-    const reportDate = new Date().toISOString().split("T")[0];
+    const reportDate = importDate;
     runLog.info("import metadata prepared", {
       reportDate,
+      minAllowedReportDate,
       branchId,
       branchSlug: branch.slug,
       recordsCount: validReports.length,
       skippedInvalidRows,
+      skippedOutOfRangeRows,
     });
 
     connection = await pool.getConnection();
@@ -152,11 +173,10 @@ export async function loadSalesReports() {
     const importId = importRes.insertId;
     runLog.info("report_imports row created", { importId });
 
-    const incomingKeys = new Set();
-
     let insertedCount = 0;
     let updatedCount = 0;
     let movedCount = 0;
+    let cancelledCount = 0;
     let missingUserCount = 0;
 
     for (const report of validReports) {
@@ -174,8 +194,6 @@ export async function loadSalesReports() {
             salesAgent: report.salesAgent || null,
           });
         }
-
-        incomingKeys.add(`${report.number}||${resolvedLoginAgent}`);
 
         const [[existing]] = await connection.query(
           `
@@ -195,6 +213,114 @@ export async function loadSalesReports() {
           `,
           [report.number, resolvedLoginAgent, branchId],
         );
+
+        const [[existingSameDate]] = await connection.query(
+          `
+          SELECT *
+          FROM sales_reports
+          WHERE document_number = ?
+            AND login_agent = ?
+            AND branch_id = ?
+            AND DATE(document_date) = ?
+          ORDER BY
+            CASE status
+              WHEN 'ACTIVE' THEN 1
+              WHEN 'CANCELLED' THEN 2
+              WHEN 'MOVED' THEN 3
+              ELSE 4
+            END,
+            created_at DESC
+          LIMIT 1
+          `,
+          [report.number, resolvedLoginAgent, branchId, report.docDate],
+        );
+
+        if (report.isDeleted) {
+          const rowToCancel = existingSameDate || null;
+          const cancelComment = "Реалізація відмінена (позначена як видалена в 1С)";
+
+          if (!rowToCancel) {
+            await connection.query(
+              `
+              INSERT INTO sales_reports (
+                report_date,
+                document_number,
+                document_date,
+                login_agent,
+                user_id,
+                sales_agent_name,
+                amount,
+                point_of_sale,
+                customer,
+                comment,
+                form2,
+                status,
+                change_comment,
+                import_id,
+                branch_id
+              )
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CANCELLED', ?, ?, ?)
+              `,
+              [
+                report.docDate,
+                report.number,
+                report.originalDate,
+                resolvedLoginAgent,
+                userId,
+                resolvedSalesAgentName,
+                report.amount,
+                report.pointOfSale,
+                report.customer,
+                report.comment,
+                report.form2 ? 1 : 0,
+                cancelComment,
+                importId,
+                branchId,
+              ],
+            );
+            insertedCount += 1;
+            cancelledCount += 1;
+            continue;
+          }
+
+          await connection.query(
+            `
+            UPDATE sales_reports
+            SET report_date = ?,
+                document_date = ?,
+                status = 'CANCELLED',
+                change_comment = ?,
+                amount = ?,
+                login_agent = ?,
+                user_id = ?,
+                sales_agent_name = ?,
+                point_of_sale = ?,
+                customer = ?,
+                comment = ?,
+                form2 = ?,
+                import_id = ?
+            WHERE id = ?
+            `,
+            [
+              report.docDate,
+              report.originalDate,
+              cancelComment,
+              report.amount,
+              resolvedLoginAgent,
+              userId,
+              resolvedSalesAgentName,
+              report.pointOfSale,
+              report.customer,
+              report.comment,
+              report.form2 ? 1 : 0,
+              importId,
+              rowToCancel.id,
+            ],
+          );
+          updatedCount += 1;
+          cancelledCount += 1;
+          continue;
+        }
 
         if (!existing) {
           await connection.query(
@@ -336,31 +462,15 @@ export async function loadSalesReports() {
       }
     }
 
-    runLog.info("incoming keys prepared", { incomingKeys: incomingKeys.size });
-
     runLog.info("rows processed", {
       processedCount: validReports.length,
       insertedCount,
       updatedCount,
       movedCount,
+      cancelledCount,
       missingUserCount,
       skippedInvalidRows,
-    });
-
-    const [cancelledRes] = await connection.query(
-      `
-      UPDATE sales_reports
-      SET status = 'CANCELLED',
-          change_comment = 'Реалізація відмінена (відсутня в останньому звіті)'
-      WHERE status = 'ACTIVE'
-        AND branch_id = ?
-        AND report_date >= DATE_SUB(?, INTERVAL 5 DAY)
-        AND CONCAT(document_number, '||', login_agent) NOT IN (?)
-      `,
-      [branchId, reportDate, Array.from(incomingKeys)],
-    );
-    runLog.info("missing active rows cancelled", {
-      affectedRows: cancelledRes.affectedRows,
+      skippedOutOfRangeRows,
     });
 
     const [delRes] = await connection.query(
@@ -405,8 +515,11 @@ export async function loadSalesReports() {
         insertedCount,
         updatedCount,
         movedCount,
+        cancelledCount,
         missingUserCount,
         skippedInvalidRows,
+        skippedOutOfRangeRows,
+        minAllowedReportDate,
         keptSourceFile: !source.deleteAfterSuccess || hasUnresolvedRows,
       },
     };
@@ -415,6 +528,7 @@ export async function loadSalesReports() {
       importId,
       recordsCount: validReports.length,
       skippedInvalidRows,
+      skippedOutOfRangeRows,
       keptSourceFile: !source.deleteAfterSuccess || hasUnresolvedRows,
     });
     return result;
@@ -477,7 +591,14 @@ function normalizeReportRow(report) {
     customer: report.customer,
     comment: report.comment,
     form2: Boolean(report.form2),
+    isDeleted: Boolean(report.isDeleted),
   };
+}
+
+function shiftIsoDate(isoDate, days) {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 async function resolveReportUser(connection, report, branchId) {
