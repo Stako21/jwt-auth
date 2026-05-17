@@ -86,5 +86,13 @@ export const defaultBootstrapBranchConfig = {
       isActive: true,
       sortOrder: 20,
     },
+    {
+      reportKey: "report-debet",
+      route: "/report-debet",
+      menuTitle: "Дебеторка",
+      fileName: "DebetReport.json",
+      isActive: true,
+      sortOrder: 30,
+    },
   ],
 };

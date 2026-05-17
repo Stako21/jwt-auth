@@ -7,9 +7,12 @@ import Header from "./components/Header/Header";
 import { ParseExcel } from "./components/ParseExcel/ParseExcel";
 import { AuthContext } from "./context/AuthContext";
 import { SalesReport } from "./components/SalesReport/SalesReport";
-import { ReportRomashka } from "./components/Reports/ReportRomashka";
 import { ROLE_IDS } from "./utils/roles";
 import { AppConfigProvider, useAppConfig } from "./context/AppConfigContext";
+import {
+  canAccessStaticReport,
+  getStaticReportEntry,
+} from "./components/Reports/reportRegistry";
 
 function renderBalanceRoutes(activeBalancePages, setLastUpdateTime) {
   return activeBalancePages.map((page) => (
@@ -26,24 +29,24 @@ function renderBalanceRoutes(activeBalancePages, setLastUpdateTime) {
   ));
 }
 
-function renderRomashkaRoute({
-  isEnabled,
-  route,
-  fallbackPath,
-  setLastUpdateTime,
-}) {
-  return (
-    <Route
-      path={route}
-      element={
-        isEnabled ? (
-          <ReportRomashka setLastUpdateTime={setLastUpdateTime} />
-        ) : (
-          <Navigate to={fallbackPath} replace />
-        )
-      }
-    />
-  );
+function renderStaticReportRoutes(activeReports, setLastUpdateTime) {
+  return activeReports.map((report) => {
+    const entry = getStaticReportEntry(report.reportKey);
+
+    if (!entry?.component) {
+      return null;
+    }
+
+    const ReportComponent = entry.component;
+
+    return (
+      <Route
+        key={report.id}
+        path={report.route}
+        element={<ReportComponent setLastUpdateTime={setLastUpdateTime} />}
+      />
+    );
+  });
 }
 
 const AppContent = () => {
@@ -53,13 +56,10 @@ const AppContent = () => {
   const [lastUpdateTime, setLastUpdateTime] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
-  const romashkaReport = activeReports.find(
-    (report) => report.reportKey === "report-romashka",
+  const accessibleStaticReports = activeReports.filter((report) =>
+    canAccessStaticReport(report.reportKey, userInfo?.role),
   );
-  const isRomashkaEnabled = Boolean(romashkaReport);
-  const romashkaRoute = romashkaReport?.route || "/report-romashka";
   const isAdmin = userInfo?.role === ROLE_IDS.Admin;
-  const isDirector = userInfo?.role === ROLE_IDS.Director;
 
   const defaultLoggedPath = useMemo(() => {
     if (isAdmin) return "/admin-page";
@@ -93,25 +93,13 @@ const AppContent = () => {
                   path="/sales-report"
                   element={<SalesReport setLastUpdateTime={setLastUpdateTime} />}
                 />
-                {renderRomashkaRoute({
-                  isEnabled: isRomashkaEnabled,
-                  route: romashkaRoute,
-                  fallbackPath: "/admin-page",
-                  setLastUpdateTime,
-                })}
+                {renderStaticReportRoutes(accessibleStaticReports, setLastUpdateTime)}
                 <Route path="/admin-page" element={<AdminPage />} />
                 {renderBalanceRoutes(activeBalancePages, setLastUpdateTime)}
               </>
             ) : (
               <>
-                {isDirector ? (
-                  renderRomashkaRoute({
-                    isEnabled: isRomashkaEnabled,
-                    route: romashkaRoute,
-                    fallbackPath: "/documents",
-                    setLastUpdateTime,
-                  })
-                ) : null}
+                {renderStaticReportRoutes(accessibleStaticReports, setLastUpdateTime)}
                 <Route
                   path="/sales-report"
                   element={

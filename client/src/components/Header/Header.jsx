@@ -6,6 +6,7 @@ import { useAppConfig } from "../../context/AppConfigContext";
 import style from "./header.module.scss";
 import logo from "../../img/ST_Wight.png";
 import { ROLE_IDS } from "../../utils/roles";
+import { canAccessStaticReport } from "../Reports/reportRegistry";
 
 const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   const location = useLocation();
@@ -32,11 +33,12 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   const currentBalancePage = activeBalancePages.find(
     (page) => location.pathname === `/balance/${page.slug}`,
   );
-  const romashkaReport = activeReports.find(
-    (report) => report.reportKey === "report-romashka",
+  const accessibleStaticReports = activeReports.filter((report) =>
+    canAccessStaticReport(report.reportKey, userInfo?.role),
   );
-  const isRomashkaEnabled = Boolean(romashkaReport);
-  const romashkaRoute = romashkaReport?.route || "/report-romashka";
+  const currentStaticReport = accessibleStaticReports.find(
+    (report) => location.pathname === report.route,
+  );
   const titleByPath = {
     "/admin-page": "Адміністрування",
     "/sales-report": "Продажі",
@@ -44,9 +46,8 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   };
   const headerTitle =
     currentBalancePage?.headerTitle ||
-    (location.pathname === romashkaRoute
-      ? romashkaReport?.menuTitle
-      : titleByPath[location.pathname]) ||
+    currentStaticReport?.menuTitle ||
+    titleByPath[location.pathname] ||
     "";
   const canSwitchBranches =
     userInfo &&
@@ -112,19 +113,20 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
                       </Link>
                     </li>
                   )}
-                  {isRomashkaEnabled && (
-                    <li
-                      className={cn(style.headerList, {
-                        [style.activePage]: location.pathname === romashkaRoute,
-                      })}
-                    >
-                      <Link to={romashkaRoute} onClick={handleLinkClick}>
-                        {romashkaReport?.menuTitle}
-                      </Link>
-                    </li>
-                  )}
                 </>
               )}
+            {accessibleStaticReports.map((report) => (
+              <li
+                key={report.id}
+                className={cn(style.headerList, {
+                  [style.activePage]: location.pathname === report.route,
+                })}
+              >
+                <Link to={report.route} onClick={handleLinkClick}>
+                  {report.menuTitle}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
       )}

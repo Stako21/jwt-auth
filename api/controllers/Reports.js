@@ -7,6 +7,34 @@ import fs from "fs/promises";
 import path from "path";
 import pool from "../db.cjs";
 
+function filterDebetReportRows(rows, visibleUsers) {
+  if (!Array.isArray(rows) || !visibleUsers) {
+    return rows;
+  }
+
+  const allowedLogins = new Set(
+    visibleUsers
+      .map((user) => String(user.login || "").trim())
+      .filter(Boolean),
+  );
+  const allowedCollectors = new Set(
+    visibleUsers
+      .map((user) => String(user.displayName || "").trim())
+      .filter(Boolean),
+  );
+
+  return rows.filter((row) => {
+    const login = String(row?.login || "").trim();
+    const collector = String(row?.collector || "").trim();
+
+    if (!login && !collector) {
+      return false;
+    }
+
+    return allowedLogins.has(login) || allowedCollectors.has(collector);
+  });
+}
+
 class ReportsController {
   static async getSalesReport(req, res) {
     try {
@@ -133,6 +161,7 @@ class ReportsController {
 
   static async getStaticReport(req, res) {
     try {
+      const { id, role } = req.user;
       const branchId = getUserBranchId(req.user);
       const { reportKey } = req.params;
 
@@ -165,7 +194,19 @@ class ReportsController {
         });
       }
 
-      return res.json(JSON.parse(raw.replace(/^\uFEFF/, "")));
+      const parsedReport = JSON.parse(raw.replace(/^\uFEFF/, ""));
+
+      if (reportKey === "report-debet") {
+        const visibleUsers = await ReportsRepository.getVisibleTaUsers({
+          userId: id,
+          role,
+          branchId,
+        });
+
+        return res.json(filterDebetReportRows(parsedReport, visibleUsers));
+      }
+
+      return res.json(parsedReport);
     } catch (err) {
       return ErrorsUtils.catchError(res, err);
     }

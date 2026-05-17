@@ -958,3 +958,78 @@ Frontend:
   - Rocket.Chat end-to-end API tests showing `rooms.mediaConfirm/{rid}/{fileId}`
 - Verification:
   - `node --check api/services/notify.service.js` passed
+
+## 2026-05-17 - Deploy guide split-runbook checkpoint
+
+- Extended `documentation/update-existing-docker-server-to-branches-config.md` with two additional targeted runbooks:
+  - `Пересборка тільки backend`
+  - `Пересборка тільки frontend`
+- The backend-only block now includes:
+  - git update
+  - repo-to-build-context sync
+  - backend rebuild/recreate
+  - optional migrations
+  - quick `/api/health` check
+- The frontend-only block now includes:
+  - git update
+  - local frontend rebuild from `/var/www/apps/jwt-auth/client`
+  - publish to `rocketchat-nginx-1`
+  - quick public-domain checks
+
+## 2026-05-17 - Debet static report checkpoint
+
+- Added a second config-driven static report based on `DebetReport.json`.
+- Backend:
+  - added `report-debet` to bootstrap branch config
+  - added migration `api/migrations/003_add_debet_report_definition.js` so existing branches receive the report definition without a full re-bootstrap
+  - extended `ReportsController.getStaticReport` to apply hierarchy-aware filtering for Debet report rows
+  - added `ReportsRepository.getVisibleTaUsers` to reuse the current TA/SV/NTO/Accountant visibility tree for static-report filtering
+- Frontend:
+  - added `ReportDebet` screen and styles
+  - introduced `reportRegistry.js` so static reports are routed/rendered through a shared registry instead of hardcoded one-off wiring
+  - updated `App.jsx` and `Header.jsx` to build static report routes/menu entries from active report config plus registry access rules
+  - configurator support comes automatically from `report_definitions`, so the Debet report can be disabled/enabled through the existing reports config UI
+- Verification:
+  - `node --check api/controllers/Reports.js` passed
+  - `node --check api/repositories/Reports.js` passed
+  - `node --check api/migrations/003_add_debet_report_definition.js` passed
+  - `npm run build` in `client` passed
+
+## 2026-05-17 - Debet report TA grouping checkpoint
+
+- Reworked the Debet report presentation so it follows the same mental model as the sales report:
+  - top-level grouping is now `TA -> rows of their debt`
+  - the TA header uses `user_name`/collector as the primary label
+  - login is secondary metadata under the TA header instead of a dedicated table column
+  - each TA block is collapsible and contains only that TA's debt rows
+- Verification:
+  - `npm run build` in `client` passed
+
+## 2026-05-17 - Debet overdue filter checkpoint
+
+- Added a quick checkbox filter next to Debet report search:
+  - label: `Тільки прострочений борг`
+  - when enabled, keeps only rows where `overdueDays > 0`
+  - combines cleanly with the existing text search and TA grouping
+- Verification:
+  - `npm run build` in `client` passed
+
+## 2026-05-17 - Debet nested hierarchy checkpoint
+
+- Reworked Debet report layout into a three-level hierarchy:
+  - level 1: TA
+  - level 2: `Контрагент + торгова точка`
+  - level 3: document rows with `Номер документа`, `Дата документа`, `Дата оплати`, `Сума док.`, `Передоплата`, `Днів прострочки`
+- The TA header still uses `user_name`/collector as the main display label.
+- Removed phone from visible output.
+- Changed `Тільки прострочений борг` to be enabled by default.
+- Verification:
+  - `npm run build` in `client` passed
+
+## 2026-05-17 - Debet default collapse checkpoint
+
+- Changed Debet report default expansion so the screen opens collapsed to level 2:
+  - TA groups stay expanded
+  - contractor groups are collapsed by default
+- Verification:
+  - `npm run build` in `client` passed
