@@ -877,3 +877,48 @@ Frontend:
 - Verification:
   - `npm run build` in `client` passed
   - build still reports the known Sass legacy API deprecation warnings and large-chunk warning
+
+## 2026-05-16 - Balance UI extra mobile compaction checkpoint
+
+- Further reduced the balance filter and table footprint after device-width feedback:
+  - removed rounding from the filter panel, inputs, stat chips, table shell, and toggle buttons
+  - reduced filter paddings, field heights, label sizes, and chip sizes again
+  - reduced hierarchy indentation and quantity-column width in the table
+  - switched the table to a tighter fixed-layout presentation so it fits narrow screens better
+  - narrowed mobile paddings and font sizes for the `430x932` class of screens
+- Verification:
+  - `npm run build` in `client` passed
+  - build still reports the known Sass legacy API deprecation warnings and large-chunk warning
+
+## 2026-05-17 - Balance filter option color checkpoint
+
+- Fixed the native select dropdown option colors for the balance filter:
+  - added explicit dark background and light text styling for `.selectControl option`
+  - added a slightly stronger selected-option color state
+- Verification:
+  - `npm run build` in `client` passed
+  - build still reports the known Sass legacy API deprecation warnings and large-chunk warning
+
+## 2026-05-17 - Balance product text emphasis checkpoint
+
+- Made product-name text in the balance table bold via `.productText` for stronger readability.
+- Verification:
+  - `npm run build` in `client` passed
+  - build still reports the known Sass legacy API deprecation warnings and large-chunk warning
+
+## 2026-05-17 - Vite LAN dev-host checkpoint
+
+- Updated `client/vite.config.js` so LAN testing from a phone works without custom CLI flags:
+  - dev server now binds to `0.0.0.0` by default
+  - added configurable `VITE_DEV_PORT` and `VITE_PREVIEW_PORT`
+  - added optional `VITE_DEV_PUBLIC_HOST` for HMR when a specific LAN IP is needed
+  - proxy behavior to backend API stays unchanged
+- This only affects Vite dev/preview runtime and does not change production build output or server deploy behavior.
+
+## 2026-05-17 - Dev LAN CORS checkpoint
+
+- Fixed the likely phone-only `500` during local LAN development:
+  - backend `api/server.js` now allows private-network dev origins (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`, plus localhost variants) when `NODE_ENV !== "production"`
+  - production CORS behavior remains strict and still honors configured `CLIENT_URL`
+- Verification:
+  - `node --check api/server.js` passed

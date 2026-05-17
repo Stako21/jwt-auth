@@ -88,12 +88,12 @@ export const Table = ({ data }) => {
       <div className={style.tableShell}>
         <div className={style.scrollContainer}>
           <table className={style.balanceTable}>
-            <thead>
+            {/* <thead>
               <tr>
                 <th className={style.productHeader}>Товар</th>
                 <th className={style.quantityHeader}>Залишок</th>
               </tr>
-            </thead>
+            </thead> */}
             <tbody>
               {flatData.map((row) => {
                 const isLeafRow = !row.hasChildren;
@@ -111,7 +111,7 @@ export const Table = ({ data }) => {
                   >
                     <td
                       className={style.productCell}
-                      style={{ paddingLeft: `${16 + row.level * 14}px` }}
+                      style={{ paddingLeft: `${10 + row.level * 6}px` }}
                     >
                       {row.hasChildren && (
                         <button

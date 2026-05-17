@@ -12,10 +12,10 @@ export const Filter = ({
   return (
     <section className={style.panel}>
       <div className={style.panelTop}>
-        <div>
+        {/* <div>
           <p className={style.eyebrow}>Залишки товарів</p>
           <h2 className={style.title}>Пошук і фільтр</h2>
-        </div>
+        </div> */}
 
         <div className={style.stats}>
           <span className={style.statChip}>Показано: {visibleCount}</span>
@@ -25,7 +25,7 @@ export const Filter = ({
 
       <div className={style.controlsRow}>
         <label className={style.searchField} htmlFor="balance-search">
-          <span className={style.fieldLabel}>Пошук</span>
+          {/* <span className={style.fieldLabel}>Пошук</span> */}
           <span className={style.inputShell}>
             <i className={`fa-solid fa-magnifying-glass ${style.inputIcon}`}></i>
             <input
@@ -40,7 +40,7 @@ export const Filter = ({
         </label>
 
         <label className={style.selectField} htmlFor="balance-filter">
-          <span className={style.fieldLabel}>Фільтр</span>
+          {/* <span className={style.fieldLabel}>Фільтр</span> */}
           <div className={style.selectShell}>
             <select
               id="balance-filter"
