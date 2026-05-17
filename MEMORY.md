@@ -922,3 +922,39 @@ Frontend:
   - production CORS behavior remains strict and still honors configured `CLIENT_URL`
 - Verification:
   - `node --check api/server.js` passed
+
+## 2026-05-17 - Docker update guide correction checkpoint
+
+- Updated `documentation/update-existing-docker-server-to-branches-config.md` so repeated deploys on the existing Docker server no longer trip over `client/dist` permissions:
+  - all repo-to-build-context `rsync` examples now exclude `api/.env` and `client/dist`
+  - frontend build steps now run from `/var/www/apps/jwt-auth/client`
+  - frontend publish steps now copy from `/var/www/apps/jwt-auth/client/dist`
+  - corrected the documented frontend build-output path accordingly
+- This was a documentation-only change based on the real server behavior observed during deploy.
+
+## 2026-05-17 - PDF Kyiv timezone checkpoint
+
+- Fixed document-PDF timestamp formatting so it no longer depends on the Node/container local timezone:
+  - added shared helper `api/pdf/dateFormatters.js`
+  - `return.template.js` and `exchange.template.js` now format stamp/history datetimes with explicit `Europe/Kyiv`
+  - `documentTemplate.js` now uses the same shared Kyiv-aware date formatter
+  - date-only strings like `YYYY-MM-DD` are normalized safely before formatting to avoid timezone drift
+- Verification:
+  - `node --check api/pdf/dateFormatters.js` passed
+  - `node --check api/pdf/return.template.js` passed
+  - `node --check api/pdf/exchange.template.js` passed
+  - `node --check api/pdf/documentTemplate.js` passed
+
+## 2026-05-17 - Rocket upload API migration checkpoint
+
+- Updated Rocket.Chat notification upload flow in `api/services/notify.service.js`:
+  - replaced removed `rooms.upload/{rid}` usage with the current `rooms.media/{rid}` upload step
+  - added `rooms.mediaConfirm/{rid}/{fileId}` confirm step to actually post the uploaded file into the room
+  - added shared response parsing for Rocket API calls so non-JSON / proxy / 404 responses are logged as readable errors instead of generic JSON parse failures
+  - `rooms.info` lookup now uses the same safer response parser
+- Sources used for the migration decision:
+  - Rocket.Chat deprecated endpoints docs (`rooms.upload/:rid` -> `rooms.media/:rid`)
+  - Rocket.Chat upload-media docs
+  - Rocket.Chat end-to-end API tests showing `rooms.mediaConfirm/{rid}/{fileId}`
+- Verification:
+  - `node --check api/services/notify.service.js` passed

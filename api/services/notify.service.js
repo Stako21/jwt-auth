@@ -8,6 +8,46 @@ import pool from "../db.cjs";
 import FormData from "form-data";
 import { loadStampBase64 } from "../controllers/documentsController.js";
 
+async function parseRocketApiResponse(res, contextLabel) {
+  const rawBody = await res.text();
+  const contentType = res.headers.get("content-type") || "";
+
+  let parsedBody = null;
+
+  if (rawBody) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      if (!res.ok) {
+        const trimmedBody = rawBody.trim().slice(0, 300);
+
+        throw new Error(
+          `Rocket.Chat ${contextLabel} failed (${res.status} ${res.statusText}): ${trimmedBody || "non-JSON response"}`,
+        );
+      }
+
+      throw new Error(
+        `Rocket.Chat ${contextLabel} returned invalid JSON (content-type: ${contentType || "unknown"})`,
+      );
+    }
+  }
+
+  if (!res.ok) {
+    const errorMessage =
+      parsedBody?.error ||
+      parsedBody?.message ||
+      `${res.status} ${res.statusText}`.trim();
+
+    throw new Error(`Rocket.Chat ${contextLabel} error: ${errorMessage}`);
+  }
+
+  if (!parsedBody) {
+    throw new Error(`Rocket.Chat ${contextLabel} returned an empty response`);
+  }
+
+  return parsedBody;
+}
+
 async function logNotification({
   documentId,
   channel,
@@ -172,6 +212,7 @@ async function uploadPdfToRocket(roomId, pdfBuffer, doc) {
   const pdfBinary = Buffer.isBuffer(pdfBuffer)
     ? pdfBuffer
     : Buffer.from(pdfBuffer);
+  const rocketMessage = `Document signed\nTA - ${doc.author}\n${doc.documentNumber}`;
 
   form.append("file", pdfBinary, {
     filename: `${doc.documentNumber}.pdf`,
@@ -182,8 +223,8 @@ async function uploadPdfToRocket(roomId, pdfBuffer, doc) {
     `📄 *Документ підписано*\n*TA - ${doc.author}*\n${doc.documentNumber}`,
   );
 
-  const res = await fetch(
-    `${process.env.ROCKET_URL}/api/v1/rooms.upload/${roomId}`,
+  const uploadRes = await fetch(
+    `${process.env.ROCKET_URL}/api/v1/rooms.media/${roomId}`,
     {
       method: "POST",
       headers: {
@@ -195,12 +236,37 @@ async function uploadPdfToRocket(roomId, pdfBuffer, doc) {
     },
   );
 
-  const data = await res.json();
+  const uploadData = await parseRocketApiResponse(uploadRes, "rooms.media");
+  const fileId = uploadData?.file?._id;
 
-  console.log("Rocket upload response:", data);
+  if (!uploadData.success || !fileId) {
+    throw new Error("Rocket.Chat rooms.media did not return an uploaded file id");
+  }
 
-  if (!data.success) {
-    throw new Error(`Rocket.Chat upload error: ${data.error || "unknown"}`);
+  const confirmRes = await fetch(
+    `${process.env.ROCKET_URL}/api/v1/rooms.mediaConfirm/${roomId}/${fileId}`,
+    {
+      method: "POST",
+      headers: {
+        "X-Auth-Token": process.env.ROCKET_TOKEN,
+        "X-User-Id": process.env.ROCKET_USER_ID,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        msg: rocketMessage,
+      }),
+    },
+  );
+
+  const confirmData = await parseRocketApiResponse(
+    confirmRes,
+    "rooms.mediaConfirm",
+  );
+
+  if (!confirmData.success) {
+    throw new Error(
+      `Rocket.Chat rooms.mediaConfirm error: ${confirmData.error || "unknown"}`,
+    );
   }
 }
 
@@ -217,7 +283,7 @@ async function getRoomIdByName(channelName) {
     },
   );
 
-  const data = await res.json();
+  const data = await parseRocketApiResponse(res, "rooms.info");
 
   if (!data.success) {
     throw new Error(`Rocket.Chat rooms.info error: ${data.error}`);

@@ -1,4 +1,6 @@
 
+import { formatPdfDate, formatPdfDateTime } from "./dateFormatters.js";
+
 export function renderExchangeHtml(doc, stampBase64) {
   const takeItems = doc.items.filter((i) => i.operation === "TAKE");
   const giveItems = doc.items.filter((i) => i.operation === "GIVE");
@@ -11,8 +13,7 @@ export function renderExchangeHtml(doc, stampBase64) {
   };
 
   function formatDateTime(date) {
-    if (!date) return "";
-    return new Date(date).toLocaleString("uk-UA");
+    return formatPdfDateTime(date);
   }
 
   const stampImg = STATUS_STAMP[doc.status];
@@ -26,9 +27,7 @@ export function renderExchangeHtml(doc, stampBase64) {
   };
 
   function formatDate(date) {
-    if (!date) return "";
-    const d = new Date(date);
-    return d.toLocaleDateString("uk-UA");
+    return formatPdfDate(date);
   }
 
   const renderRows = (items) =>

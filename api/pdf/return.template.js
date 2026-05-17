@@ -1,3 +1,5 @@
+import { formatPdfDate, formatPdfDateTime } from "./dateFormatters.js";
+
 export function renderReturnHtml(doc, stampBase64) {
   const UNIT_LABELS = {
     PCS: "шт",
@@ -14,16 +16,13 @@ export function renderReturnHtml(doc, stampBase64) {
   };
 
   function formatDateTime(date) {
-    if (!date) return "";
-    return new Date(date).toLocaleString("uk-UA");
+    return formatPdfDateTime(date);
   }
 
   const stampImg = STATUS_STAMP[doc.status];
 
   function formatDate(date) {
-    if (!date) return "";
-    const d = new Date(date);
-    return d.toLocaleDateString("uk-UA");
+    return formatPdfDate(date);
   }
 
   const rows = doc.items

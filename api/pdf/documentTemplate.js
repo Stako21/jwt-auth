@@ -1,3 +1,5 @@
+import { formatPdfDate } from "./dateFormatters.js";
+
 export function renderDocumentHtml(doc) {
   const escapeHtml = (str) => {
     if (str == null) return "";
@@ -10,8 +12,7 @@ export function renderDocumentHtml(doc) {
   };
 
   const formatDate = (date) => {
-    const d = new Date(date);
-    return isNaN(d.getTime()) ? "" : d.toLocaleDateString("uk-UA");
+    return formatPdfDate(date);
   };
 
   const itemsRows = doc.items

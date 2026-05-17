@@ -552,6 +552,8 @@ rsync -a --delete \
   --exclude 'node_modules' \
   --exclude 'api/node_modules' \
   --exclude 'client/node_modules' \
+  --exclude 'api/.env' \
+  --exclude 'client/dist' \
   /var/www/apps/jwt-auth/ /var/www/apps/jwt-auth-docker/app/
 ```
 
@@ -635,10 +637,9 @@ docker exec -it jwt-auth-api sh -lc "cd /app/api && npm run seed:user-access -- 
 ## 13. Збірка frontend
 
 ```bash
-docker run --rm \
-  -v /var/www/apps/jwt-auth-docker/app:/work \
-  -w /work/client \
-  node:20 bash -lc "npm install && npm run build"
+cd /var/www/apps/jwt-auth/client
+npm install
+npm run build
 ```
 
 Так ви збираєте frontend у контрольованому середовищі, не залежачи від host Node.js.
@@ -646,7 +647,7 @@ docker run --rm \
 Результат буде тут:
 
 ```bash
-/var/www/apps/jwt-auth-docker/app/client/dist
+/var/www/apps/jwt-auth/client/dist
 ```
 
 ---
@@ -665,7 +666,7 @@ docker inspect rocketchat-nginx-1 --format '{{json .Mounts}}'
 
 ```bash
 docker exec rocketchat-nginx-1 sh -lc "rm -rf /usr/share/nginx/html/balance/*"
-docker cp /var/www/apps/jwt-auth-docker/app/client/dist/. rocketchat-nginx-1:/usr/share/nginx/html/balance/
+docker cp /var/www/apps/jwt-auth/client/dist/. rocketchat-nginx-1:/usr/share/nginx/html/balance/
 docker exec rocketchat-nginx-1 ls -la /usr/share/nginx/html/balance
 ```
 
@@ -754,6 +755,8 @@ rsync -a --delete \
   --exclude 'node_modules' \
   --exclude 'api/node_modules' \
   --exclude 'client/node_modules' \
+  --exclude 'api/.env' \
+  --exclude 'client/dist' \
   /var/www/apps/jwt-auth/ /var/www/apps/jwt-auth-docker/app/
 
 cd /var/www/apps/jwt-auth-docker
@@ -951,6 +954,8 @@ rsync -a --delete \
   --exclude 'node_modules' \
   --exclude 'api/node_modules' \
   --exclude 'client/node_modules' \
+  --exclude 'api/.env' \
+  --exclude 'client/dist' \
   /var/www/apps/jwt-auth/ /var/www/apps/jwt-auth-docker/app/
 ```
 
@@ -986,10 +991,9 @@ docker exec -it jwt-auth-api sh -lc "cd /app/api && npm run seed:user-access -- 
 ### 11. Збірка frontend
 
 ```bash
-docker run --rm \
-  -v /var/www/apps/jwt-auth-docker/app:/work \
-  -w /work/client \
-  node:20 bash -lc "npm install && npm run build"
+cd /var/www/apps/jwt-auth/client
+npm install
+npm run build
 ```
 
 Це збирає production frontend.
@@ -999,7 +1003,7 @@ docker run --rm \
 ```bash
 docker inspect rocketchat-nginx-1 --format '{{json .Mounts}}'
 docker exec rocketchat-nginx-1 sh -lc "rm -rf /usr/share/nginx/html/balance/*"
-docker cp /var/www/apps/jwt-auth-docker/app/client/dist/. rocketchat-nginx-1:/usr/share/nginx/html/balance/
+docker cp /var/www/apps/jwt-auth/client/dist/. rocketchat-nginx-1:/usr/share/nginx/html/balance/
 docker exec rocketchat-nginx-1 ls -la /usr/share/nginx/html/balance
 ```
 
@@ -1038,6 +1042,8 @@ rsync -a --delete \
   --exclude 'node_modules' \
   --exclude 'api/node_modules' \
   --exclude 'client/node_modules' \
+  --exclude 'api/.env' \
+  --exclude 'client/dist' \
   /var/www/apps/jwt-auth/ /var/www/apps/jwt-auth-docker/app/
 
 cd /var/www/apps/jwt-auth-docker
@@ -1046,3 +1052,93 @@ docker compose up -d jwt-auth-api
 ```
 
 Це повертає старий код, конфіги і БД.
+
+---
+
+## Коротке оновлення після нових змін
+
+Цей блок для ситуації, коли сервер уже переведений на `branches-config`, Windows-шара вже змонтована, `IMPORT_DIR` вже налаштований, і потрібно просто оновити застосунок після нових комітів.
+
+### 1. Оновити код у git-репозиторії
+
+```bash
+cd /var/www/apps/jwt-auth
+git fetch --all --prune
+git switch branches-config
+git pull --ff-only
+git log --oneline -3
+```
+
+Це забирає останні зміни в основну серверну копію репозиторію.
+
+### 2. Синхронізувати код у Docker build context
+
+```bash
+rsync -a --delete \
+  --exclude '.git' \
+  --exclude 'node_modules' \
+  --exclude 'api/node_modules' \
+  --exclude 'client/node_modules' \
+  --exclude 'api/.env' \
+  --exclude 'client/dist' \
+  /var/www/apps/jwt-auth/ /var/www/apps/jwt-auth-docker/app/
+```
+
+Це обов'язково, бо контейнер збирається не з git-папки напряму, а з `/var/www/apps/jwt-auth-docker/app`.
+
+### 3. Пересобрати і перезапустити backend
+
+```bash
+cd /var/www/apps/jwt-auth-docker
+docker compose build --no-cache jwt-auth-api
+docker compose up -d --force-recreate jwt-auth-api
+docker logs --tail 100 jwt-auth-api
+```
+
+Це запускає backend уже на новому коді.
+
+### 4. Якщо є нові міграції
+
+```bash
+docker exec -it jwt-auth-api sh -lc "cd /app/api && npm run migrate"
+docker exec -it jwt-auth-api sh -lc "cd /app/api && npm run bootstrap:doctor"
+```
+
+Це потрібно тільки якщо в новому релізі изменялась структура БД или rollout-скрипты.
+
+### 5. Пересобрати frontend
+
+```bash
+cd /var/www/apps/jwt-auth/client
+npm install
+npm run build
+```
+
+Це створює новий production frontend у `client/dist`.
+
+### 6. Опублікувати frontend у nginx-контейнері
+
+```bash
+docker exec rocketchat-nginx-1 sh -lc "rm -rf /usr/share/nginx/html/balance/*"
+docker cp /var/www/apps/jwt-auth/client/dist/. rocketchat-nginx-1:/usr/share/nginx/html/balance/
+docker exec rocketchat-nginx-1 sh -lc "test -f /usr/share/nginx/html/balance/index.html && echo index-ok || echo index-missing"
+```
+
+Це оновлює frontend на `https://balance.sweetglobal.com.ua`.
+
+### 7. Фінальна перевірка
+
+```bash
+docker exec jwt-auth-api curl -s http://localhost:5000/api/health
+curl -I https://balance.sweetglobal.com.ua
+curl -I https://balance.sweetglobal.com.ua/api/health
+tail -n 50 /var/log/jwt-auth-import-sync.log
+```
+
+Після цього достатньо коротко перевірити в браузері:
+
+1. логін
+2. відкриття залишків
+3. вкладку `Конфігурація`
+4. вкладку `Планувальник`
+5. один-два ключові звіти
