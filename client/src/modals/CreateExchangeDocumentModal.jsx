@@ -23,6 +23,7 @@ export default function CreateExchangeDocumentModal({
   const [tradePointId, setTradePointId] = useState("");
   const [reason, setReason] = useState("");
   const [comment, setComment] = useState("");
+  const [executorType, setExecutorType] = useState("TA");
 
   const [contractorSearch, setContractorSearch] = useState("");
   const [showContractorDropdown, setShowContractorDropdown] = useState(false);
@@ -104,6 +105,7 @@ export default function CreateExchangeDocumentModal({
       setTradePointId(tradePointId);
       setReason(editingDocument.reason || "");
       setComment(editingDocument.comment || "");
+      setExecutorType(editingDocument.executorType || "TA");
 
       // Преобразуем items в нужный формат по операциям
       if (editingDocument.items && Array.isArray(editingDocument.items)) {
@@ -142,6 +144,7 @@ export default function CreateExchangeDocumentModal({
     setTradePointId("");
     setReason("");
     setComment("");
+    setExecutorType("TA");
     setTakeItems([]);
     setGiveItems([]);
   }
@@ -256,6 +259,7 @@ export default function CreateExchangeDocumentModal({
         tradePointId: Number(tradePointId),
         reason,
         comment,
+        executorType,
         items: [
           ...takeItems.map((i) => ({
             productId: Number(i.productId),
@@ -447,6 +451,28 @@ export default function CreateExchangeDocumentModal({
 
             <hr />
 
+            <div className="field">
+              <label className="label">Виконавець</label>
+              <div className="buttons has-addons">
+                <button
+                  type="button"
+                  className={`button ${executorType === "TA" ? "is-link" : "is-light"}`}
+                  disabled={isViewOnly}
+                  onClick={() => setExecutorType("TA")}
+                >
+                  ТА
+                </button>
+                <button
+                  type="button"
+                  className={`button ${executorType === "DRIVER" ? "is-link" : "is-light"}`}
+                  disabled={isViewOnly}
+                  onClick={() => setExecutorType("DRIVER")}
+                >
+                  Водій
+                </button>
+              </div>
+            </div>
+
             {/* TAKE */}
             <div className="is-flex is-justify-content-space-between mb-2">
               <h4 className="title is-6">Забрати від контрагента</h4>
@@ -511,6 +537,7 @@ export default function CreateExchangeDocumentModal({
         }
         productGroups={productGroups}
         products={products}
+        datesRequired={editingType !== "GIVE"}
       />
     </>
   );

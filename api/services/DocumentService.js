@@ -6,14 +6,98 @@ import {
   getUserVisibleBranchIds,
 } from "./appConfig.service.js";
 
+const EXECUTOR_TYPE_DRIVER_PREFIX = "[[EXECUTOR_TYPE:DRIVER]]";
+const OPTIONAL_ITEM_DATE_SENTINEL = "1000-01-01";
+
+function normalizeExecutorType(value) {
+  return value === "DRIVER" ? "DRIVER" : "TA";
+}
+
+function encodeDocumentComment(comment, executorType) {
+  const normalizedExecutorType = normalizeExecutorType(executorType);
+  const normalizedComment = typeof comment === "string" ? comment : "";
+  const hasVisibleComment = normalizedComment.trim().length > 0;
+
+  if (normalizedExecutorType === "TA") {
+    return hasVisibleComment ? normalizedComment : null;
+  }
+
+  return hasVisibleComment
+    ? `${EXECUTOR_TYPE_DRIVER_PREFIX}\n${normalizedComment}`
+    : EXECUTOR_TYPE_DRIVER_PREFIX;
+}
+
+function decodeDocumentComment(comment) {
+  if (typeof comment !== "string" || !comment.length) {
+    return { executorType: "TA", comment: comment ?? null };
+  }
+
+  if (comment.startsWith(EXECUTOR_TYPE_DRIVER_PREFIX)) {
+    const strippedComment = comment
+      .slice(EXECUTOR_TYPE_DRIVER_PREFIX.length)
+      .replace(/^\r?\n/, "");
+
+    return {
+      executorType: "DRIVER",
+      comment: strippedComment || "",
+    };
+  }
+
+  return {
+    executorType: "TA",
+    comment,
+  };
+}
+
+function normalizeOptionalDate(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === "string" && value.trim() === "") {
+    return null;
+  }
+
+  return value;
+}
+
+function getStoredItemDate(value, operation) {
+  const normalizedValue = normalizeOptionalDate(value);
+
+  if (normalizedValue !== null) {
+    return normalizedValue;
+  }
+
+  return operation === "GIVE" ? OPTIONAL_ITEM_DATE_SENTINEL : null;
+}
+
+function getResponseItemDate(value, operation) {
+  if (!value) {
+    return null;
+  }
+
+  if (operation === "GIVE" && value === OPTIONAL_ITEM_DATE_SENTINEL) {
+    return null;
+  }
+
+  return value;
+}
+
 /**
  * user: { id, role, city }
  * payload: тело запроса
  */
 export async function createDocumentService(user, payload) {
 
-  const { documentType, documentDate, tradePointId, reason, comment, items } =
-    payload;
+  const {
+    documentType,
+    documentDate,
+    tradePointId,
+    reason,
+    comment,
+    executorType,
+    items,
+  } = payload;
 
   if (!documentType || !documentDate || !tradePointId || !items?.length) {
     throw new Error("Некорректные данные документа");
@@ -54,6 +138,7 @@ export async function createDocumentService(user, payload) {
 
   const connection = await pool.getConnection();
   const branchId = getUserBranchId(user);
+  const storedComment = encodeDocumentComment(comment, executorType);
 
   try {
     await connection.beginTransaction();
@@ -146,7 +231,7 @@ export async function createDocumentService(user, payload) {
         tp.contractor_id,
         user.id,
         reason,
-        comment ?? null,
+        storedComment,
       ],
     );
 
@@ -169,6 +254,10 @@ export async function createDocumentService(user, payload) {
 
       if (!["TAKE", "GIVE"].includes(operation)) {
         throw new Error("Неверное значение operation");
+      }
+
+      if (operation !== "GIVE" && (!manufactureDate || !expiryDate)) {
+        throw new Error("Для цієї позиції дати виробництва та придатності обовʼязкові");
       }
 
       const [[product]] = await connection.query(
@@ -212,8 +301,8 @@ export async function createDocumentService(user, payload) {
           product.group_name,
           unit,
           quantity,
-          manufactureDate,
-          expiryDate,
+          getStoredItemDate(manufactureDate, operation),
+          getStoredItemDate(expiryDate, operation),
           operation,
         ],
       );
@@ -859,6 +948,7 @@ export async function getDocumentByIdService(user, documentId) {
   }
 
   const doc = rows[0];
+  const decodedComment = decodeDocumentComment(doc.comment);
 
   /** -----------------------------
    * 2️⃣ Проверка прав
@@ -982,6 +1072,12 @@ export async function getDocumentByIdService(user, documentId) {
     [documentId],
   );
 
+  const normalizedItems = items.map((item) => ({
+    ...item,
+    manufacture_date: getResponseItemDate(item.manufacture_date, item.operation),
+    expiry_date: getResponseItemDate(item.expiry_date, item.operation),
+  }));
+
   /** -----------------------------
    * 4️⃣ История
    * ----------------------------- */
@@ -1018,7 +1114,8 @@ export async function getDocumentByIdService(user, documentId) {
     documentDate: doc.document_date,
     status: doc.status,
     reason: doc.reason,
-    comment: doc.comment,
+    comment: decodedComment.comment,
+    executorType: decodedComment.executorType,
 
     tradePoint: {
       name: doc.trade_point_name,
@@ -1034,7 +1131,7 @@ export async function getDocumentByIdService(user, documentId) {
     signedBy: doc.signed_by_user_id,
     signedAt: doc.signed_at,
 
-    items,
+    items: normalizedItems,
     history,
   };
 }
@@ -1086,11 +1183,19 @@ export async function getDocumentNotificationHistoryService(user, documentId) {
 }
 
 export async function updateDocumentService(user, documentId, payload) {
-  const { documentType, documentDate, tradePointId, reason, comment, items } =
-    payload;
+  const {
+    documentType,
+    documentDate,
+    tradePointId,
+    reason,
+    comment,
+    executorType,
+    items,
+  } = payload;
   const branchId = getUserBranchId(user);
 
   const connection = await pool.getConnection();
+  const storedComment = encodeDocumentComment(comment, executorType);
 
   try {
     await connection.beginTransaction();
@@ -1226,7 +1331,7 @@ export async function updateDocumentService(user, documentId, payload) {
         tradePointId,
         tp.contractor_id,
         reason,
-        comment ?? null,
+        storedComment,
         documentId,
         branchId,
       ],
@@ -1255,6 +1360,10 @@ export async function updateDocumentService(user, documentId, payload) {
 
       if (!["TAKE", "GIVE"].includes(operation)) {
         throw new Error("Неверное значение operation");
+      }
+
+      if (operation !== "GIVE" && (!manufactureDate || !expiryDate)) {
+        throw new Error("Для цієї позиції дати виробництва та придатності обовʼязкові");
       }
 
       const [[product]] = await connection.query(
@@ -1298,8 +1407,8 @@ export async function updateDocumentService(user, documentId, payload) {
           product.group_name,
           unit,
           quantity,
-          manufactureDate,
-          expiryDate,
+          getStoredItemDate(manufactureDate, operation),
+          getStoredItemDate(expiryDate, operation),
           operation,
         ],
       );

@@ -1,8 +1,39 @@
 import cn from "classnames";
-import { useEffect, useMemo, useState } from "react";
-import DatePicker, { registerLocale } from "react-datepicker";
+import DatePicker from "react-datepicker";
+import { forwardRef, useEffect, useMemo, useState } from "react";
 import style from "./ItemModal.module.scss";
-import React from "react";
+
+const CustomInput = forwardRef(function CustomInput(
+  { value, onClick, hasError },
+  ref,
+) {
+  return (
+    <input
+      ref={ref}
+      value={value}
+      onClick={onClick}
+      className={cn("input", {
+        [style.dateInput]: true,
+        [style.dateInputError]: hasError,
+      })}
+      readOnly
+    />
+  );
+});
+
+function toPickerDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0);
+  }
+
+  const parsedDate = new Date(value);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
 
 export default function ItemModal({
   isOpen,
@@ -11,6 +42,7 @@ export default function ItemModal({
   initialItem,
   productGroups,
   products,
+  datesRequired = true,
 }) {
   const [groupId, setGroupId] = useState("");
   const [productId, setProductId] = useState("");
@@ -20,12 +52,10 @@ export default function ItemModal({
   const [expiryDate, setExpiryDate] = useState("");
   const [errors, setErrors] = useState({});
 
-  /* ---------- init ---------- */
   useEffect(() => {
     if (initialItem) {
-
-      // Пытаемся найти товар по productId или product названию
       let foundProduct = null;
+
       if (initialItem.productId) {
         foundProduct = products?.find(
           (p) =>
@@ -33,17 +63,14 @@ export default function ItemModal({
             String(p.id) === String(initialItem.productId),
         );
       } else if (initialItem.product) {
-        // Ищем по названию товара
         foundProduct = products?.find((p) => p.name === initialItem.product);
       }
 
-
-      // Если нашли товар, берем его группу
-      const gid = foundProduct
+      const resolvedGroupId = foundProduct
         ? (foundProduct.group_id ?? foundProduct.groupId)
         : initialItem.groupId || "";
 
-      setGroupId(gid?.toString() || "");
+      setGroupId(resolvedGroupId?.toString() || "");
       setProductId(
         foundProduct ? foundProduct.id.toString() : initialItem.productId || "",
       );
@@ -51,6 +78,7 @@ export default function ItemModal({
       setQuantity(initialItem.quantity || "");
       setManufactureDate(initialItem.manufactureDate || "");
       setExpiryDate(initialItem.expiryDate || "");
+      setErrors({});
     } else {
       reset();
     }
@@ -66,31 +94,34 @@ export default function ItemModal({
     setErrors({});
   }
 
-  /* ---------- products by group ---------- */
   const productsByGroup = useMemo(() => {
     const map = {};
-    for (const p of products || []) {
-      const gid = String(p.group_id ?? p.groupId);
-      if (!map[gid]) map[gid] = [];
-      map[gid].push(p);
+
+    for (const product of products || []) {
+      const currentGroupId = String(product.group_id ?? product.groupId);
+      if (!map[currentGroupId]) {
+        map[currentGroupId] = [];
+      }
+      map[currentGroupId].push(product);
     }
+
     return map;
   }, [products]);
 
-  /* ---------- validation ---------- */
   function validate() {
-    const e = {};
-    if (!groupId) e.groupId = true;
-    if (!productId) e.productId = true;
-    if (!quantity) e.quantity = true;
-    if (!manufactureDate) e.manufactureDate = true;
-    if (!expiryDate) e.expiryDate = true;
-    if (manufactureDate && expiryDate && manufactureDate > expiryDate) {
-      e.mismathDate = true;
-    }
-    setErrors(e);
+    const nextErrors = {};
 
-    return Object.keys(e).length === 0;
+    if (!groupId) nextErrors.groupId = true;
+    if (!productId) nextErrors.productId = true;
+    if (!quantity) nextErrors.quantity = true;
+    if (datesRequired && !manufactureDate) nextErrors.manufactureDate = true;
+    if (datesRequired && !expiryDate) nextErrors.expiryDate = true;
+    if (manufactureDate && expiryDate && manufactureDate > expiryDate) {
+      nextErrors.mismathDate = true;
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   }
 
   function handleSave() {
@@ -110,19 +141,6 @@ export default function ItemModal({
 
   if (!isOpen) return null;
 
-  const CustomInput = React.forwardRef(({ value, onClick }, ref) => (
-    <input
-      ref={ref}
-      value={value}
-      onClick={onClick}
-      className={cn("input", {
-        [style.dateInput]: true,
-        [style.dateInputError]: errors.manufactureDate || errors.expiryDate,
-      })}
-      readOnly
-    />
-  ));
-
   return (
     <div
       className="modal is-active"
@@ -139,7 +157,6 @@ export default function ItemModal({
         </header>
 
         <section className="modal-card-body">
-          {/* Группа */}
           <div className="field">
             <label className="label">Група *</label>
             <div
@@ -157,16 +174,15 @@ export default function ItemModal({
                 }}
               >
                 <option value="">— Оберіть —</option>
-                {productGroups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
+                {productGroups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Товар */}
           <div className="field">
             <label className="label">Товар *</label>
             <div
@@ -183,16 +199,15 @@ export default function ItemModal({
                 }}
               >
                 <option value="">— Оберіть —</option>
-                {(productsByGroup[String(groupId)] || []).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
+                {(productsByGroup[String(groupId)] || []).map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Unit + Qty */}
           <div className="columns">
             <div className="column is-4">
               <label className="label">Одиниця</label>
@@ -221,10 +236,11 @@ export default function ItemModal({
             </div>
           </div>
 
-          {/* Dates */}
-        <div className={`columns ${style.dateColumns}`}>
+          <div className={`columns ${style.dateColumns}`}>
             <div className="column">
-              <label className="label">Дата виготовлення *</label>
+              <label className="label">
+                Дата виготовлення{datesRequired ? " *" : ""}
+              </label>
               <DatePicker
                 popperClassName={style.datepickerPopper}
                 className={cn(style.dateInput, {
@@ -232,18 +248,22 @@ export default function ItemModal({
                 })}
                 locale="uk"
                 dateFormat="dd.MM.yyyy"
-                // onFocus={(e) => e.target.blur()}
-                customInput={<CustomInput />}
-                selected={manufactureDate}
+                customInput={
+                  <CustomInput hasError={Boolean(errors.manufactureDate)} />
+                }
+                isClearable={!datesRequired}
+                selected={toPickerDate(manufactureDate)}
                 onChange={(date) => {
-                  setManufactureDate(date.toISOString().split("T")[0]);
+                  setManufactureDate(date ? date.toISOString().split("T")[0] : "");
                   setErrors((prev) => ({ ...prev, manufactureDate: false }));
                 }}
-              ></DatePicker>
+              />
             </div>
 
             <div className="column">
-              <label className="label">Придатний до *</label>
+              <label className="label">
+                Придатний до{datesRequired ? " *" : ""}
+              </label>
               <DatePicker
                 popperClassName={style.datepickerPopper}
                 className={cn(style.dateInput, {
@@ -251,20 +271,22 @@ export default function ItemModal({
                 })}
                 locale="uk"
                 dateFormat="dd.MM.yyyy"
-                selected={expiryDate}
-                customInput={<CustomInput />}
+                customInput={<CustomInput hasError={Boolean(errors.expiryDate)} />}
+                isClearable={!datesRequired}
+                selected={toPickerDate(expiryDate)}
                 onChange={(date) => {
-                  setExpiryDate(date.toISOString().split("T")[0]);
+                  setExpiryDate(date ? date.toISOString().split("T")[0] : "");
                   setErrors((prev) => ({ ...prev, expiryDate: false }));
                 }}
-              ></DatePicker>
+              />
             </div>
           </div>
-            {errors.mismathDate && (
-              <p className="help is-danger">
-                Дата виготовлення не може бути пізніше дати придатності
-              </p>
-            )}
+
+          {errors.mismathDate && (
+            <p className="help is-danger">
+              Дата виготовлення не може бути пізніше дати придатності
+            </p>
+          )}
         </section>
 
         <footer

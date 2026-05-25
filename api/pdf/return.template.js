@@ -1,6 +1,8 @@
 import { formatPdfDate, formatPdfDateTime } from "./dateFormatters.js";
 
 export function renderReturnHtml(doc, stampBase64) {
+  const executorLabel = doc.executorType === "DRIVER" ? "ВОДІЙ" : "ТА";
+
   const UNIT_LABELS = {
     PCS: "шт",
     KG: "кг",
@@ -19,11 +21,11 @@ export function renderReturnHtml(doc, stampBase64) {
     return formatPdfDateTime(date);
   }
 
-  const stampImg = STATUS_STAMP[doc.status];
-
   function formatDate(date) {
     return formatPdfDate(date);
   }
+
+  const stampImg = STATUS_STAMP[doc.status];
 
   const rows = doc.items
     .map(
@@ -57,7 +59,7 @@ body {
   top: 85px;
   right: 20px;
   width: 260px;
-  opacity: 0.5; /* полупрозрачность */
+  opacity: 0.5;
   z-index: 1000;
 }
 .stamp-text {
@@ -70,13 +72,40 @@ body {
   opacity: 0.8;
   z-index: 1001;
 }
-h1 { text-align: center; font-size: 16px; }
-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-th, td { border: 1px solid #000; padding: 4px; font-size: 10px; }
-th { background: #f0f0f0; }
-.header { text-align: right; margin-bottom: 20px; }
-.signatures { margin-top: 40px; width: 210px;}
-// .signatures div { margin-bottom: 20px; }
+h1 {
+  text-align: center;
+  font-size: 16px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+th, td {
+  border: 1px solid #000;
+  padding: 4px;
+  font-size: 10px;
+}
+th {
+  background: #f0f0f0;
+}
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.meta-row p {
+  margin: 0 0 12px;
+}
+.meta-right {
+  margin-left: auto;
+  text-align: right;
+}
+.signatures {
+  margin-top: 40px;
+  width: 210px;
+}
 .signatures-item {
   display: flex;
   justify-content: space-between;
@@ -92,24 +121,21 @@ ${
     ? `
   ${stampBase64 ? `<img src="${stampBase64}" class="stamp" />` : ""}
   <div class="stamp-text">
-  <div><b>
-    ${
+    <div><b>${
       doc.status === "SIGNED"
         ? "ПІДПИСАНО"
         : doc.status === "PREPARED"
           ? "ПІДГОТОВЛЕНО"
-        : doc.status === "REJECTED"
-          ? "ВІДХИЛЕНО"
-          : doc.status === "REVISION"
-            ? "ВИПРАВИТИ"
-            : ""
-    }
-  </b></div>
-  ${doc.signerName ? `<div>${doc.signerName}</div>` : `<div>${doc.history[doc.history.length - 1].user}</div>`}
-  ${doc.signedAt ? `<div>${formatDateTime(doc.signedAt)}</div>` : `<div>${formatDateTime(doc.history[doc.history.length - 1].created_at)}</div>`}
-  ${doc.history[doc.history.length - 1].comment ? `<div>Коментар: ${doc.history[doc.history.length - 1].comment}</div>` : ""}
-
-</div>
+          : doc.status === "REJECTED"
+            ? "ВІДХИЛЕНО"
+            : doc.status === "REVISION"
+              ? "ВИПРАВИТИ"
+              : ""
+    }</b></div>
+    ${doc.signerName ? `<div>${doc.signerName}</div>` : `<div>${doc.history[doc.history.length - 1].user}</div>`}
+    ${doc.signedAt ? `<div>${formatDateTime(doc.signedAt)}</div>` : `<div>${formatDateTime(doc.history[doc.history.length - 1].created_at)}</div>`}
+    ${doc.history[doc.history.length - 1].comment ? `<div>Коментар: ${doc.history[doc.history.length - 1].comment}</div>` : ""}
+  </div>
 `
     : ""
 }
@@ -119,7 +145,10 @@ ${
 <p><b>Контрагент:</b> ${doc.contractor.name}</p>
 <p><b>Торгівельна точка:</b> ${doc.tradePoint.name}</p>
 <p><b>Адреса:</b> ${doc.tradePoint.address}</p>
-<p><b>Через:</b> ${doc.author}</p>
+<div class="meta-row">
+  <p><b>Через:</b> ${doc.author}</p>
+  <p class="meta-right"><b>Виконавець:</b> ${executorLabel}</p>
+</div>
 <p><b>Причина повернення:</b> ${doc.reason}</p>
 
 <table>
@@ -145,8 +174,7 @@ ${rows}
     <p>Комірник</p> <p>____________________</p>
   </div>
   <div class="signatures-item"><p>Водій</p> <p>____________________</p></div>
-  <div class="signatures-item"><p>Торгівельний <br>
-  представник</p> <p>____________________</p></div>
+  <div class="signatures-item"><p>Торгівельний <br>представник</p> <p>____________________</p></div>
   <div class="signatures-item"><p>Клієнт</p> <p>____________________</p></div>
 </div>
 

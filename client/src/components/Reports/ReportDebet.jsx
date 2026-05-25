@@ -169,7 +169,9 @@ export function ReportDebet({ setLastUpdateTime }) {
               );
             }),
           }))
-          .sort((left, right) => left.label.localeCompare(right.label, "uk-UA")),
+          .sort((left, right) =>
+            left.label.localeCompare(right.label, "uk-UA"),
+          ),
       }))
       .sort((left, right) =>
         left.displayName.localeCompare(right.displayName, "uk-UA"),
@@ -201,8 +203,7 @@ export function ReportDebet({ setLastUpdateTime }) {
   }, [groupedRows]);
 
   const grandTotal = useMemo(
-    () =>
-      filteredRows.reduce((sum, row) => sum + (Number(row.debt) || 0), 0),
+    () => filteredRows.reduce((sum, row) => sum + (Number(row.debt) || 0), 0),
     [filteredRows],
   );
 
@@ -314,7 +315,9 @@ export function ReportDebet({ setLastUpdateTime }) {
                           <thead>
                             <tr>
                               <th>Номер док.</th>
+                              <th>Ф2.</th>
                               <th>Дата док.</th>
+                              <th>Відтерм.</th>
                               <th>Дата оплати</th>
                               <th>Сума док.</th>
                               <th>Передоплата</th>
@@ -335,7 +338,18 @@ export function ReportDebet({ setLastUpdateTime }) {
                                 }
                               >
                                 <td>{row.documentNumber || "—"}</td>
+                                <td>
+                                  {row.form2 ? (
+                                    <i
+                                      className="fa-solid fa-check"
+                                      style={{ color: "#14C700" }}
+                                    ></i>
+                                  ) : (
+                                    ""
+                                  )}
+                                </td>
                                 <td>{formatDate(row.documentDate) || "—"}</td>
+                                <td>{(row.deferment) || "Факт"}</td>
                                 <td>{formatDate(row.paymentDate) || "—"}</td>
                                 <td className={style.money}>
                                   {formatMoney(getDocumentAmount(row))}
@@ -343,7 +357,11 @@ export function ReportDebet({ setLastUpdateTime }) {
                                 <td className={style.money}>
                                   {formatMoney(row.prepayment)}
                                 </td>
-                                <td className={getOverdueClassName(row.overdueDays)}>
+                                <td
+                                  className={getOverdueClassName(
+                                    row.overdueDays,
+                                  )}
+                                >
                                   {row.overdueDays || 0}
                                 </td>
                               </tr>
