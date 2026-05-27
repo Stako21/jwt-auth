@@ -1033,3 +1033,45 @@ Frontend:
   - contractor groups are collapsed by default
 - Verification:
   - `npm run build` in `client` passed
+
+## 2026-05-26 - Debet grouping and visibility checkpoint
+
+- Updated Debet static report behavior:
+  - added a grouping switch in `client/src/components/Reports/ReportDebet.jsx`
+  - collector grouping keeps the existing hierarchy: `TA -> contractor/trade point -> documents`
+  - contractor grouping adds the alternate hierarchy: `contractor/trade point -> TA -> documents`
+  - both modes keep the search box and default overdue-only filter
+  - contractor/TA child groups remain collapsed by default while top-level groups open by default
+- Updated Debet report visibility:
+  - `GET /api/reports/static/report-debet` now returns the full active `DebetReport.json` for the current branch
+  - removed the Debet-specific role/hierarchy row filter from `api/controllers/Reports.js`
+  - removed the now-unused `ReportsRepository.getVisibleTaUsers` helper
+- Verification:
+  - `node --check api/controllers/Reports.js` passed
+  - `node --check api/repositories/Reports.js` passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the known Sass legacy API and chunk-size warnings
+
+## 2026-05-27 - Debet contractor address checkpoint
+
+- Refined Debet contractor address rendering in `client/src/components/Reports/ReportDebet.jsx`:
+  - added a small `getTradePointAddress` helper
+  - contractor groups now store `address` during hierarchy construction
+  - collector grouping displays the address under the contractor/trade point child header
+  - contractor grouping displays the address under the top-level contractor/trade point header
+  - removed a temporary `console.log` from the report render
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the known Sass legacy API and chunk-size warnings
+
+## 2026-05-27 - Debet fact column checkpoint
+
+- Reviewed the new Debet document-table `Факт` column in `client/src/components/Reports/ReportDebet.jsx`:
+  - `DebetReport.json` rows contain boolean `fact` values
+  - the table renders the same check icon pattern used by `Ф2` when `row.fact` is truthy
+  - the column is included alongside `Ф2`, before the document date
+- Verification:
+  - `node --check api/controllers/Reports.js` passed
+  - `node --check api/repositories/Reports.js` passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the known Sass legacy API and chunk-size warnings

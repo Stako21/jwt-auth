@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import style from "./ReportDebet.module.scss";
 import { fetchStaticReport } from "../../services/reports.api";
 
+const GROUPING_MODES = {
+  collector: "collector",
+  contractor: "contractor",
+};
+
 function formatMoney(value) {
   return new Intl.NumberFormat("uk-UA", {
     style: "currency",
@@ -34,15 +39,213 @@ function getOverdueClassName(overdueDays) {
   return "";
 }
 
+function getTaInfo(row) {
+  const displayName = String(row.collector || row.login || "").trim();
+  const login = String(row.login || "").trim();
+
+  return {
+    id: `${displayName || "Без ТА"}:${login}`,
+    label: displayName || "Без ТА",
+    login,
+  };
+}
+
 function getContractorLabel(row) {
   const customer = String(row.customer || "").trim();
   const pointOfSale = String(row.pointOfSale || "").trim();
 
   if (customer && pointOfSale) {
-    return `${customer} — ${pointOfSale}`;
+    return `${customer} - ${pointOfSale}`;
   }
 
   return customer || pointOfSale || "Без контрагента";
+}
+
+function getTradePointAddress(row) {
+  return String(row.tradePointAddress || "").trim();
+}
+
+function createGroup(id, title, meta = "") {
+  return {
+    id,
+    title,
+    meta,
+    address: "",
+    totalDebt: 0,
+    totalPrepayment: 0,
+    children: new Map(),
+  };
+}
+
+function addRowTotals(group, row) {
+  group.totalDebt += Number(row.debt) || 0;
+  group.totalPrepayment += Number(row.prepayment) || 0;
+}
+
+function sortByTitle(left, right) {
+  return left.title.localeCompare(right.title, "uk-UA");
+}
+
+function sortDocuments(left, right) {
+  return String(left.documentNumber || "").localeCompare(
+    String(right.documentNumber || ""),
+    "uk-UA",
+  );
+}
+
+function finalizeGroups(groups) {
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      children: Array.from(group.children.values())
+        .map((child) => ({
+          ...child,
+          rows: [...child.rows].sort(sortDocuments),
+        }))
+        .sort(sortByTitle),
+    }))
+    .sort(sortByTitle);
+}
+
+function buildCollectorGroups(rows) {
+  const groups = new Map();
+
+  for (const row of rows) {
+    const ta = getTaInfo(row);
+    const groupId = `collector:${ta.id}`;
+
+    if (!groups.has(groupId)) {
+      groups.set(groupId, createGroup(groupId, ta.label, ta.login));
+    }
+
+    const group = groups.get(groupId);
+    addRowTotals(group, row);
+
+    const contractorLabel = getContractorLabel(row);
+    const childId = `${groupId}:contractor:${contractorLabel}`;
+
+    if (!group.children.has(childId)) {
+      group.children.set(childId, {
+        id: childId,
+        title: contractorLabel,
+        address: getTradePointAddress(row),
+        totalDebt: 0,
+        totalPrepayment: 0,
+        rows: [],
+      });
+    }
+
+    const child = group.children.get(childId);
+    child.address ||= getTradePointAddress(row);
+    addRowTotals(child, row);
+    child.rows.push(row);
+  }
+
+  return finalizeGroups(groups);
+}
+
+function buildContractorGroups(rows) {
+  const groups = new Map();
+
+  for (const row of rows) {
+    const contractorLabel = getContractorLabel(row);
+    const groupId = `contractor:${contractorLabel}`;
+
+    if (!groups.has(groupId)) {
+      groups.set(groupId, createGroup(groupId, contractorLabel));
+    }
+
+    const group = groups.get(groupId);
+    group.address ||= getTradePointAddress(row);
+    addRowTotals(group, row);
+
+    const ta = getTaInfo(row);
+    const childId = `${groupId}:collector:${ta.id}`;
+
+    if (!group.children.has(childId)) {
+      group.children.set(childId, {
+        id: childId,
+        title: ta.label,
+        meta: ta.login,
+        totalDebt: 0,
+        totalPrepayment: 0,
+        rows: [],
+      });
+    }
+
+    const child = group.children.get(childId);
+    addRowTotals(child, row);
+    child.rows.push(row);
+  }
+
+  return finalizeGroups(groups);
+}
+
+function DocumentRows({ rows, groupId }) {
+  return (
+    <div className={style.tableShell}>
+      <table className={style.table}>
+        <thead>
+          <tr>
+            <th>Номер док.</th>
+            <th>Ф2.</th>
+            <th>Факт</th>
+            <th>Дата док.</th>
+            <th>Відтерм.</th>
+            <th>Дата оплати</th>
+            <th>Сума док.</th>
+            <th>Передоплата</th>
+            <th>Днів</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={
+                row.id ??
+                [
+                  groupId,
+                  row.documentNumber,
+                  row.documentDate,
+                  row.paymentDate,
+                ].join(":")
+              }
+            >
+              <td>{row.documentNumber || "-"}</td>
+              <td>
+                {row.form2 ? (
+                  <i
+                    className="fa-solid fa-check"
+                    style={{ color: "#14C700" }}
+                  ></i>
+                ) : (
+                  ""
+                )}
+              </td>
+              <td>
+                {row.fact ? (
+                  <i
+                    className="fa-solid fa-check"
+                    style={{ color: "#14C700" }}
+                  ></i>
+                ) : (
+                  ""
+                )}
+              </td>
+              <td>{formatDate(row.documentDate) || "-"}</td>
+              <td>{row.deferment || "0"}</td>
+              <td>{formatDate(row.paymentDate) || "-"}</td>
+              <td className={style.money}>{formatMoney(getDocumentAmount(row))}</td>
+              <td className={style.money}>{formatMoney(row.prepayment)}</td>
+              <td className={getOverdueClassName(row.overdueDays)}>
+                {row.overdueDays || 0}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export function ReportDebet({ setLastUpdateTime }) {
@@ -51,8 +254,9 @@ export function ReportDebet({ setLastUpdateTime }) {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [onlyOverdue, setOnlyOverdue] = useState(true);
-  const [openTaGroups, setOpenTaGroups] = useState({});
-  const [openContractorGroups, setOpenContractorGroups] = useState({});
+  const [groupingMode, setGroupingMode] = useState(GROUPING_MODES.collector);
+  const [openPrimaryGroups, setOpenPrimaryGroups] = useState({});
+  const [openSecondaryGroups, setOpenSecondaryGroups] = useState({});
 
   useEffect(() => {
     let isActive = true;
@@ -73,7 +277,8 @@ export function ReportDebet({ setLastUpdateTime }) {
         console.error("Failed to load debet report:", loadError);
         setRows([]);
         setError(
-          loadError?.response?.data?.message || "Не вдалося завантажити звіт",
+          loadError?.response?.data?.message ||
+            "Не вдалося завантажити звіт",
         );
       })
       .finally(() => {
@@ -115,71 +320,15 @@ export function ReportDebet({ setLastUpdateTime }) {
   }, [onlyOverdue, query, rows]);
 
   const groupedRows = useMemo(() => {
-    const taGroups = new Map();
-
-    for (const row of filteredRows) {
-      const taName = row.collector || row.login || "Без ТА";
-      const taLogin = row.login || "";
-      const taId = `${taName}:${taLogin}`;
-
-      if (!taGroups.has(taId)) {
-        taGroups.set(taId, {
-          id: taId,
-          displayName: taName,
-          login: taLogin,
-          totalDebt: 0,
-          totalPrepayment: 0,
-          contractors: new Map(),
-        });
-      }
-
-      const taGroup = taGroups.get(taId);
-      taGroup.totalDebt += Number(row.debt) || 0;
-      taGroup.totalPrepayment += Number(row.prepayment) || 0;
-
-      const contractorLabel = getContractorLabel(row);
-      const contractorId = `${taId}:${contractorLabel}`;
-
-      if (!taGroup.contractors.has(contractorId)) {
-        taGroup.contractors.set(contractorId, {
-          id: contractorId,
-          label: contractorLabel,
-          totalDebt: 0,
-          totalPrepayment: 0,
-          rows: [],
-        });
-      }
-
-      const contractorGroup = taGroup.contractors.get(contractorId);
-      contractorGroup.totalDebt += Number(row.debt) || 0;
-      contractorGroup.totalPrepayment += Number(row.prepayment) || 0;
-      contractorGroup.rows.push(row);
+    if (groupingMode === GROUPING_MODES.contractor) {
+      return buildContractorGroups(filteredRows);
     }
 
-    return Array.from(taGroups.values())
-      .map((taGroup) => ({
-        ...taGroup,
-        contractors: Array.from(taGroup.contractors.values())
-          .map((contractor) => ({
-            ...contractor,
-            rows: [...contractor.rows].sort((left, right) => {
-              return String(left.documentNumber || "").localeCompare(
-                String(right.documentNumber || ""),
-                "uk-UA",
-              );
-            }),
-          }))
-          .sort((left, right) =>
-            left.label.localeCompare(right.label, "uk-UA"),
-          ),
-      }))
-      .sort((left, right) =>
-        left.displayName.localeCompare(right.displayName, "uk-UA"),
-      );
-  }, [filteredRows]);
+    return buildCollectorGroups(filteredRows);
+  }, [filteredRows, groupingMode]);
 
   useEffect(() => {
-    setOpenTaGroups((current) => {
+    setOpenPrimaryGroups((current) => {
       const nextState = {};
 
       for (const group of groupedRows) {
@@ -189,12 +338,12 @@ export function ReportDebet({ setLastUpdateTime }) {
       return nextState;
     });
 
-    setOpenContractorGroups((current) => {
+    setOpenSecondaryGroups((current) => {
       const nextState = {};
 
       for (const group of groupedRows) {
-        for (const contractor of group.contractors) {
-          nextState[contractor.id] = current[contractor.id] ?? false;
+        for (const child of group.children) {
+          nextState[child.id] = current[child.id] ?? false;
         }
       }
 
@@ -207,6 +356,13 @@ export function ReportDebet({ setLastUpdateTime }) {
     [filteredRows],
   );
 
+  const primaryCountLabel =
+    groupingMode === GROUPING_MODES.contractor ? "ТА" : "Контрагентів";
+  const groupingSubtitle =
+    groupingMode === GROUPING_MODES.contractor
+      ? "Контрагент → ТА → документи"
+      : "ТА → контрагент → документи";
+
   return (
     <section className={style.report}>
       <div className={style.header}>
@@ -218,6 +374,32 @@ export function ReportDebet({ setLastUpdateTime }) {
         </div>
 
         <div className={style.filters}>
+          <div className={style.groupingField}>
+            <span>Групування</span>
+            <div className={style.segmentedControl}>
+              <button
+                type="button"
+                className={
+                  groupingMode === GROUPING_MODES.collector ? style.active : ""
+                }
+                onClick={() => setGroupingMode(GROUPING_MODES.collector)}
+              >
+                Колектор
+              </button>
+              <button
+                type="button"
+                className={
+                  groupingMode === GROUPING_MODES.contractor
+                    ? style.active
+                    : ""
+                }
+                onClick={() => setGroupingMode(GROUPING_MODES.contractor)}
+              >
+                Контрагент
+              </button>
+            </div>
+          </div>
+
           <label className={style.searchField}>
             <span>Пошук</span>
             <input
@@ -240,7 +422,7 @@ export function ReportDebet({ setLastUpdateTime }) {
       </div>
 
       <div className={style.totalBar}>
-        <span>Загальний борг</span>
+        <span>{groupingSubtitle}</span>
         <strong>{formatMoney(grandTotal)}</strong>
       </div>
 
@@ -257,7 +439,7 @@ export function ReportDebet({ setLastUpdateTime }) {
             <div
               className={style.groupHeader}
               onClick={() =>
-                setOpenTaGroups((current) => ({
+                setOpenPrimaryGroups((current) => ({
                   ...current,
                   [group.id]: !current[group.id],
                 }))
@@ -266,12 +448,15 @@ export function ReportDebet({ setLastUpdateTime }) {
               <div>
                 <h3>
                   <span className={style.groupMarker}>
-                    {openTaGroups[group.id] ? "▾" : "▸"}
+                    {openPrimaryGroups[group.id] ? "▾" : "▸"}
                   </span>
-                  {group.displayName}
+                  {group.title}
                 </h3>
-                {group.login ? <p>Логін: {group.login}</p> : null}
-                <p>Контрагентів: {group.contractors.length}</p>
+                {group.address ? <p>Адреса: {group.address}</p> : null}
+                {group.meta ? <p>Логін: {group.meta}</p> : null}
+                <p>
+                  {primaryCountLabel}: {group.children.length}
+                </p>
               </div>
               <div className={style.groupTotals}>
                 <span>Борг: {formatMoney(group.totalDebt)}</span>
@@ -279,96 +464,40 @@ export function ReportDebet({ setLastUpdateTime }) {
               </div>
             </div>
 
-            {openTaGroups[group.id] ? (
+            {openPrimaryGroups[group.id] ? (
               <div className={style.contractors}>
-                {group.contractors.map((contractor) => (
-                  <div key={contractor.id} className={style.contractorBlock}>
+                {group.children.map((child) => (
+                  <div key={child.id} className={style.contractorBlock}>
                     <div
                       className={style.contractorHeader}
                       onClick={() =>
-                        setOpenContractorGroups((current) => ({
+                        setOpenSecondaryGroups((current) => ({
                           ...current,
-                          [contractor.id]: !current[contractor.id],
+                          [child.id]: !current[child.id],
                         }))
                       }
                     >
                       <div>
                         <strong>
                           <span className={style.groupMarker}>
-                            {openContractorGroups[contractor.id] ? "▾" : "▸"}
+                            {openSecondaryGroups[child.id] ? "▾" : "▸"}
                           </span>
-                          {contractor.label}
+                          {child.title}
                         </strong>
-                        <p>Документів: {contractor.rows.length}</p>
+                        {child.address ? <p>Адреса: {child.address}</p> : null}
+                        {child.meta ? <p>Логін: {child.meta}</p> : null}
+                        <p>Документів: {child.rows.length}</p>
                       </div>
                       <div className={style.groupTotals}>
-                        <span>Борг: {formatMoney(contractor.totalDebt)}</span>
+                        <span>Борг: {formatMoney(child.totalDebt)}</span>
                         <span>
-                          Передоплата: {formatMoney(contractor.totalPrepayment)}
+                          Передоплата: {formatMoney(child.totalPrepayment)}
                         </span>
                       </div>
                     </div>
 
-                    {openContractorGroups[contractor.id] ? (
-                      <div className={style.tableShell}>
-                        <table className={style.table}>
-                          <thead>
-                            <tr>
-                              <th>Номер док.</th>
-                              <th>Ф2.</th>
-                              <th>Дата док.</th>
-                              <th>Відтерм.</th>
-                              <th>Дата оплати</th>
-                              <th>Сума док.</th>
-                              <th>Передоплата</th>
-                              <th>Днів</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {contractor.rows.map((row) => (
-                              <tr
-                                key={
-                                  row.id ??
-                                  [
-                                    contractor.id,
-                                    row.documentNumber,
-                                    row.documentDate,
-                                    row.paymentDate,
-                                  ].join(":")
-                                }
-                              >
-                                <td>{row.documentNumber || "—"}</td>
-                                <td>
-                                  {row.form2 ? (
-                                    <i
-                                      className="fa-solid fa-check"
-                                      style={{ color: "#14C700" }}
-                                    ></i>
-                                  ) : (
-                                    ""
-                                  )}
-                                </td>
-                                <td>{formatDate(row.documentDate) || "—"}</td>
-                                <td>{(row.deferment) || "Факт"}</td>
-                                <td>{formatDate(row.paymentDate) || "—"}</td>
-                                <td className={style.money}>
-                                  {formatMoney(getDocumentAmount(row))}
-                                </td>
-                                <td className={style.money}>
-                                  {formatMoney(row.prepayment)}
-                                </td>
-                                <td
-                                  className={getOverdueClassName(
-                                    row.overdueDays,
-                                  )}
-                                >
-                                  {row.overdueDays || 0}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                    {openSecondaryGroups[child.id] ? (
+                      <DocumentRows rows={child.rows} groupId={child.id} />
                     ) : null}
                   </div>
                 ))}

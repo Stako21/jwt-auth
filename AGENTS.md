@@ -8,7 +8,19 @@ This repository contains a JWT-authenticated business web application with:
 - `client/`: React + Vite frontend with Bulma styling.
 - root `package.json`: currently only declares the `xlsx` dependency and has no scripts.
 
-Current active work is on branch `branches-config`. The ongoing goal is to make the application configurable for branches/cities instead of hardcoding city routes and file names.
+Current active work is on branch `branches-config`.
+
+The branch/config foundation is already largely implemented. The repository has moved far beyond the initial "replace hardcoded city routes" phase and now supports branch-aware configuration for:
+
+- branches and cities
+- balance pages
+- static report definitions
+- document prefixes
+- import sources
+- scheduler task settings
+- branch/city access boundaries
+
+The ongoing goal remains the same: keep pushing the app toward configurable branch/city support without reintroducing hardcoded city-specific logic.
 
 ## Run Commands
 
@@ -55,62 +67,142 @@ Important: migrations alter the configured MySQL database. Do not run them casua
 - `client/package.json` has no test script.
 - Use `client` build and lint as the available frontend checks.
 - For backend syntax checks, use `node --check` on project files only. Do not traverse `api/node_modules`.
+- For backend/runtime readiness work, prefer the existing bootstrap/doctor scripts instead of improvising destructive DB checks.
 
 ## Project Structure
 
 Backend:
 
 - `api/server.js`: Express app setup and top-level routes.
-- `api/routers/Auth.js`: auth-root routes and nested reports/documents/directories routes.
+- `api/routers/Auth.js`: auth-root routes and branch/user auth endpoints.
 - `api/routes/`: route modules.
 - `api/controllers/`: HTTP controllers.
-- `api/services/`: business logic, imports, scheduler, notifications.
+- `api/services/`: business logic, imports, scheduler, notifications, app config, user hierarchy.
 - `api/repositories/`: DB query wrappers for users/reports/sessions.
 - `api/migrations/`: JS migrations for schema/config changes.
-- `api/scripts/migrate.js`: simple migration runner.
+- `api/scripts/`: migration, rollout, diagnostics, and seed helpers.
+- `api/config/bootstrapBranchConfig.js`: bootstrap branch/city/balance/report seed source.
 - `api/pdf/`: PDF templates and stamp assets.
 
 Frontend:
 
 - `client/src/App.jsx`: routes and main app composition.
 - `client/src/context/`: auth/config contexts.
-- `client/src/services/`: frontend API clients.
+- `client/src/services/`: frontend API clients built on a shared authenticated client pattern.
 - `client/src/components/`: shared UI and domain components.
 - `client/src/pages/`: page-level components.
 - `client/src/modals/`: document/item modals.
-- `client/src/utils/`: roles, unit labels, helpers.
+- `client/src/utils/`: roles, unit labels, helpers, report registry/parser helpers.
 
-## Current Configuration Direction
+## Current State
 
-Already visible in code:
+Already visible in code and considered current baseline:
 
-- `branches`, `cities`, `balance_pages`, `report_definitions`, `import_sources`, `scheduler_tasks` are introduced by migration.
+- Branch/config migration exists:
+  - `api/migrations/001_branch_configuration.js`
+  - `api/migrations/002_scheduler_last_run.js`
 - Frontend app config is loaded via `client/src/context/AppConfigContext.jsx`.
-- Dynamic balance pages now use `/balance/:slug` routes.
+- Dynamic balance pages use `/balance/:slug` routes.
 - Balance XLSX files are served by authenticated backend route `GET /api/balances/:slug/file`.
-- `IMPORT_DIR` is the intended backend source directory for import/report/balance files, with a legacy fallback to `client/public/Sorce`.
-- Document number prefixes are being moved from hardcoded maps to `cities.document_prefix`.
-- Scheduler active/interval settings are being moved to DB table `scheduler_tasks`.
+- Static reports are config-driven through `report_definitions` plus frontend report registry wiring.
+- `ReportRomashka` and `DebetReport` load through authenticated backend report routes, not public `/Sorce`.
+- Header menus for balances/reports are driven from config instead of hardcoded city/report lists.
+- Branch switching is implemented:
+  - `/api/auth/branches`
+  - `/api/auth/switch-branch`
+  - frontend support in `AuthContext` and header UI
+- Branch CRUD/configuration is implemented in admin UI:
+  - `BranchConfig.jsx`
+  - `CitiesConfig.jsx`
+  - `BalancePagesConfig.jsx`
+  - `ReportsConfig.jsx`
+  - `ImportSourcesConfig.jsx`
+  - `SchedulerConfig.jsx`
+- User access tables are part of the live design:
+  - `user_branch_access`
+  - `user_city_access`
+- Admin-only user creation is enforced:
+  - public self-service signup remains disabled in UI
+  - protected `POST /api/auth/sign-up` is the intended create-user flow
+- Document number prefixes use `cities.document_prefix` instead of a hardcoded prefix map.
+- Reports repository/controller already include branch-aware filtering for sales report queries.
+- `region_notifications` and several document/report access paths were hardened for `branch_id` scope.
+- Import services use `IMPORT_DIR` through `getImportDir()` with legacy fallback to `client/public/Sorce`.
+- Import source filenames support branch placeholders such as `{branchSlug}`, `{branchId}`, `{branchShortName}`.
+- Import path resolution is constrained to stay inside `IMPORT_DIR`.
+- Scheduler task settings live in `scheduler_tasks`, including persisted `lastRun`.
+- Branch-bound scheduler tasks declare `requiresSystemBranch` and may be blocked until runtime branch config is valid.
+- Scheduler UI shows blocked state, resolved runtime branch, refresh status, and recent run outcomes.
+- DB connection config is environment-driven via `api/db.cjs`.
+- Protected top-level route mounts in `api/server.js` are the current norm for `/api/config`, `/api/balances`, `/api/documents`, `/api/directories`, `/api/reports`, and `/api/region-notifications`.
+- Frontend API clients share the normalized authenticated retry/refresh flow from `client/src/services/createAuthenticatedApi.js`.
+- Balance parser and balance UI were recently refined for better search/filter UX and mobile density.
+- Debet static report was recently added and refined with a grouping switch:
+  - collector view: TA -> contractor/trade point -> documents
+  - contractor view: contractor/trade point -> TA -> documents
+  - trade point address is displayed under the contractor/trade point header in both grouping modes.
+  - document rows include boolean markers for `Ф2` and `Факт` from the static report JSON.
+  - all roles with access to the active report route now see the full Debet JSON for the current branch.
+
+## Partial Or Unfinished
+
+- Background jobs still rely on one resolved system branch at runtime by design.
+- Full multi-branch parallel scheduler execution is not implemented.
+- Legacy backend leftovers may still exist and should be cleaned up carefully.
+- Branch-scope review should still be treated as ongoing whenever touching older SQL/service logic.
 
 ## Rules For Future AI Work
 
-- Continue the started branch/config approach; do not reintroduce hardcoded `/zp`, `/dp`, `/kr` route logic.
+- Continue the branch/config approach; do not reintroduce hardcoded `/zp`, `/dp`, `/kr` route logic.
 - Treat `branch_id` as the isolation boundary for future multi-branch support.
 - Any query that reads business data in a multi-branch table should be checked for branch scoping.
 - Keep city data in `cities`; do not duplicate city lists in frontend components.
 - Keep balance page metadata in `balance_pages`; do not hardcode balance file names in routes.
+- Keep static report metadata in `report_definitions`; do not hardcode one-off report routing/menu logic when config/registry should drive it.
 - Keep document prefixes in `cities.document_prefix`; do not restore `prefixMap`.
+- Keep branch/bootstrap seed values in `api/config/bootstrapBranchConfig.js`; do not duplicate them inline in migrations or services.
+- Keep branch-bound import resolution inside `IMPORT_DIR`; do not add unsafe path resolution that can escape the configured import directory.
 - Use existing backend layering: routes -> controllers -> services/repositories.
 - Use existing frontend API-service style and contexts instead of embedding fetch logic throughout components.
+- Prefer top-level `/api/reports` and `/api/region-notifications` flows; do not restore legacy duplicate auth-prefixed aliases unless explicitly required.
+- Preserve the normalized authenticated API-client pattern in `client/src/services/createAuthenticatedApi.js`.
+- Preserve admin-only user creation and the current protected branch-switch/access model.
+- Preserve server-side hierarchy validation through the shared user-hierarchy service instead of scattering role/supervisor rules.
 - Do not run migrations unless the target database is known and approved.
+- Do not run rollout/seed scripts against a non-local DB unless that action is explicitly approved.
 - Avoid modifying generated `client/dist` output unless explicitly requested.
+- Avoid modifying `client/public/Sorce/*` business-data snapshots unless the task is explicitly about source assets or operational data refresh.
+- Treat `AGENTS.md`, `MEMORY.md`, and `.github/instructions/*` as collaboration/docs material; do not mix them blindly into the main product-code commit.
 
 ## Critical Areas Not To Break
 
 - JWT login/refresh flow in `api/services/Auth.js`, `api/services/Token.js`, `client/src/context/AuthContext.jsx`.
 - Role IDs in `api/utils/roles.js` and `client/src/utils/roles.js`.
+- User hierarchy and supervisor constraints in `api/services/userHierarchy.service.js`.
 - Document workflow/status transitions in `api/services/DocumentService.js`.
 - Sales report visibility rules in `api/repositories/Reports.js`.
+- Static report loading/access behavior in backend reports controller plus frontend report registry; Debet visibility is intentionally full-report for all roles that can open the active report route.
 - Import jobs in `api/services/load*.js`.
-- Notification retry and PDF generation paths.
+- Scheduler runtime/branch-resolution behavior in `api/services/scheduler.js`.
+- Notification retry and Rocket.Chat upload paths in `api/services/notificationRetry.service.js` and `api/services/notify.service.js`.
+- PDF generation and Kyiv timezone formatting in `api/pdf/*`.
 
+## Current Resume Point
+
+If work resumes without fresh guidance, assume this branch is past the initial migration phase and is now in hardening/polish mode.
+
+Most recent recorded product work in `MEMORY.md` focused on:
+
+- sales report import cancellation behavior cleanup
+- production-safe SQL cleanup helpers
+- UTF-8/mojibake text cleanup
+- balance search/filter/table UX refresh
+- Debet static report rollout and iterative UX refinement, including the collector/contractor grouping switch, contractor address display, `Факт` marker column, and full-report visibility
+
+Before starting a new slice, check whether the intended task belongs to:
+
+1. legacy cleanup
+2. branch-scope hardening
+3. import/scheduler branch-runtime design
+4. config-driven report/balance polish
+5. deployment/diagnostics/readiness tooling

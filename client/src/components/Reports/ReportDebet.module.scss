@@ -45,6 +45,45 @@
   }
 }
 
+.groupingField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #dce6f7;
+}
+
+.segmentedControl {
+  display: inline-flex;
+  min-height: 38px;
+  border: 1px solid #3a4860;
+  background: #162132;
+
+  button {
+    min-width: 104px;
+    padding: 0 12px;
+    border: 0;
+    border-right: 1px solid #3a4860;
+    background: transparent;
+    color: #dce6f7;
+    cursor: pointer;
+
+    &:last-child {
+      border-right: 0;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: #22314a;
+      color: #ffffff;
+    }
+  }
+}
+
+.active {
+  background: #2f6fed !important;
+  color: #ffffff !important;
+}
+
 .checkboxField {
   display: inline-flex;
   align-items: center;
@@ -204,6 +243,19 @@
 
   .searchField {
     min-width: 100%;
+  }
+
+  .groupingField {
+    width: 100%;
+  }
+
+  .segmentedControl {
+    width: 100%;
+
+    button {
+      flex: 1;
+      min-width: 0;
+    }
   }
 
   .filters {
