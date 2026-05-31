@@ -105,6 +105,7 @@ Already visible in code and considered current baseline:
 - Dynamic balance pages use `/balance/:slug` routes.
 - Balance XLSX files are served by authenticated backend route `GET /api/balances/:slug/file`.
 - Static reports are config-driven through `report_definitions` plus frontend report registry wiring.
+- Static report role visibility is configured in `report_definitions.allowed_roles`; Admin always has access, while `NULL` means all non-admin roles and `[]` means admin-only.
 - `ReportRomashka` and `DebetReport` load through authenticated backend report routes, not public `/Sorce`.
 - Header menus for balances/reports are driven from config instead of hardcoded city/report lists.
 - Branch switching is implemented:
@@ -143,6 +144,8 @@ Already visible in code and considered current baseline:
   - trade point address is displayed under the contractor/trade point header in both grouping modes.
   - document rows include boolean markers for `Ф2` and `Факт` from the static report JSON.
   - all roles with access to the active report route now see the full Debet JSON for the current branch.
+- `report-orders-by-time` is DB-backed through `orders_by_time_report_rows`; `OrderByTimet.json` is configured as import source `loadOrdersByTimeReport`, scheduler task `loadOrdersByTimeReport` can refresh it, rows are replaced by source day to avoid duplicates, and rows older than one month are pruned.
+- `report-bill-of-lading` is DB-backed through `bill_of_lading_report_rows`; `BillOfLading.json` is configured as import source `loadBillOfLadingReport`, scheduler task `loadBillOfLadingReport` can refresh it, report days run 08:00-08:00, rows are replaced by source day to avoid duplicates, and rows older than one month are pruned.
 
 ## Partial Or Unfinished
 
@@ -153,12 +156,15 @@ Already visible in code and considered current baseline:
 
 ## Rules For Future AI Work
 
+- After every completed project change, append a concise resume/checkpoint to `MEMORY.md`. When the change affects operating instructions, setup, runbooks, or current project capabilities, also update `AGENTS.md` and/or `README.md` in the same slice.
 - Continue the branch/config approach; do not reintroduce hardcoded `/zp`, `/dp`, `/kr` route logic.
 - Treat `branch_id` as the isolation boundary for future multi-branch support.
 - Any query that reads business data in a multi-branch table should be checked for branch scoping.
 - Keep city data in `cities`; do not duplicate city lists in frontend components.
 - Keep balance page metadata in `balance_pages`; do not hardcode balance file names in routes.
 - Keep static report metadata in `report_definitions`; do not hardcode one-off report routing/menu logic when config/registry should drive it.
+- Keep static report role visibility in `report_definitions.allowed_roles`; do not restore hardcoded `allowedRoles` lists in frontend registry except for component mapping.
+- Treat phones and tablets as the primary app devices; report tables should be compact, adaptive, and touch-friendly by default.
 - Keep document prefixes in `cities.document_prefix`; do not restore `prefixMap`.
 - Keep branch/bootstrap seed values in `api/config/bootstrapBranchConfig.js`; do not duplicate them inline in migrations or services.
 - Keep branch-bound import resolution inside `IMPORT_DIR`; do not add unsafe path resolution that can escape the configured import directory.
@@ -181,7 +187,9 @@ Already visible in code and considered current baseline:
 - User hierarchy and supervisor constraints in `api/services/userHierarchy.service.js`.
 - Document workflow/status transitions in `api/services/DocumentService.js`.
 - Sales report visibility rules in `api/repositories/Reports.js`.
-- Static report loading/access behavior in backend reports controller plus frontend report registry; Debet visibility is intentionally full-report for all roles that can open the active report route.
+- Static report loading/access behavior in backend reports controller plus frontend report registry; report access is role-gated by `report_definitions.allowed_roles`, and Debet visibility is intentionally full-report for roles that can open the active report route.
+- Order-upload-by-hour report storage in `orders_by_time_report_rows`; keep replace-by-day import semantics and one-month retention.
+- Collected-bills report storage in `bill_of_lading_report_rows`; keep 08:00-08:00 report-day grouping, replace-by-day import semantics, and one-month retention.
 - Import jobs in `api/services/load*.js`.
 - Scheduler runtime/branch-resolution behavior in `api/services/scheduler.js`.
 - Notification retry and Rocket.Chat upload paths in `api/services/notificationRetry.service.js` and `api/services/notify.service.js`.

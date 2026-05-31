@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import cn from "classnames";
 import { AuthContext } from "../../context/AuthContext";
 import { useAppConfig } from "../../context/AppConfigContext";
@@ -10,6 +10,7 @@ import { canAccessStaticReport } from "../Reports/reportRegistry";
 
 const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     isUserLogged,
     userInfo,
@@ -30,15 +31,25 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
     setIsOpen(false);
   };
 
+  const handleReportSelect = (event) => {
+    const route = event.target.value;
+
+    if (!route) return;
+
+    navigate(route);
+    handleLinkClick();
+  };
+
   const currentBalancePage = activeBalancePages.find(
     (page) => location.pathname === `/balance/${page.slug}`,
   );
   const accessibleStaticReports = activeReports.filter((report) =>
-    canAccessStaticReport(report.reportKey, userInfo?.role),
+    canAccessStaticReport(report, userInfo?.role),
   );
   const currentStaticReport = accessibleStaticReports.find(
     (report) => location.pathname === report.route,
   );
+  const showReportsSelect = accessibleStaticReports.length > 1;
   const titleByPath = {
     "/admin-page": "Адміністрування",
     "/sales-report": "Продажі",
@@ -115,18 +126,42 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
                   )}
                 </>
               )}
-            {accessibleStaticReports.map((report) => (
+            {showReportsSelect ? (
               <li
-                key={report.id}
-                className={cn(style.headerList, {
-                  [style.activePage]: location.pathname === report.route,
+                className={cn(style.headerList, style.reportSelectItem, {
+                  [style.activePage]: Boolean(currentStaticReport),
                 })}
               >
-                <Link to={report.route} onClick={handleLinkClick}>
-                  {report.menuTitle}
-                </Link>
+                <select
+                  className={style.reportSelect}
+                  value={currentStaticReport?.route || ""}
+                  onChange={handleReportSelect}
+                  aria-label="Звіти"
+                >
+                  <option value="" disabled>
+                    Звіти
+                  </option>
+                  {accessibleStaticReports.map((report) => (
+                    <option key={report.id} value={report.route}>
+                      {report.menuTitle}
+                    </option>
+                  ))}
+                </select>
               </li>
-            ))}
+            ) : (
+              accessibleStaticReports.map((report) => (
+                <li
+                  key={report.id}
+                  className={cn(style.headerList, {
+                    [style.activePage]: location.pathname === report.route,
+                  })}
+                >
+                  <Link to={report.route} onClick={handleLinkClick}>
+                    {report.menuTitle}
+                  </Link>
+                </li>
+              ))
+            )}
           </ul>
         </nav>
       )}

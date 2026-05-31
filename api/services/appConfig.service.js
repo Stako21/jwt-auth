@@ -12,6 +12,94 @@ export function getUserBranchId(user) {
   return Number(user?.branchId || user?.branch_id || 1);
 }
 
+const VALID_REPORT_ROLE_IDS = new Set(Object.values(ROLE_IDS).map(Number));
+let reportAllowedRolesColumnExistsCache = null;
+
+export async function hasReportAllowedRolesColumn() {
+  if (reportAllowedRolesColumnExistsCache === true) {
+    return reportAllowedRolesColumnExistsCache;
+  }
+
+  const [rows] = await pool.query(
+    `
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = 'report_definitions'
+      AND column_name = 'allowed_roles'
+    LIMIT 1
+    `,
+  );
+
+  const exists = rows.length > 0;
+  if (exists) {
+    reportAllowedRolesColumnExistsCache = true;
+  }
+  return exists;
+}
+
+async function getReportAllowedRolesSelect() {
+  return (await hasReportAllowedRolesColumn())
+    ? "allowed_roles AS allowedRoles,"
+    : "NULL AS allowedRoles,";
+}
+
+export function normalizeReportAllowedRoles(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  let rawRoles = value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    try {
+      rawRoles = JSON.parse(trimmed);
+    } catch {
+      rawRoles = trimmed.split(",");
+    }
+  }
+
+  if (!Array.isArray(rawRoles)) {
+    return null;
+  }
+
+  const roles = [...new Set(rawRoles.map(Number))]
+    .filter((roleId) => VALID_REPORT_ROLE_IDS.has(roleId))
+    .sort((a, b) => a - b);
+
+  return roles;
+}
+
+function serializeReportAllowedRoles(value) {
+  const roles = normalizeReportAllowedRoles(value);
+  return roles === null ? null : JSON.stringify(roles);
+}
+
+function mapReportDefinition(row) {
+  if (!row) return row;
+
+  return {
+    ...row,
+    allowedRoles: normalizeReportAllowedRoles(row.allowedRoles),
+  };
+}
+
+function mapReportDefinitions(rows) {
+  return rows.map(mapReportDefinition);
+}
+
+export function canUserAccessReportDefinition(user, report) {
+  const role = Number(user?.role);
+  if (role === ROLE_IDS.Admin) return true;
+
+  const allowedRoles = normalizeReportAllowedRoles(report?.allowedRoles);
+  if (!allowedRoles) return true;
+
+  return allowedRoles.includes(role);
+}
+
 async function getPrimaryBranchIdForUser(user) {
   const fallbackBranchId = getUserBranchId(user);
   const userId = Number(user?.id);
@@ -106,6 +194,7 @@ export function getImportDir() {
 
 export async function getAppConfig(user) {
   const branchId = getUserBranchId(user);
+  const allowedRolesSelect = await getReportAllowedRolesSelect();
 
   const [[branch]] = await pool.query(
     `
@@ -167,6 +256,7 @@ export async function getAppConfig(user) {
       route,
       menu_title AS menuTitle,
       file_name AS fileName,
+      ${allowedRolesSelect}
       is_active AS isActive,
       sort_order AS sortOrder
     FROM report_definitions
@@ -176,11 +266,15 @@ export async function getAppConfig(user) {
     [branchId],
   );
 
+  const reportDefinitions = mapReportDefinitions(reports);
+
   return {
     branch: branch || null,
     cities,
     balancePages,
-    reports,
+    reports: reportDefinitions.filter((report) =>
+      canUserAccessReportDefinition(user, report),
+    ),
   };
 }
 
@@ -748,6 +842,10 @@ async function ensureBranchUniqueness({ slug, excludeId = null }) {
 }
 
 async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor) {
+  const hasAllowedRoles = await hasReportAllowedRolesColumn();
+  const allowedRolesSelect = hasAllowedRoles
+    ? "allowed_roles AS allowedRoles,"
+    : "NULL AS allowedRoles,";
   const [[sourceBranch]] = await executor.query(
     `
     SELECT id
@@ -861,6 +959,7 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
       route,
       menu_title AS menuTitle,
       file_name AS fileName,
+      ${allowedRolesSelect}
       is_active AS isActive,
       sort_order AS sortOrder
     FROM report_definitions
@@ -879,10 +978,11 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
         route,
         menu_title,
         file_name,
+        ${hasAllowedRoles ? "allowed_roles," : ""}
         is_active,
         sort_order
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ${hasAllowedRoles ? "?," : ""} ?, ?)
       `,
       [
         targetBranchId,
@@ -890,6 +990,9 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
         report.route,
         report.menuTitle,
         report.fileName,
+        ...(hasAllowedRoles
+          ? [serializeReportAllowedRoles(report.allowedRoles)]
+          : []),
         report.isActive ? 1 : 0,
         report.sortOrder,
       ],
@@ -1198,6 +1301,7 @@ export async function getBalancePagesForBranch(user) {
 
 export async function getReportsForBranch(user) {
   const branchId = getUserBranchId(user);
+  const allowedRolesSelect = await getReportAllowedRolesSelect();
   const [reports] = await pool.query(
     `
     SELECT
@@ -1207,6 +1311,7 @@ export async function getReportsForBranch(user) {
       route,
       menu_title AS menuTitle,
       file_name AS fileName,
+      ${allowedRolesSelect}
       is_active AS isActive,
       sort_order AS sortOrder
     FROM report_definitions
@@ -1216,7 +1321,27 @@ export async function getReportsForBranch(user) {
     [branchId],
   );
 
-  return reports;
+  return mapReportDefinitions(reports);
+}
+
+export async function getActiveStaticReportDefinition(branchId, reportKey) {
+  const allowedRolesSelect = await getReportAllowedRolesSelect();
+  const [[report]] = await pool.query(
+    `
+    SELECT
+      file_name AS fileName,
+      ${allowedRolesSelect}
+      report_key AS reportKey
+    FROM report_definitions
+    WHERE branch_id = ?
+      AND report_key = ?
+      AND is_active = 1
+    LIMIT 1
+    `,
+    [branchId, reportKey],
+  );
+
+  return mapReportDefinition(report) || null;
 }
 
 export async function getImportSources() {
@@ -1310,12 +1435,16 @@ function normalizeReportPayload(payload = {}) {
       : typeof payload.is_active === "boolean"
         ? payload.is_active
         : true;
+  const allowedRoles = normalizeReportAllowedRoles(
+    payload.allowedRoles ?? payload.allowed_roles,
+  );
 
   return {
     reportKey,
     route,
     menuTitle,
     fileName,
+    allowedRoles,
     sortOrder,
     isActive,
   };
@@ -1592,6 +1721,7 @@ export async function updateReportDefinition(user, reportId, payload) {
     excludeId: reportId,
   });
 
+  const hasAllowedRoles = await hasReportAllowedRolesColumn();
   await pool.query(
     `
     UPDATE report_definitions
@@ -1600,6 +1730,7 @@ export async function updateReportDefinition(user, reportId, payload) {
       route = ?,
       menu_title = ?,
       file_name = ?,
+      ${hasAllowedRoles ? "allowed_roles = ?," : ""}
       is_active = ?,
       sort_order = ?
     WHERE id = ?
@@ -1610,6 +1741,7 @@ export async function updateReportDefinition(user, reportId, payload) {
       report.route,
       report.menuTitle,
       report.fileName || null,
+      ...(hasAllowedRoles ? [serializeReportAllowedRoles(report.allowedRoles)] : []),
       report.isActive ? 1 : 0,
       report.sortOrder,
       reportId,
@@ -1866,6 +1998,7 @@ export async function getBalancePageById(branchId, pageId) {
 }
 
 export async function getReportById(branchId, reportId) {
+  const allowedRolesSelect = await getReportAllowedRolesSelect();
   const [[report]] = await pool.query(
     `
     SELECT
@@ -1875,6 +2008,7 @@ export async function getReportById(branchId, reportId) {
       route,
       menu_title AS menuTitle,
       file_name AS fileName,
+      ${allowedRolesSelect}
       is_active AS isActive,
       sort_order AS sortOrder
     FROM report_definitions
@@ -1885,7 +2019,7 @@ export async function getReportById(branchId, reportId) {
     [branchId, reportId],
   );
 
-  return report || null;
+  return mapReportDefinition(report) || null;
 }
 
 export async function getImportSourceById(sourceId) {

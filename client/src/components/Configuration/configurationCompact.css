@@ -1,0 +1,144 @@
+.configuration-compact {
+  font-size: 13px;
+}
+
+.configuration-compact > div {
+  padding: 8px 10px !important;
+}
+
+.configuration-compact .columns {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.configuration-compact .column {
+  padding: 0.45rem;
+}
+
+.configuration-compact .title.is-5 {
+  font-size: 1rem;
+  margin-bottom: 0.55rem !important;
+}
+
+.configuration-compact .title.is-6 {
+  font-size: 0.95rem;
+}
+
+.configuration-compact .level {
+  margin-bottom: 0.5rem !important;
+}
+
+.configuration-compact .notification {
+  padding: 0.55rem 0.7rem;
+  margin-bottom: 0.55rem;
+}
+
+.configuration-compact .content p,
+.configuration-compact p {
+  line-height: 1.25;
+}
+
+.configuration-compact .table-container {
+  margin-bottom: 0;
+  overflow-x: auto;
+}
+
+.configuration-compact .table {
+  font-size: 12px;
+  table-layout: fixed;
+  min-width: 760px;
+  margin-bottom: 0.45rem;
+}
+
+.configuration-compact .table th,
+.configuration-compact .table td {
+  padding: 0.32rem 0.42rem;
+  vertical-align: middle;
+}
+
+.configuration-compact .table th {
+  white-space: nowrap;
+}
+
+.configuration-compact .table td {
+  overflow-wrap: anywhere;
+}
+
+.configuration-compact .tag {
+  font-size: 0.68rem;
+  height: 1.45em;
+  line-height: 1.1;
+  padding-left: 0.45em;
+  padding-right: 0.45em;
+}
+
+.configuration-compact .buttons {
+  gap: 0.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.configuration-compact .table .buttons {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+
+.configuration-compact .button {
+  font-size: 0.72rem;
+  min-height: 1.85rem;
+  padding: 0.28rem 0.52rem;
+  white-space: nowrap;
+}
+
+.configuration-compact .table .button {
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.configuration-compact .field {
+  margin-bottom: 0.45rem;
+}
+
+.configuration-compact .label {
+  font-size: 0.76rem;
+  margin-bottom: 0.2rem;
+}
+
+.configuration-compact .input,
+.configuration-compact .select select {
+  font-size: 0.78rem;
+  height: 2rem;
+  padding-bottom: 0.25rem;
+  padding-top: 0.25rem;
+}
+
+.configuration-compact .select:not(.is-multiple) {
+  height: 2rem;
+}
+
+.configuration-compact .checkbox {
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.configuration-compact .help {
+  font-size: 0.68rem;
+  line-height: 1.22;
+  margin-top: 0.18rem;
+}
+
+.configuration-compact code {
+  font-size: 0.72rem;
+  padding: 0.05rem 0.22rem;
+}
+
+@media screen and (min-width: 1024px) {
+  .configuration-compact .column.is-7 {
+    width: 66.6667%;
+  }
+
+  .configuration-compact .column.is-5 {
+    width: 33.3333%;
+  }
+}

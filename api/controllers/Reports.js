@@ -2,10 +2,19 @@ import ReportsRepository from "../repositories/Reports.js";
 import ErrorsUtils from "../utils/Errors.js";
 import puppeteer from "puppeteer";
 import { renderSalesReportHtml } from "../pdf/salesReport.template.js";
-import { getImportDir, getUserBranchId } from "../services/appConfig.service.js";
+import {
+  canUserAccessReportDefinition,
+  getActiveStaticReportDefinition,
+  getImportDir,
+  getUserBranchId,
+} from "../services/appConfig.service.js";
+import { getOrdersByTimeReport } from "../services/ordersByTimeReport.service.js";
+import { getBillOfLadingReport } from "../services/billOfLadingReport.service.js";
 import fs from "fs/promises";
 import path from "path";
-import pool from "../db.cjs";
+
+const ORDERS_BY_TIME_REPORT_KEY = "report-orders-by-time";
+const BILL_OF_LADING_REPORT_KEY = "report-bill-of-lading";
 
 class ReportsController {
   static async getSalesReport(req, res) {
@@ -133,27 +142,38 @@ class ReportsController {
 
   static async getStaticReport(req, res) {
     try {
-      const { id, role } = req.user;
       const branchId = getUserBranchId(req.user);
       const { reportKey } = req.params;
 
-      const [[report]] = await pool.query(
-        `
-        SELECT file_name
-        FROM report_definitions
-        WHERE branch_id = ?
-          AND report_key = ?
-          AND is_active = 1
-        LIMIT 1
-        `,
-        [branchId, reportKey],
-      );
+      const report = await getActiveStaticReportDefinition(branchId, reportKey);
 
-      if (!report?.file_name) {
+      if (!report?.fileName) {
         return res.status(404).json({ message: "Report not found" });
       }
 
-      const safeFileName = path.basename(report.file_name);
+      if (!canUserAccessReportDefinition(req.user, report)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      if (reportKey === ORDERS_BY_TIME_REPORT_KEY) {
+        const rows = await getOrdersByTimeReport({
+          branchId,
+          fileName: report.fileName,
+        });
+
+        return res.json(rows);
+      }
+
+      if (reportKey === BILL_OF_LADING_REPORT_KEY) {
+        const rows = await getBillOfLadingReport({
+          branchId,
+          fileName: report.fileName,
+        });
+
+        return res.json(rows);
+      }
+
+      const safeFileName = path.basename(report.fileName);
       const filePath = path.resolve(getImportDir(), safeFileName);
 
       let raw;

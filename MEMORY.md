@@ -1075,3 +1075,279 @@ Frontend:
   - `node --check api/repositories/Reports.js` passed
   - `npm run lint` in `client` passed
   - `npm run build` in `client` passed with the known Sass legacy API and chunk-size warnings
+
+## 2026-05-27 - Orders-by-time report and header checkpoint
+
+- User preference recorded: always append a concise `MEMORY.md` summary for completed work slices.
+- Added a new config-driven static report for order uploads by hour:
+  - bootstrap report key: `report-orders-by-time`
+  - route: `/orders-by-time`
+  - source file: `OrderByTimet.json` from `IMPORT_DIR`
+  - frontend component: `client/src/components/Reports/ReportOrdersByTime.jsx`
+  - styles: `client/src/components/Reports/ReportOrdersByTime.module.scss`
+  - registry entry added in `client/src/components/Reports/reportRegistry.js`
+- Added and applied migration `api/migrations/004_add_orders_by_time_report_definition.js`.
+- Ran branch config sync against local DB:
+  - `npm run migrate` applied migration `004_add_orders_by_time_report_definition.js`
+  - `node scripts/syncBootstrapBranchConfig.js --apply` synced `localhost:3306/auth`
+- Iterated report UX:
+  - grouped table by `city -> supervisor -> TA`
+  - added city totals below the total order count in the report header
+  - made the table denser with smaller padding/font sizes
+  - added thick visual separators between city groups
+  - shortened displayed supervisor/TA names by removing the last word from full names
+  - added an hourly share row (`доля заявок за годину`) under the table headers with red/yellow/green percentage highlighting
+- Updated app Header report navigation:
+  - when more than one accessible active static report exists, reports render as a single select instead of separate links
+  - the same select appears in desktop header navigation and burger menu because both use the shared `navPages` markup
+  - if only one report is accessible, the old single-link behavior remains
+- Verification:
+  - `node --check api/migrations/004_add_orders_by_time_report_definition.js` passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed before the final header change with known Sass legacy API and chunk-size warnings
+  - after disk space was freed on 2026-05-29, `npm run lint` and `npm run build` in `client` both passed; build still emits the known Sass legacy API and chunk-size warnings
+- Notes:
+  - generated `client/dist` changes from build attempts were restored
+  - pre-existing unrelated workspace changes remain untouched, including deleted `client/public/Sorce/*` files and documentation edits
+
+## 2026-05-29 - Documentation maintenance rule checkpoint
+
+- Re-read `MEMORY.md`, `AGENTS.md`, and `README.md` at the user's request.
+- Promoted the user's documentation preference into repo guidance:
+  - after every completed project change, append a concise checkpoint to `MEMORY.md`
+  - update `AGENTS.md` and/or `README.md` too when the change affects operating instructions, setup, runbooks, or current capabilities
+- Updated `README.md` current-state notes to mention config-driven static reports, the order-upload-by-hour report, and Header report select behavior.
+
+## 2026-05-29 - Static report role access checkpoint
+
+- Added configurable per-report role visibility:
+  - new migration `api/migrations/005_report_allowed_roles.js` adds `report_definitions.allowed_roles`
+  - bootstrap defaults now set `report-orders-by-time` to Director, `report-debet` to Director/NTO/SV/TA/Accountant, and `report-romashka` to Director
+  - Admin always has access; `NULL` means all roles, while `[]` means admin-only
+- Moved static report access out of hardcoded frontend registry role lists:
+  - `reportRegistry.js` now maps report keys to React components only and checks configured `allowedRoles`
+  - app routes and Header report select use configured role access
+- Hardened backend access:
+  - `/api/config` returns only static reports visible to the current user
+  - `/api/reports/static/:reportKey` checks `allowed_roles` before reading the static report JSON
+  - branch clone/sync/bootstrap helpers preserve `allowed_roles`
+- Updated admin report configuration UI to edit role checkboxes per report.
+- Updated `README.md`, `AGENTS.md`, and `bootstrapDoctor` schema checks for report role access.
+- Verification:
+  - `node --check api/services/appConfig.service.js` passed
+  - `node --check api/controllers/Reports.js` passed
+  - `node --check api/migrations/005_report_allowed_roles.js` passed
+  - `node --check api/scripts/syncBootstrapBranchConfig.js` passed
+  - `node --check api/scripts/bootstrapDoctor.js` passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - migration was not run in this slice
+  - generated `client/dist` changes from build were restored
+  - pre-existing unrelated workspace changes remain untouched, including deleted `client/public/Sorce/*` files and documentation/source-report work from the previous slice
+
+## 2026-05-29 - Reports config compact UI checkpoint
+
+- Tightened `client/src/components/Configuration/ReportsConfig.jsx` after adding role access controls:
+  - widened the reports table column and narrowed the edit form column
+  - made the table `is-narrow` with smaller text, fixed column widths, and ellipsis for long key/route/title/file cells
+  - rendered role access as compact small tags instead of a long comma-separated string
+  - shortened row action buttons to compact `Edit`/`On`/`Off` buttons with tooltips
+  - reduced form field, label, help-text, and role-checkbox spacing/font sizes
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - generated `client/dist` changes from build were restored
+
+## 2026-05-29 - Configuration page compact layout checkpoint
+
+- Applied the compact admin configuration style to the whole Configuration tab:
+  - added `client/src/components/Configuration/configurationCompact.css`
+  - wrapped the Configuration tab content in `AdminPage.jsx` with `configuration-compact`
+  - tightened section padding, column spacing, headings, tables, tags, buttons, labels, inputs, checkboxes, help text, notifications, and code snippets
+  - kept the compact style scoped to the Configuration tab only, leaving Users, Notifications, and the standalone Scheduler tab unchanged
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - generated `client/dist` changes from build were restored
+
+## 2026-05-29 - Header config fallback checkpoint
+
+- Investigated missing Header links for balances/reports after adding static report role access.
+- Root cause: `/api/config` can fail before migration `005_report_allowed_roles.js` is applied because backend queries selected `report_definitions.allowed_roles`; balances and reports both depend on this config response, so Header rendered no dynamic links.
+- Hardened backend report-config reads:
+  - added a runtime `allowed_roles` column check in `api/services/appConfig.service.js`
+  - config/report reads now select `NULL AS allowedRoles` when the column is not present yet
+  - static report file access now uses the shared report definition lookup
+  - branch clone/report update logic skips `allowed_roles` writes until the column exists
+- Verification:
+  - `node --check api/services/appConfig.service.js` passed
+  - `node --check api/controllers/Reports.js` passed
+- Notes:
+  - migration `005_report_allowed_roles.js` is still required for persisted per-report role configuration
+
+## 2026-05-29 - Reports config roles display checkpoint
+
+- Refined `client/src/components/Configuration/ReportsConfig.jsx`:
+  - removed fixed report-table column widths plus fixed table layout/min-width
+  - relaxed compact cell styling so the table can size columns naturally
+  - added frontend `allowedRoles` normalization for arrays, JSON strings, comma-separated strings, and null values
+  - role tags now display configured roles even if API data reaches the component as serialized JSON
+- Checked local DB state:
+  - `report_definitions.allowed_roles` column exists
+  - current values are `report-romashka = []`, `report-debet = [2,3,4,5,6]`, `report-orders-by-time = [2]`
+  - service-level `getReportsForBranch` returns parsed arrays
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - generated `client/dist` changes from build were restored
+  - `report-romashka = []` means admin-only in the current local DB; change it in UI if Director should see it
+
+## 2026-05-30 - Orders-by-time DB storage checkpoint
+
+- Converted `report-orders-by-time` backend storage from direct JSON response toward DB-backed rows:
+  - added migration `api/migrations/006_orders_by_time_report_table.js`
+  - added `orders_by_time_report_rows` with branch/date/datetime/order/TA/SV/city fields
+  - added `api/services/ordersByTimeReport.service.js`
+  - `GET /api/reports/static/report-orders-by-time` now syncs `OrderByTimet.json` into the DB and returns DB rows
+- Import behavior:
+  - source rows are normalized from JSON fields `date`, `number`, `salesAgent`, `supervisor`, `city`
+  - import replaces all rows for dates present in the source file, preventing duplicate rows for the same day across imports
+  - rows older than 31 days are deleted during sync
+  - if the source file has not changed since the last DB update and rows already exist, import is skipped to avoid unnecessary rewrites
+  - if the source file is missing, existing DB rows are still returned after retention cleanup
+- Updated `bootstrapDoctor`, `README.md`, and `AGENTS.md` for the DB-backed orders-by-time report.
+- Verification:
+  - `node --check api/migrations/006_orders_by_time_report_table.js` passed
+  - `node --check api/services/ordersByTimeReport.service.js` passed
+  - `node --check api/controllers/Reports.js` passed
+  - `node --check api/scripts/bootstrapDoctor.js` passed
+- Notes:
+  - migration was not run in this slice
+
+## 2026-05-30 - Orders-by-time import and scheduler checkpoint
+
+- Added the DB-backed orders-by-time report to admin import/scheduler management:
+  - new import source key: `loadOrdersByTimeReport`
+  - default file: `OrderByTimet.json`
+  - new scheduler task key: `loadOrdersByTimeReport`
+  - default interval: 300000 ms
+  - added migration `api/migrations/007_add_orders_by_time_import_and_scheduler.js`
+  - updated `api/migrations/001_branch_configuration.js` seed data for fresh installs
+  - added the import source label in `ImportSourcesConfig.jsx`
+- Updated scheduler wiring:
+  - `api/services/scheduler.js` now registers `Load orders by time report`
+  - `api/services/ordersByTimeReport.service.js` exports `loadOrdersByTimeReport`
+  - report page sync now prefers the configured import source and uses the report definition filename only as fallback
+- Verification:
+  - `node --check api/services/ordersByTimeReport.service.js` passed
+  - `node --check api/services/scheduler.js` passed
+  - `node --check api/migrations/001_branch_configuration.js` passed
+  - `node --check api/migrations/007_add_orders_by_time_import_and_scheduler.js` passed
+  - `node --check api/controllers/Reports.js` passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - migration was not run in this slice
+  - generated `client/dist` changes from build were restored
+
+## 2026-05-31 - Bill of lading report DB/import checkpoint
+
+- Added a DB-backed collected-bills static report:
+  - report key: `report-bill-of-lading`
+  - route: `/bill-of-lading`
+  - source file: `BillOfLading.json`
+  - storage table: `bill_of_lading_report_rows`
+  - migration: `api/migrations/008_bill_of_lading_report.js`
+- Import behavior:
+  - report days are calculated as 08:00 through next-day 08:00 using `scanDate`
+  - rows are grouped in UI by `warehouseName -> picker`
+  - picker rows sort by `scanDate` ascending
+  - source fields `id` and `warehouseCode` are intentionally not stored or rendered
+  - imports replace all rows for source report dates to avoid duplicate day rows
+  - rows older than 31 days are pruned during sync/import
+- Admin/runtime wiring:
+  - added import source key `loadBillOfLadingReport`
+  - added scheduler task key `loadBillOfLadingReport`
+  - added the import source label in `ImportSourcesConfig.jsx`
+  - added frontend component `ReportBillOfLading` and registered it in `reportRegistry.js`
+  - default report access is Director and Warehouse roles; Admin always sees it
+- Verification:
+  - `node --check api/services/billOfLadingReport.service.js` passed
+  - `node --check api/migrations/008_bill_of_lading_report.js` passed
+  - `node --check api/controllers/Reports.js` passed
+  - `node --check api/services/scheduler.js` passed
+  - `node --check api/migrations/001_branch_configuration.js` passed
+  - `node --check api/scripts/bootstrapDoctor.js` passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - migration was not run in this slice
+  - generated `client/dist` changes from build were restored
+
+## 2026-05-31 - Bill of lading Header visibility fix checkpoint
+
+- Fixed why `report-bill-of-lading` did not appear in the Header reports select:
+  - the bootstrap entry had accidentally been placed in `balancePages` instead of `reports`
+  - Header receives static reports from `/api/config`, which reads `report_definitions`, so the misplaced bootstrap entry was never seeded as a report definition
+- Moved the `report-bill-of-lading` bootstrap entry into `defaultBootstrapBranchConfig.reports`.
+- Added repair migration `api/migrations/009_add_bill_of_lading_report_definition.js` so databases that already ran migration `008` can still receive the missing report definition.
+- Verification:
+  - `node --check api/config/bootstrapBranchConfig.js` passed
+  - `node --check api/migrations/008_bill_of_lading_report.js` passed
+  - `node --check api/migrations/009_add_bill_of_lading_report_definition.js` passed
+- Notes:
+  - migration was not run in this slice
+  - default visibility remains Director and Warehouse; Admin always sees the report
+
+## 2026-05-31 - Bill of lading report compact mobile UX checkpoint
+
+- Refined `client/src/components/Reports/ReportBillOfLading.jsx` and styles:
+  - removed sticky/fixed behavior from the first table column so the table can stay more compact
+  - shortened picker names by removing the patronymic/last name part from three-part names
+  - shows `scanDate` with seconds
+  - replaced one global summary line with one summary row per warehouse
+  - added collapse/expand controls for both warehouse and picker groups, with all groups expanded by default
+  - tightened report spacing, table width, font sizes, and mobile/tablet density
+- Recorded product UX preference in `AGENTS.md`: phones and tablets are primary app devices, so report tables should be compact, adaptive, and touch-friendly by default.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - generated `client/dist` changes from build were restored
+
+## 2026-05-31 - Orders-by-time first column sizing checkpoint
+
+- Refined `client/src/components/Reports/ReportOrdersByTime.module.scss`:
+  - removed sticky positioning from the first table column
+  - removed the `230px` minimum width from `.nameCell`
+  - kept names on one line so `Місто / СВ / ТА` sizes by content instead of a fixed minimum
+- Verification:
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - generated `client/dist` changes from build were restored
+
+## 2026-05-31 - Orders-by-time cell details checkpoint
+
+- Modernized `client/src/components/Reports/ReportOrdersByTime.jsx`:
+  - each non-empty hourly count cell is now clickable
+  - clicking a count opens a compact details panel with order numbers and order times for that group/hour
+  - detail orders are sorted by timestamp ascending
+- Added compact/touch-friendly styles in `ReportOrdersByTime.module.scss` for count buttons and the details panel.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - generated `client/dist` changes from build were restored
+
+## 2026-05-31 - Orders-by-time clickable cell cleanup checkpoint
+
+- Refined the hourly count details interaction:
+  - removed visible buttons from count cells in `ReportOrdersByTime.jsx`
+  - made the `td` cells themselves clickable while preserving keyboard Enter/Space activation
+  - replaced button styling with a subtle hover/focus state on the cell
+- Verification:
+  - `npm run lint` in `client` passed

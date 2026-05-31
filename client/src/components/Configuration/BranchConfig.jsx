@@ -281,7 +281,7 @@ export function BranchConfig() {
                             }}
                             disabled={saving}
                           >
-                            Редагувати
+                            Edit
                           </button>
                           <button
                             type="button"
@@ -291,7 +291,7 @@ export function BranchConfig() {
                             onClick={() => handleToggleActive(branch)}
                             disabled={saving}
                           >
-                            {branch.isActive ? "Деактивувати" : "Активувати"}
+                            {branch.isActive ? "Off" : "On"}
                           </button>
                         </div>
                       </td>

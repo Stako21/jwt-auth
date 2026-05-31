@@ -171,13 +171,14 @@ async function seedBootstrapBranchConfig(pool) {
     await pool.query(
       `
       INSERT INTO report_definitions
-        (branch_id, report_key, route, menu_title, file_name, is_active, sort_order)
+        (branch_id, report_key, route, menu_title, file_name, allowed_roles, is_active, sort_order)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         route = VALUES(route),
         menu_title = VALUES(menu_title),
         file_name = VALUES(file_name),
+        allowed_roles = VALUES(allowed_roles),
         is_active = VALUES(is_active),
         sort_order = VALUES(sort_order)
       `,
@@ -187,6 +188,9 @@ async function seedBootstrapBranchConfig(pool) {
         report.route,
         report.menuTitle,
         report.fileName,
+        Array.isArray(report.allowedRoles)
+          ? JSON.stringify(report.allowedRoles)
+          : null,
         report.isActive ? 1 : 0,
         Number(report.sortOrder),
       ],
@@ -261,6 +265,7 @@ export async function up(pool) {
       route VARCHAR(128) NOT NULL,
       menu_title VARCHAR(128) NOT NULL,
       file_name VARCHAR(255) NULL,
+      allowed_roles TEXT NULL,
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       sort_order INT NOT NULL DEFAULT 0,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -330,6 +335,8 @@ export async function up(pool) {
       ('loadSalesReports', 'SalesReport.json', 1, 1),
       ('loadProducts', 'Product.json', 1, 1),
       ('loadTradePoints', 'TradePoint.json', 1, 1),
+      ('loadOrdersByTimeReport', 'OrderByTimet.json', 0, 1),
+      ('loadBillOfLadingReport', 'BillOfLading.json', 0, 1),
       ('reportRomashka', 'report_romashka.json', 0, 1)
     ON DUPLICATE KEY UPDATE
       file_name = VALUES(file_name),
@@ -343,6 +350,8 @@ export async function up(pool) {
     VALUES
       ('loadSalesAgents', 'Load sales agents', 7200000, 1),
       ('loadSalesReports', 'Load sales reports', 30000, 1),
+      ('loadOrdersByTimeReport', 'Load orders by time report', 300000, 1),
+      ('loadBillOfLadingReport', 'Load bill of lading report', 300000, 1),
       ('loadProducts', 'Load products', 7200000, 1),
       ('loadTradePoints', 'Load trade points', 7200000, 1),
       ('retryFailedNotifications', 'Retry failed notifications', 300000, 1)

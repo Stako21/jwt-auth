@@ -18,6 +18,8 @@ const SOURCE_LABELS = {
   loadSalesReports: "Імпорт продажів",
   loadProducts: "Імпорт товарів",
   loadTradePoints: "Імпорт ТТ",
+  loadOrdersByTimeReport: "Звіт заявок ТА по часам",
+  loadBillOfLadingReport: "Звіт зібраних накладних",
   reportRomashka: "Файл звіту Ромашка",
 };
 
@@ -174,7 +176,7 @@ export function ImportSourcesConfig() {
                               : "is-light has-text-grey-light"
                           }`}
                         >
-                          {source.isActive ? "Активне" : "Неактивне"}
+                          {source.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
                       <td className="has-text-right">
@@ -189,7 +191,7 @@ export function ImportSourcesConfig() {
                             }}
                             disabled={saving}
                           >
-                            Редагувати
+                            Edit
                           </button>
                           <button
                             type="button"
@@ -199,7 +201,7 @@ export function ImportSourcesConfig() {
                             onClick={() => handleToggleActive(source)}
                             disabled={saving}
                           >
-                            {source.isActive ? "Деактивувати" : "Активувати"}
+                            {source.isActive ? "Off" : "On"}
                           </button>
                         </div>
                       </td>
@@ -288,7 +290,7 @@ export function ImportSourcesConfig() {
                   }
                   disabled={!editingSourceId}
                 />{" "}
-                Активне
+                Active
               </label>
             </div>
 

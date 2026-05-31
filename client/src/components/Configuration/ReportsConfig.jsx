@@ -6,27 +6,96 @@ import {
   updateReportConfig,
 } from "../../services/config.api";
 import { useAppConfig } from "../../context/AppConfigContext";
+import { ROLE_IDS, ROLE_OPTIONS } from "../../utils/roles";
+
+const ALL_NON_ADMIN_ROLE_IDS = ROLE_OPTIONS.map((option) =>
+  Number(option.value),
+).filter((roleId) => roleId !== ROLE_IDS.Admin);
+
+const compactCellStyle = {
+  verticalAlign: "middle",
+};
+
+const rolesCellStyle = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 4,
+};
+
+const formFieldClassName = "field mb-2";
+const labelClassName = "label is-size-7 mb-1";
 
 const defaultForm = {
   reportKey: "",
   route: "",
   menuTitle: "",
   fileName: "",
+  allowedRoles: ALL_NON_ADMIN_ROLE_IDS,
   sortOrder: 0,
   isActive: true,
 };
 
+function normalizeAllowedRoles(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(Number).filter((roleId) => Number.isInteger(roleId));
+  }
+
+  if (typeof value === "string") {
+    try {
+      return normalizeAllowedRoles(JSON.parse(value));
+    } catch {
+      return value
+        .split(",")
+        .map(Number)
+        .filter((roleId) => Number.isInteger(roleId));
+    }
+  }
+
+  return null;
+}
+
 function normalizeForm(report) {
   if (!report) return defaultForm;
+
+  const allowedRoles = normalizeAllowedRoles(report.allowedRoles);
 
   return {
     reportKey: report.reportKey || "",
     route: report.route || "",
     menuTitle: report.menuTitle || "",
     fileName: report.fileName || "",
+    allowedRoles: allowedRoles === null ? ALL_NON_ADMIN_ROLE_IDS : allowedRoles,
     sortOrder: Number(report.sortOrder) || 0,
     isActive: Boolean(report.isActive),
   };
+}
+
+function getAllowedRoleLabels(allowedRoles) {
+  const normalizedRoles = normalizeAllowedRoles(allowedRoles);
+
+  if (normalizedRoles === null) {
+    return ["Усі ролі"];
+  }
+
+  if (normalizedRoles.length === 0) {
+    return ["Admin"];
+  }
+
+  const labelsByRole = new Map(
+    ROLE_OPTIONS.map((option) => [Number(option.value), option.label]),
+  );
+
+  const labels = normalizedRoles
+    .map(Number)
+    .filter((roleId) => roleId !== ROLE_IDS.Admin)
+    .map((roleId) => labelsByRole.get(roleId) || String(roleId))
+    .filter(Boolean);
+
+  return labels.length ? labels : ["Admin"];
 }
 
 export function ReportsConfig() {
@@ -102,6 +171,7 @@ export function ReportsConfig() {
         route: form.route.trim(),
         menuTitle: form.menuTitle.trim(),
         fileName: form.fileName.trim(),
+        allowedRoles: form.allowedRoles,
         sortOrder: Number(form.sortOrder),
         isActive: Boolean(form.isActive),
       };
@@ -144,10 +214,26 @@ export function ReportsConfig() {
     }
   };
 
+  const handleRoleChange = (roleId, checked) => {
+    setForm((current) => {
+      const currentRoles = Array.isArray(current.allowedRoles)
+        ? current.allowedRoles.map(Number)
+        : [];
+      const nextRoles = checked
+        ? [...new Set([...currentRoles, roleId])]
+        : currentRoles.filter((selectedRoleId) => selectedRoleId !== roleId);
+
+      return {
+        ...current,
+        allowedRoles: nextRoles.sort((a, b) => a - b),
+      };
+    });
+  };
+
   return (
-    <div style={{ padding: 16 }}>
-      <div className="columns">
-        <div className="column is-7">
+    <div style={{ padding: 10, fontSize: 13 }}>
+      <div className="columns is-variable is-2">
+        <div className="column is-8">
           <div className="level mb-3">
             <div className="level-left">
               <div>
@@ -163,29 +249,52 @@ export function ReportsConfig() {
             <p>Завантаження...</p>
           ) : (
             <div className="table-container">
-              <table className="table is-fullwidth is-striped is-hoverable">
+              <table
+                className="table is-fullwidth is-striped is-hoverable is-narrow"
+                style={{ fontSize: 12 }}
+              >
                 <thead>
                   <tr>
                     <th>Ключ</th>
                     <th>Маршрут</th>
                     <th>Назва</th>
                     <th>Файл</th>
-                    <th>Порядок</th>
+                    <th>Ролі</th>
+                    <th>Пор.</th>
                     <th>Статус</th>
-                    <th className="has-text-right">Дії</th>
+                    <th className="has-text-right">
+                      Дії
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedReports.map((report) => (
                     <tr key={report.id}>
-                      <td>{report.reportKey}</td>
-                      <td>{report.route}</td>
-                      <td>{report.menuTitle}</td>
-                      <td>{report.fileName || "—"}</td>
-                      <td>{report.sortOrder}</td>
+                      <td style={compactCellStyle} title={report.reportKey}>
+                        {report.reportKey}
+                      </td>
+                      <td style={compactCellStyle} title={report.route}>
+                        {report.route}
+                      </td>
+                      <td style={compactCellStyle} title={report.menuTitle}>
+                        {report.menuTitle}
+                      </td>
+                      <td style={compactCellStyle} title={report.fileName || "—"}>
+                        {report.fileName || "—"}
+                      </td>
+                      <td>
+                        <div style={rolesCellStyle}>
+                          {getAllowedRoleLabels(report.allowedRoles).map((label) => (
+                            <span className="tag is-info is-light is-small" key={label}>
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="has-text-centered">{report.sortOrder}</td>
                       <td>
                         <span
-                          className={`tag ${
+                          className={`tag is-small ${
                             report.isActive
                               ? "is-success"
                               : "is-light has-text-grey-light"
@@ -195,7 +304,10 @@ export function ReportsConfig() {
                         </span>
                       </td>
                       <td className="has-text-right">
-                        <div className="buttons is-right are-small">
+                        <div
+                          className="buttons is-right are-small"
+                          style={{ gap: 4, marginBottom: 0 }}
+                        >
                           <button
                             type="button"
                             className="button is-info"
@@ -205,8 +317,9 @@ export function ReportsConfig() {
                               setErrors({});
                             }}
                             disabled={saving}
+                            title="Редагувати"
                           >
-                            Редагувати
+                            Edit
                           </button>
                           <button
                             type="button"
@@ -215,8 +328,9 @@ export function ReportsConfig() {
                             }`}
                             onClick={() => handleToggleActive(report)}
                             disabled={saving}
+                            title={report.isActive ? "Деактивувати" : "Активувати"}
                           >
-                            {report.isActive ? "Деактивувати" : "Активувати"}
+                            {report.isActive ? "Off" : "On"}
                           </button>
                         </div>
                       </td>
@@ -224,7 +338,7 @@ export function ReportsConfig() {
                   ))}
                   {!sortedReports.length && (
                     <tr>
-                      <td colSpan="7" className="has-text-centered has-text-grey">
+                      <td colSpan="8" className="has-text-centered has-text-grey">
                         Звіти ще не налаштовані
                       </td>
                     </tr>
@@ -235,23 +349,23 @@ export function ReportsConfig() {
           )}
         </div>
 
-        <div className="column is-5">
-          <h3 className="title is-5">
+        <div className="column is-4">
+          <h3 className="title is-6 mb-3">
             {editingReportId ? "Картка звіту" : "Оберіть звіт"}
           </h3>
           <form onSubmit={handleSubmit}>
-            <div className="field">
-              <label className="label">Ключ</label>
+            <div className={formFieldClassName}>
+              <label className={labelClassName}>Ключ</label>
               <div className="control">
-                <input className="input" value={form.reportKey} disabled />
+                <input className="input is-small" value={form.reportKey} disabled />
               </div>
             </div>
 
-            <div className="field">
-              <label className="label">Маршрут *</label>
+            <div className={formFieldClassName}>
+              <label className={labelClassName}>Маршрут *</label>
               <div className="control">
                 <input
-                  className={`input ${errors.route ? "is-danger" : ""}`}
+                  className={`input is-small ${errors.route ? "is-danger" : ""}`}
                   value={form.route}
                   onChange={(e) =>
                     setForm((current) => ({ ...current, route: e.target.value }))
@@ -263,11 +377,11 @@ export function ReportsConfig() {
               {errors.route && <p className="help is-danger">{errors.route}</p>}
             </div>
 
-            <div className="field">
-              <label className="label">Назва в меню *</label>
+            <div className={formFieldClassName}>
+              <label className={labelClassName}>Назва в меню *</label>
               <div className="control">
                 <input
-                  className={`input ${errors.menuTitle ? "is-danger" : ""}`}
+                  className={`input is-small ${errors.menuTitle ? "is-danger" : ""}`}
                   value={form.menuTitle}
                   onChange={(e) =>
                     setForm((current) => ({
@@ -284,11 +398,11 @@ export function ReportsConfig() {
               )}
             </div>
 
-            <div className="field">
-              <label className="label">Файл *</label>
+            <div className={formFieldClassName}>
+              <label className={labelClassName}>Файл *</label>
               <div className="control">
                 <input
-                  className={`input ${errors.fileName ? "is-danger" : ""}`}
+                  className={`input is-small ${errors.fileName ? "is-danger" : ""}`}
                   value={form.fileName}
                   onChange={(e) =>
                     setForm((current) => ({
@@ -305,11 +419,51 @@ export function ReportsConfig() {
               )}
             </div>
 
-            <div className="field">
-              <label className="label">Порядок *</label>
+            <div className={formFieldClassName}>
+              <label className={labelClassName}>Ролі з доступом</label>
+              <div
+                className="field is-grouped is-grouped-multiline mb-1"
+                style={{ gap: 4 }}
+              >
+                {ROLE_OPTIONS.map((roleOption) => {
+                  const roleId = Number(roleOption.value);
+                  const isAdminRole = roleId === ROLE_IDS.Admin;
+                  const selectedRoles = Array.isArray(form.allowedRoles)
+                    ? form.allowedRoles.map(Number)
+                    : [];
+                  const isChecked =
+                    isAdminRole || selectedRoles.includes(roleId);
+
+                  return (
+                    <label
+                      className="checkbox mr-2 mb-1"
+                      key={roleId}
+                      style={{ fontSize: 12, whiteSpace: "nowrap" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        disabled={!editingReportId || isAdminRole}
+                        onChange={(e) =>
+                          handleRoleChange(roleId, e.target.checked)
+                        }
+                      />{" "}
+                      {roleOption.label}
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="help mb-1" style={{ fontSize: 11, lineHeight: 1.25 }}>
+                Адмін завжди має доступ. Зніміть усі інші ролі, щоб залишити
+                звіт тільки для адміна.
+              </p>
+            </div>
+
+            <div className={formFieldClassName}>
+              <label className={labelClassName}>Порядок *</label>
               <div className="control">
                 <input
-                  className={`input ${errors.sortOrder ? "is-danger" : ""}`}
+                  className={`input is-small ${errors.sortOrder ? "is-danger" : ""}`}
                   type="number"
                   value={form.sortOrder}
                   onChange={(e) =>
@@ -326,7 +480,7 @@ export function ReportsConfig() {
               )}
             </div>
 
-            <div className="field">
+            <div className={formFieldClassName}>
               <label className="checkbox">
                 <input
                   type="checkbox"
@@ -343,7 +497,7 @@ export function ReportsConfig() {
               </label>
             </div>
 
-            <div className="buttons">
+            <div className="buttons are-small">
               <button
                 type="submit"
                 className={`button is-primary ${saving ? "is-loading" : ""}`}

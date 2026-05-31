@@ -94,6 +94,25 @@
 
 }
 
+.reportSelectItem {
+  display: flex;
+  align-items: center;
+}
+
+.reportSelect {
+  min-width: 150px;
+  border: 0;
+  outline: 0;
+  cursor: pointer;
+  font: inherit;
+  color: $light-text-color;
+
+  option {
+    background-color: $header-background-color;
+    color: $light-text-color;
+  }
+}
+
 
 
 li:hover {
@@ -220,6 +239,15 @@ li:hover {
   .navPages .listPages {
     flex-direction: column;
     // row-gap: 10px;
+  }
+
+  .reportSelectItem {
+    align-items: stretch;
+  }
+
+  .reportSelect {
+    width: 100%;
+    min-height: 32px;
   }
 }
 

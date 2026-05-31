@@ -215,7 +215,7 @@ export function CitiesConfig() {
                             }}
                             disabled={saving}
                           >
-                            Редагувати
+                            Edit
                           </button>
                           <button
                             type="button"
@@ -225,7 +225,7 @@ export function CitiesConfig() {
                             onClick={() => handleToggleActive(city)}
                             disabled={saving}
                           >
-                            {city.isActive ? "Деактивувати" : "Активувати"}
+                            {city.isActive ? "Off" : "On"}
                           </button>
                         </div>
                       </td>

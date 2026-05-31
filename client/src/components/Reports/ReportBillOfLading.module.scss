@@ -1,0 +1,225 @@
+.report {
+  padding: 10px 12px 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  color: #ffffff;
+}
+
+.summaryList {
+  display: grid;
+  gap: 3px;
+  margin-top: 5px;
+}
+
+.summaryRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0;
+  color: #b9c4d9;
+  font-size: 12px;
+  line-height: 1.25;
+
+  strong {
+    color: #ffffff;
+  }
+}
+
+.filters {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.field,
+.searchField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #dce6f7;
+
+  select,
+  input {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #3a4860;
+    background: #162132;
+    color: #ffffff;
+  }
+}
+
+.field {
+  min-width: 150px;
+}
+
+.searchField {
+  min-width: 240px;
+}
+
+.state,
+.error {
+  padding: 12px;
+  color: #dce6f7;
+}
+
+.error {
+  color: #ff7f9b;
+}
+
+.tableShell {
+  overflow-x: auto;
+  border: 1px solid #24324a;
+  background: #121b2b;
+}
+
+.table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  color: #ffffff;
+  font-size: 11px;
+
+  th,
+  td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #24324a;
+    border-right: 1px solid #24324a;
+    text-align: right;
+    vertical-align: top;
+  }
+
+  th:first-child,
+  td:first-child {
+    text-align: left;
+  }
+
+  th {
+    top: 0;
+    background: #172235;
+    color: #dce6f7;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  td:first-child {
+    background: #121b2b;
+  }
+
+  th:nth-child(2),
+  th:nth-child(3),
+  td:nth-child(2),
+  td:nth-child(3) {
+    white-space: nowrap;
+  }
+}
+
+.warehouseRow {
+  font-weight: 800;
+
+  td {
+    border-top: 4px solid #4f6f9f;
+    border-bottom-color: #4f6f9f;
+    background: #263953 !important;
+  }
+
+  td:first-child {
+    background: #263953 !important;
+    font-size: 12px;
+  }
+}
+
+.pickerRow {
+  font-weight: 700;
+
+  td,
+  td:first-child {
+    background: #1c2940 !important;
+  }
+
+  td:first-child {
+    padding-left: 20px;
+  }
+}
+
+.documentRow {
+  td:first-child {
+    padding-left: 34px;
+    font-size: 11px;
+  }
+
+  &:nth-child(even) td {
+    background: #151f30;
+  }
+}
+
+.groupButton {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  span {
+    display: inline-grid;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    place-items: center;
+    border: 1px solid rgba(220, 230, 247, 0.45);
+    font-size: 12px;
+    line-height: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .report {
+    padding: 8px 8px 16px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .summaryRow {
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .filters,
+  .field,
+  .searchField {
+    width: 100%;
+  }
+
+  .table {
+    min-width: 700px;
+    font-size: 10px;
+
+    th,
+    td {
+      padding: 4px 5px;
+    }
+  }
+}

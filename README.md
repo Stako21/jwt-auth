@@ -20,6 +20,7 @@ Implemented in the current workspace:
 - frontend `AppConfigContext` and Admin "Configuration" UI
 - dynamic balance routes via `/balance/:slug`
 - authenticated static balance/report file access through backend routes
+- config-driven reports, including Debet, DB-backed order-upload-by-hour, and DB-backed collected-bills reports with import-source/scheduler management, per-report role access, and Header report navigation collapsed into a select when multiple reports are active
 - branch switching for eligible users
 - user branch/city access management
 - scheduler task settings and persisted `lastRun`

@@ -1,15 +1,20 @@
-import { ROLE_IDS } from "../../utils/roles";
 import { ReportDebet } from "./ReportDebet";
+import { ReportBillOfLading } from "./ReportBillOfLading";
+import { ReportOrdersByTime } from "./ReportOrdersByTime";
 import { ReportRomashka } from "./ReportRomashka";
 
 export const STATIC_REPORT_REGISTRY = {
   "report-romashka": {
     component: ReportRomashka,
-    allowedRoles: [ROLE_IDS.Admin, ROLE_IDS.Director],
   },
   "report-debet": {
     component: ReportDebet,
-    allowedRoles: null,
+  },
+  "report-orders-by-time": {
+    component: ReportOrdersByTime,
+  },
+  "report-bill-of-lading": {
+    component: ReportBillOfLading,
   },
 };
 
@@ -17,16 +22,25 @@ export function getStaticReportEntry(reportKey) {
   return STATIC_REPORT_REGISTRY[reportKey] || null;
 }
 
-export function canAccessStaticReport(reportKey, role) {
+export function canAccessStaticReport(report, role) {
+  const reportKey = typeof report === "string" ? report : report?.reportKey;
   const entry = getStaticReportEntry(reportKey);
 
   if (!entry) {
     return false;
   }
 
-  if (!entry.allowedRoles) {
+  if (Number(role) === 1) {
     return true;
   }
 
-  return entry.allowedRoles.includes(Number(role));
+  const allowedRoles = Array.isArray(report?.allowedRoles)
+    ? report.allowedRoles.map(Number)
+    : null;
+
+  if (!allowedRoles) {
+    return true;
+  }
+
+  return allowedRoles.includes(Number(role));
 }

@@ -13,6 +13,10 @@ function isLocalDatabaseHost(host) {
 }
 
 function normalizeComparableValue(value) {
+  if (Array.isArray(value)) {
+    return JSON.stringify([...new Set(value.map(Number))].sort((a, b) => a - b));
+  }
+
   if (typeof value === "boolean") {
     return value ? 1 : 0;
   }
@@ -30,6 +34,34 @@ function normalizeComparableValue(value) {
   }
 
   return value ?? null;
+}
+
+function normalizeAllowedRoles(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  let rawRoles = value;
+  if (typeof value === "string") {
+    try {
+      rawRoles = JSON.parse(value);
+    } catch {
+      rawRoles = value.split(",");
+    }
+  }
+
+  if (!Array.isArray(rawRoles)) return null;
+
+  const roles = [...new Set(rawRoles.map(Number))]
+    .filter((roleId) => Number.isInteger(roleId) && roleId > 0)
+    .sort((a, b) => a - b);
+
+  return roles;
+}
+
+function serializeAllowedRoles(value) {
+  const roles = normalizeAllowedRoles(value);
+  return roles === null ? null : JSON.stringify(roles);
 }
 
 async function loadCurrentState(connection, branchId) {
@@ -86,6 +118,7 @@ async function loadCurrentState(connection, branchId) {
       route,
       menu_title AS menuTitle,
       file_name AS fileName,
+      allowed_roles AS allowedRoles,
       is_active AS isActive,
       sort_order AS sortOrder
     FROM report_definitions
@@ -95,7 +128,15 @@ async function loadCurrentState(connection, branchId) {
     [branchId],
   );
 
-  return { branch: branch || null, cities, balancePages, reports };
+  return {
+    branch: branch || null,
+    cities,
+    balancePages,
+    reports: reports.map((report) => ({
+      ...report,
+      allowedRoles: normalizeAllowedRoles(report.allowedRoles),
+    })),
+  };
 }
 
 function hasDifferentFields(current, desired, fieldNames) {
@@ -173,6 +214,7 @@ function buildPlan(currentState, config) {
             "route",
             "menuTitle",
             "fileName",
+            "allowedRoles",
             "isActive",
             "sortOrder",
           ])
@@ -339,14 +381,16 @@ async function upsertReports(connection, branchId, reports) {
         route,
         menu_title,
         file_name,
+        allowed_roles,
         is_active,
         sort_order
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         route = VALUES(route),
         menu_title = VALUES(menu_title),
         file_name = VALUES(file_name),
+        allowed_roles = VALUES(allowed_roles),
         is_active = VALUES(is_active),
         sort_order = VALUES(sort_order)
       `,
@@ -356,6 +400,7 @@ async function upsertReports(connection, branchId, reports) {
         report.route,
         report.menuTitle,
         report.fileName,
+        serializeAllowedRoles(report.allowedRoles),
         report.isActive ? 1 : 0,
         Number(report.sortOrder),
       ],

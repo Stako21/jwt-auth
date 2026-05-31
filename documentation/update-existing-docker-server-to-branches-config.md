@@ -1142,3 +1142,93 @@ tail -n 50 /var/log/jwt-auth-import-sync.log
 3. вкладку `Конфігурація`
 4. вкладку `Планувальник`
 5. один-два ключові звіти
+
+---
+
+## Пересборка тільки backend
+
+Цей блок використовуй, коли змінювався тільки backend і frontend чіпати не потрібно.
+
+### 1. Оновити код у git-репозиторії
+
+```bash
+cd /var/www/apps/jwt-auth
+git fetch --all --prune
+git switch branches-config
+git pull --ff-only
+git log --oneline -3
+```
+
+### 2. Синхронізувати код у Docker build context
+
+```bash
+rsync -av --delete \
+  --exclude '.git' \
+  --exclude 'api/node_modules' \
+  --exclude 'client/node_modules' \
+  --exclude 'api/.env' \
+  --exclude 'client/dist' \
+  /var/www/apps/jwt-auth/ \
+  /var/www/apps/jwt-auth-docker/app/
+```
+
+### 3. Пересобрати і перезапустити тільки backend
+
+```bash
+cd /var/www/apps/jwt-auth-docker
+docker compose build --no-cache jwt-auth-api
+docker compose up -d --force-recreate jwt-auth-api
+docker logs --tail 100 jwt-auth-api
+```
+
+### 4. Якщо у релізі є міграції
+
+```bash
+docker exec -it jwt-auth-api sh -lc "cd /app/api && npm run migrate"
+docker exec -it jwt-auth-api sh -lc "cd /app/api && npm run bootstrap:doctor"
+```
+
+### 5. Швидка перевірка backend
+
+```bash
+docker exec jwt-auth-api curl -s http://localhost:5000/api/health
+```
+
+---
+
+## Пересборка тільки frontend
+
+Цей блок використовуй, коли backend не змінювався, а потрібно оновити тільки UI.
+
+### 1. Оновити код у git-репозиторії
+
+```bash
+cd /var/www/apps/jwt-auth
+git fetch --all --prune
+git switch branches-config
+git pull --ff-only
+git log --oneline -3
+```
+
+### 2. Пересобрати frontend
+
+```bash
+cd /var/www/apps/jwt-auth/client
+npm install
+npm run build
+```
+
+### 3. Опублікувати frontend у nginx-контейнері
+
+```bash
+docker exec rocketchat-nginx-1 sh -lc "rm -rf /usr/share/nginx/html/balance/*"
+docker cp /var/www/apps/jwt-auth/client/dist/. rocketchat-nginx-1:/usr/share/nginx/html/balance/
+docker exec rocketchat-nginx-1 sh -lc "test -f /usr/share/nginx/html/balance/index.html && echo index-ok || echo index-missing"
+```
+
+### 4. Швидка перевірка frontend
+
+```bash
+curl -I https://balance.sweetglobal.com.ua
+curl -I https://balance.sweetglobal.com.ua/api/health
+```

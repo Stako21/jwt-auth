@@ -57,7 +57,7 @@ const AppContent = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const accessibleStaticReports = activeReports.filter((report) =>
-    canAccessStaticReport(report.reportKey, userInfo?.role),
+    canAccessStaticReport(report, userInfo?.role),
   );
   const isAdmin = userInfo?.role === ROLE_IDS.Admin;
 

@@ -11,6 +11,7 @@ import { ReportsConfig } from "../components/Configuration/ReportsConfig";
 import { ImportSourcesConfig } from "../components/Configuration/ImportSourcesConfig";
 import { SchedulerConfig } from "../components/Configuration/SchedulerConfig";
 import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton";
+import "../components/Configuration/configurationCompact.css";
 
 const ADMIN_PAGE_TAB_STORAGE_KEY = "admin-page-active-tab";
 const DEFAULT_ADMIN_TAB = "users";
@@ -212,14 +213,14 @@ export default function AdminPage() {
       )}
 
       {activeTab === "configuration" && (
-        <>
+        <div className="configuration-compact">
           <BranchConfig />
           <CitiesConfig />
           <BalancePagesConfig />
           <ReportsConfig />
           <ImportSourcesConfig />
           <SchedulerConfig title="Планувальник" />
-        </>
+        </div>
       )}
 
       <ScrollToTopButton />

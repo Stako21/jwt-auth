@@ -224,7 +224,7 @@ export function BalancePagesConfig() {
                             }}
                             disabled={saving}
                           >
-                            Редагувати
+                            Edit
                           </button>
                           <button
                             type="button"
@@ -234,7 +234,7 @@ export function BalancePagesConfig() {
                             onClick={() => handleToggleActive(page)}
                             disabled={saving}
                           >
-                            {page.isActive ? "Деактивувати" : "Активувати"}
+                            {page.isActive ? "Off" : "On"}
                           </button>
                         </div>
                       </td>
