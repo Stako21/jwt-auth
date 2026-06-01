@@ -164,6 +164,19 @@ class ReportsRepository {
                 AND uo.branch_id = sr.branch_id
                 AND ho.parent_user_id IS NULL
             )
+            OR sr.user_id IN (
+              SELECT ta.id
+              FROM users ta
+              JOIN user_hierarchy ta_h ON ta_h.child_user_id = ta.id
+              JOIN users sv
+                ON sv.id = ta_h.parent_user_id
+               AND sv.role = ${ROLE_IDS.SV}
+               AND sv.branch_id = ta.branch_id
+              LEFT JOIN user_hierarchy sv_h ON sv_h.child_user_id = sv.id
+              WHERE ta.role = ${ROLE_IDS.TA}
+                AND ta.branch_id = sr.branch_id
+                AND sv_h.parent_user_id IS NULL
+            )
           )
           AND u.role = ${ROLE_IDS.TA}
           AND u.is_active = 1

@@ -1351,3 +1351,13 @@ Frontend:
   - replaced button styling with a subtle hover/focus state on the cell
 - Verification:
   - `npm run lint` in `client` passed
+
+## 2026-06-01 - Sales report NTO visibility fallback checkpoint
+
+- Updated `api/repositories/Reports.js` sales report filtering for NTO users:
+  - NTO still sees their own recursive subordinate tree
+  - NTO still sees TA users with no supervisor
+  - all NTO in the active branch now also see TA reports under SV users that have no assigned NTO
+  - branch scoping remains tied to `sales_reports.branch_id` and the TA/SV users' `branch_id`
+- Verification:
+  - `node --check api/repositories/Reports.js` passed
