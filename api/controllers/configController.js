@@ -3,6 +3,7 @@ import {
   createBalancePage,
   createBranch,
   createCity,
+  createReportDefinition,
   getAppConfig,
   getBranchesConfig,
   getUserAccessConfig,
@@ -182,6 +183,15 @@ export async function getReports(req, res) {
   try {
     const reports = await getReportsForBranch(req.user);
     res.json({ reports });
+  } catch (error) {
+    return ErrorsUtils.catchError(res, error);
+  }
+}
+
+export async function createReportController(req, res) {
+  try {
+    const report = await createReportDefinition(req.user, req.body);
+    res.status(201).json({ report });
   } catch (error) {
     return ErrorsUtils.catchError(res, error);
   }

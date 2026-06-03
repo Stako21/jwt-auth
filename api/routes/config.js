@@ -4,6 +4,7 @@ import {
   createBalancePageController,
   createBranchController,
   createCityController,
+  createReportController,
   getBalancePages,
   getBranchController,
   getBranchesController,
@@ -72,6 +73,7 @@ router.patch(
   setBalancePageActiveController,
 );
 router.get("/reports", authMiddleware, adminOnly, getReports);
+router.post("/reports", authMiddleware, adminOnly, createReportController);
 router.put("/reports/:id", authMiddleware, adminOnly, updateReportController);
 router.patch(
   "/reports/:id/active",

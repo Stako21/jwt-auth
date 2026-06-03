@@ -10,6 +10,7 @@ import {
 } from "../services/appConfig.service.js";
 import { getOrdersByTimeReport } from "../services/ordersByTimeReport.service.js";
 import { getBillOfLadingReport } from "../services/billOfLadingReport.service.js";
+import { getXlsx1cReport } from "../services/xlsx1cReport.service.js";
 import fs from "fs/promises";
 import path from "path";
 
@@ -153,6 +154,11 @@ class ReportsController {
 
       if (!canUserAccessReportDefinition(req.user, report)) {
         return res.status(403).json({ message: "Forbidden" });
+      }
+
+      if (report.reportType === "xlsx-1c") {
+        const parsedReport = await getXlsx1cReport(report);
+        return res.json(parsedReport);
       }
 
       if (reportKey === ORDERS_BY_TIME_REPORT_KEY) {

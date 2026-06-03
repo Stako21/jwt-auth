@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSnackbar } from "notistack";
 import {
+  createReportConfig,
   fetchReportsConfig,
   setReportConfigActive,
   updateReportConfig,
@@ -30,6 +31,10 @@ const defaultForm = {
   route: "",
   menuTitle: "",
   fileName: "",
+  reportType: "xlsx-1c",
+  sheetName: "",
+  headerRow: 12,
+  dataStartRow: 15,
   allowedRoles: ALL_NON_ADMIN_ROLE_IDS,
   sortOrder: 0,
   isActive: true,
@@ -68,6 +73,10 @@ function normalizeForm(report) {
     route: report.route || "",
     menuTitle: report.menuTitle || "",
     fileName: report.fileName || "",
+    reportType: report.reportType || "static-json",
+    sheetName: report.sheetName || "",
+    headerRow: report.headerRow ?? "",
+    dataStartRow: report.dataStartRow ?? "",
     allowedRoles: allowedRoles === null ? ALL_NON_ADMIN_ROLE_IDS : allowedRoles,
     sortOrder: Number(report.sortOrder) || 0,
     isActive: Boolean(report.isActive),
@@ -138,6 +147,11 @@ export function ReportsConfig() {
   const validate = () => {
     const nextErrors = {};
 
+    if (!form.reportKey.trim()) nextErrors.reportKey = "Обов'язкове поле";
+    else if (!/^[a-z0-9-]+$/.test(form.reportKey.trim().toLowerCase())) {
+      nextErrors.reportKey = "Лише a-z, 0-9 та дефіс";
+    }
+
     if (!form.route.trim()) nextErrors.route = "Обов'язкове поле";
     else if (!form.route.trim().startsWith("/")) {
       nextErrors.route = "Маршрут має починатися з /";
@@ -145,6 +159,25 @@ export function ReportsConfig() {
 
     if (!form.menuTitle.trim()) nextErrors.menuTitle = "Обов'язкове поле";
     if (!form.fileName.trim()) nextErrors.fileName = "Обов'язкове поле";
+    if (form.reportType === "xlsx-1c") {
+      if (!Number.isInteger(Number(form.headerRow)) || Number(form.headerRow) <= 0) {
+        nextErrors.headerRow = "Додатне ціле число";
+      }
+      if (
+        !Number.isInteger(Number(form.dataStartRow)) ||
+        Number(form.dataStartRow) <= 0
+      ) {
+        nextErrors.dataStartRow = "Додатне ціле число";
+      }
+      if (
+        Number.isInteger(Number(form.headerRow)) &&
+        Number.isInteger(Number(form.dataStartRow)) &&
+        Number(form.dataStartRow) < Number(form.headerRow)
+      ) {
+        nextErrors.dataStartRow = "Не раніше рядка заголовків";
+      }
+    }
+
     if (!Number.isInteger(Number(form.sortOrder))) {
       nextErrors.sortOrder = "Має бути цілим числом";
     }
@@ -161,25 +194,35 @@ export function ReportsConfig() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!editingReportId) return;
     if (!validate()) return;
 
     setSaving(true);
     try {
       const payload = {
-        reportKey: form.reportKey,
+        reportKey: form.reportKey.trim().toLowerCase(),
         route: form.route.trim(),
         menuTitle: form.menuTitle.trim(),
         fileName: form.fileName.trim(),
+        reportType: form.reportType,
+        sheetName: form.sheetName.trim() || null,
+        headerRow:
+          form.reportType === "xlsx-1c" ? Number(form.headerRow) : null,
+        dataStartRow:
+          form.reportType === "xlsx-1c" ? Number(form.dataStartRow) : null,
         allowedRoles: form.allowedRoles,
         sortOrder: Number(form.sortOrder),
         isActive: Boolean(form.isActive),
       };
 
-      await updateReportConfig(editingReportId, payload);
+      if (editingReportId) {
+        await updateReportConfig(editingReportId, payload);
+      } else {
+        await createReportConfig(payload);
+      }
       enqueueSnackbar("Налаштування звіту оновлено", { variant: "success" });
 
       await Promise.all([loadReports(), reloadConfig()]);
+      resetForm();
     } catch (error) {
       console.error("Failed to save report config:", error);
       enqueueSnackbar(
@@ -357,8 +400,21 @@ export function ReportsConfig() {
             <div className={formFieldClassName}>
               <label className={labelClassName}>Ключ</label>
               <div className="control">
-                <input className="input is-small" value={form.reportKey} disabled />
+                <input
+                  className={`input is-small ${errors.reportKey ? "is-danger" : ""}`}
+                  value={form.reportKey}
+                  onChange={(e) =>
+                    setForm((current) => ({
+                      ...current,
+                      reportKey: e.target.value,
+                    }))
+                  }
+                  placeholder="report-max"
+                />
               </div>
+              {errors.reportKey && (
+                <p className="help is-danger">{errors.reportKey}</p>
+              )}
             </div>
 
             <div className={formFieldClassName}>
@@ -370,8 +426,7 @@ export function ReportsConfig() {
                   onChange={(e) =>
                     setForm((current) => ({ ...current, route: e.target.value }))
                   }
-                  placeholder="/report-romashka"
-                  disabled={!editingReportId}
+                  placeholder="/report-max"
                 />
               </div>
               {errors.route && <p className="help is-danger">{errors.route}</p>}
@@ -390,7 +445,6 @@ export function ReportsConfig() {
                     }))
                   }
                   placeholder="Звіт Ромашка"
-                  disabled={!editingReportId}
                 />
               </div>
               {errors.menuTitle && (
@@ -410,14 +464,97 @@ export function ReportsConfig() {
                       fileName: e.target.value,
                     }))
                   }
-                  placeholder="report_romashka.json"
-                  disabled={!editingReportId}
+                  placeholder="Max.xlsx"
                 />
               </div>
               {errors.fileName && (
                 <p className="help is-danger">{errors.fileName}</p>
               )}
             </div>
+
+            <div className={formFieldClassName}>
+              <label className={labelClassName}>Тип звіту *</label>
+              <div className="control">
+                <div className="select is-small is-fullwidth">
+                  <select
+                    value={form.reportType}
+                    onChange={(e) =>
+                      setForm((current) => ({
+                        ...current,
+                        reportType: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="xlsx-1c">Звіти XLSX з 1С</option>
+                    <option value="static-json">Static JSON</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {form.reportType === "xlsx-1c" && (
+              <>
+                <div className={formFieldClassName}>
+                  <label className={labelClassName}>Лист Excel</label>
+                  <div className="control">
+                    <input
+                      className="input is-small"
+                      value={form.sheetName}
+                      onChange={(e) =>
+                        setForm((current) => ({
+                          ...current,
+                          sheetName: e.target.value,
+                        }))
+                      }
+                      placeholder="Порожньо = перший лист"
+                    />
+                  </div>
+                </div>
+
+                <div className="columns is-variable is-2 mb-1">
+                  <div className="column">
+                    <label className={labelClassName}>Рядок заголовків *</label>
+                    <input
+                      className={`input is-small ${
+                        errors.headerRow ? "is-danger" : ""
+                      }`}
+                      type="number"
+                      min="1"
+                      value={form.headerRow}
+                      onChange={(e) =>
+                        setForm((current) => ({
+                          ...current,
+                          headerRow: e.target.value,
+                        }))
+                      }
+                    />
+                    {errors.headerRow && (
+                      <p className="help is-danger">{errors.headerRow}</p>
+                    )}
+                  </div>
+                  <div className="column">
+                    <label className={labelClassName}>Дані з рядка *</label>
+                    <input
+                      className={`input is-small ${
+                        errors.dataStartRow ? "is-danger" : ""
+                      }`}
+                      type="number"
+                      min="1"
+                      value={form.dataStartRow}
+                      onChange={(e) =>
+                        setForm((current) => ({
+                          ...current,
+                          dataStartRow: e.target.value,
+                        }))
+                      }
+                    />
+                    {errors.dataStartRow && (
+                      <p className="help is-danger">{errors.dataStartRow}</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className={formFieldClassName}>
               <label className={labelClassName}>Ролі з доступом</label>
@@ -443,7 +580,7 @@ export function ReportsConfig() {
                       <input
                         type="checkbox"
                         checked={isChecked}
-                        disabled={!editingReportId || isAdminRole}
+                        disabled={isAdminRole}
                         onChange={(e) =>
                           handleRoleChange(roleId, e.target.checked)
                         }
@@ -472,7 +609,6 @@ export function ReportsConfig() {
                       sortOrder: e.target.value,
                     }))
                   }
-                  disabled={!editingReportId}
                 />
               </div>
               {errors.sortOrder && (
@@ -491,7 +627,6 @@ export function ReportsConfig() {
                       isActive: e.target.checked,
                     }))
                   }
-                  disabled={!editingReportId}
                 />{" "}
                 Активний
               </label>
@@ -501,7 +636,7 @@ export function ReportsConfig() {
               <button
                 type="submit"
                 className={`button is-primary ${saving ? "is-loading" : ""}`}
-                disabled={saving || !editingReportId}
+                disabled={saving}
               >
                 Зберегти
               </button>

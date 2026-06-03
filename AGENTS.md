@@ -146,6 +146,7 @@ Already visible in code and considered current baseline:
   - all roles with access to the active report route now see the full Debet JSON for the current branch.
 - `report-orders-by-time` is DB-backed through `orders_by_time_report_rows`; `OrderByTimet.json` is configured as import source `loadOrdersByTimeReport`, scheduler task `loadOrdersByTimeReport` can refresh it, rows are replaced by source day to avoid duplicates, and rows older than one month are pruned.
 - `report-bill-of-lading` is DB-backed through `bill_of_lading_report_rows`; `BillOfLading.json` is configured as import source `loadBillOfLadingReport`, scheduler task `loadBillOfLadingReport` can refresh it, report days run 08:00-08:00, rows are replaced by source day to avoid duplicates, and rows older than one month are pruned.
+- Generic `Звіти XLSX з 1С` are supported through `report_definitions.report_type = 'xlsx-1c'`; each report can configure display title, file name, optional Excel sheet name, header row, data start row, role visibility, route, active state, and sort order.
 
 ## Partial Or Unfinished
 
@@ -164,6 +165,7 @@ Already visible in code and considered current baseline:
 - Keep balance page metadata in `balance_pages`; do not hardcode balance file names in routes.
 - Keep static report metadata in `report_definitions`; do not hardcode one-off report routing/menu logic when config/registry should drive it.
 - Keep static report role visibility in `report_definitions.allowed_roles`; do not restore hardcoded `allowedRoles` lists in frontend registry except for component mapping.
+- Keep generic 1C XLSX report pages config-driven via `report_definitions` metadata and `ReportXlsx1C`; do not create one-off React components for simple tabular XLSX reports unless the report needs custom business behavior.
 - Treat phones and tablets as the primary app devices; report tables should be compact, adaptive, and touch-friendly by default.
 - Keep document prefixes in `cities.document_prefix`; do not restore `prefixMap`.
 - Keep branch/bootstrap seed values in `api/config/bootstrapBranchConfig.js`; do not duplicate them inline in migrations or services.

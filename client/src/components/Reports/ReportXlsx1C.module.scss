@@ -1,0 +1,171 @@
+.wrapper {
+  background: #111;
+  color: #e1e1e1;
+  min-height: calc(100vh - 60px);
+  padding: 12px;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  p {
+    color: #9e9e9e;
+    font-size: 12px;
+    margin: 4px 0 0;
+  }
+}
+
+.count {
+  background: #1c1b1b;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #cfcfcf;
+  font-size: 12px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.tableShell {
+  background: #131313;
+  border: 1px solid #333;
+  border-radius: 4px;
+  max-height: calc(100vh - 150px);
+  overflow: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 100%;
+  width: max-content;
+
+  th,
+  td {
+    border: 1px solid #333;
+    max-width: 320px;
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+    white-space: pre-wrap;
+  }
+
+  th {
+    background: #252525;
+    color: #f1f1f1;
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  thead tr:nth-child(2) th {
+    top: 28px;
+  }
+
+  thead tr:nth-child(3) th {
+    top: 56px;
+  }
+
+  tbody tr {
+    background: #141414;
+    color: #e1e1e1;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #191919;
+  }
+
+  tbody tr:hover {
+    background: #263126;
+  }
+}
+
+.dataRow {
+  --outline-level: 0;
+}
+
+.level0 {
+  background: #222 !important;
+  color: #f0f0f0 !important;
+  font-weight: 700;
+}
+
+.level1 {
+  background: #17321b !important;
+  color: #e8f5e9 !important;
+  font-weight: 600;
+}
+
+.level2 {
+  background: #151515 !important;
+}
+
+.level3,
+.level4,
+.level5,
+.level6 {
+  background: #131313 !important;
+}
+
+.nameCell {
+  font-weight: inherit;
+  padding-left: calc(8px + (var(--outline-level, 0) * 18px)) !important;
+  min-width: 260px;
+}
+
+.numericCell {
+  font-variant-numeric: tabular-nums;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.state {
+  background: #111;
+  color: #cfcfcf;
+  padding: 24px;
+  text-align: center;
+}
+
+.error {
+  color: #c62828;
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 8px;
+  }
+
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tableShell {
+    max-height: calc(100vh - 125px);
+  }
+
+  .table {
+    font-size: 11px;
+
+    th,
+    td {
+      max-width: 220px;
+      padding: 4px 6px;
+    }
+  }
+
+  .nameCell {
+    min-width: 190px;
+    padding-left: calc(6px + (var(--outline-level, 0) * 10px)) !important;
+  }
+}

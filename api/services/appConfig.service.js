@@ -14,6 +14,7 @@ export function getUserBranchId(user) {
 
 const VALID_REPORT_ROLE_IDS = new Set(Object.values(ROLE_IDS).map(Number));
 let reportAllowedRolesColumnExistsCache = null;
+const reportDefinitionColumnExistsCache = new Map();
 
 export async function hasReportAllowedRolesColumn() {
   if (reportAllowedRolesColumnExistsCache === true) {
@@ -38,10 +39,49 @@ export async function hasReportAllowedRolesColumn() {
   return exists;
 }
 
+async function hasReportDefinitionColumn(columnName) {
+  if (reportDefinitionColumnExistsCache.has(columnName)) {
+    return reportDefinitionColumnExistsCache.get(columnName);
+  }
+
+  const [rows] = await pool.query(
+    `
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = 'report_definitions'
+      AND column_name = ?
+    LIMIT 1
+    `,
+    [columnName],
+  );
+
+  const exists = rows.length > 0;
+  reportDefinitionColumnExistsCache.set(columnName, exists);
+  return exists;
+}
+
 async function getReportAllowedRolesSelect() {
   return (await hasReportAllowedRolesColumn())
     ? "allowed_roles AS allowedRoles,"
     : "NULL AS allowedRoles,";
+}
+
+async function getReportMetadataSelect() {
+  const [hasReportType, hasSheetName, hasHeaderRow, hasDataStartRow] =
+    await Promise.all([
+      hasReportDefinitionColumn("report_type"),
+      hasReportDefinitionColumn("sheet_name"),
+      hasReportDefinitionColumn("header_row"),
+      hasReportDefinitionColumn("data_start_row"),
+    ]);
+
+  return `
+      ${hasReportType ? "report_type" : "'static-json'"} AS reportType,
+      ${hasSheetName ? "sheet_name" : "NULL"} AS sheetName,
+      ${hasHeaderRow ? "header_row" : "NULL"} AS headerRow,
+      ${hasDataStartRow ? "data_start_row" : "NULL"} AS dataStartRow,
+  `;
 }
 
 export function normalizeReportAllowedRoles(value) {
@@ -83,6 +123,9 @@ function mapReportDefinition(row) {
   return {
     ...row,
     allowedRoles: normalizeReportAllowedRoles(row.allowedRoles),
+    reportType: row.reportType || "static-json",
+    headerRow: row.headerRow === null ? null : Number(row.headerRow),
+    dataStartRow: row.dataStartRow === null ? null : Number(row.dataStartRow),
   };
 }
 
@@ -195,6 +238,7 @@ export function getImportDir() {
 export async function getAppConfig(user) {
   const branchId = getUserBranchId(user);
   const allowedRolesSelect = await getReportAllowedRolesSelect();
+  const reportMetadataSelect = await getReportMetadataSelect();
 
   const [[branch]] = await pool.query(
     `
@@ -256,6 +300,7 @@ export async function getAppConfig(user) {
       route,
       menu_title AS menuTitle,
       file_name AS fileName,
+      ${reportMetadataSelect}
       ${allowedRolesSelect}
       is_active AS isActive,
       sort_order AS sortOrder
@@ -1302,6 +1347,7 @@ export async function getBalancePagesForBranch(user) {
 export async function getReportsForBranch(user) {
   const branchId = getUserBranchId(user);
   const allowedRolesSelect = await getReportAllowedRolesSelect();
+  const reportMetadataSelect = await getReportMetadataSelect();
   const [reports] = await pool.query(
     `
     SELECT
@@ -1311,6 +1357,7 @@ export async function getReportsForBranch(user) {
       route,
       menu_title AS menuTitle,
       file_name AS fileName,
+      ${reportMetadataSelect}
       ${allowedRolesSelect}
       is_active AS isActive,
       sort_order AS sortOrder
@@ -1326,10 +1373,13 @@ export async function getReportsForBranch(user) {
 
 export async function getActiveStaticReportDefinition(branchId, reportKey) {
   const allowedRolesSelect = await getReportAllowedRolesSelect();
+  const reportMetadataSelect = await getReportMetadataSelect();
   const [[report]] = await pool.query(
     `
     SELECT
       file_name AS fileName,
+      menu_title AS menuTitle,
+      ${reportMetadataSelect}
       ${allowedRolesSelect}
       report_key AS reportKey
     FROM report_definitions
@@ -1424,6 +1474,27 @@ function normalizeReportPayload(payload = {}) {
     payload.fileName === null || payload.file_name === null
       ? null
       : String(payload.fileName || payload.file_name || "").trim();
+  const reportType = String(
+    payload.reportType || payload.report_type || "static-json",
+  ).trim();
+  const sheetName =
+    payload.sheetName === null || payload.sheet_name === null
+      ? null
+      : String(payload.sheetName || payload.sheet_name || "").trim() || null;
+  const headerRow =
+    payload.headerRow === null ||
+    payload.headerRow === "" ||
+    payload.header_row === null ||
+    payload.header_row === ""
+      ? null
+      : Number(payload.headerRow ?? payload.header_row);
+  const dataStartRow =
+    payload.dataStartRow === null ||
+    payload.dataStartRow === "" ||
+    payload.data_start_row === null ||
+    payload.data_start_row === ""
+      ? null
+      : Number(payload.dataStartRow ?? payload.data_start_row);
   const sortOrder = Number.isFinite(Number(payload.sortOrder))
     ? Number(payload.sortOrder)
     : Number.isFinite(Number(payload.sort_order))
@@ -1444,6 +1515,10 @@ function normalizeReportPayload(payload = {}) {
     route,
     menuTitle,
     fileName,
+    reportType,
+    sheetName,
+    headerRow,
+    dataStartRow,
     allowedRoles,
     sortOrder,
     isActive,
@@ -1462,6 +1537,23 @@ function validateReportPayload(report) {
     throw new BadRequest("Маршрут має починатися з /");
   }
   if (!report.menuTitle) throw new BadRequest("Назва в меню є обов'язковою");
+  if (!["static-json", "xlsx-1c"].includes(report.reportType)) {
+    throw new BadRequest("Unsupported report type");
+  }
+  if (!report.fileName) {
+    throw new BadRequest("Report file name is required");
+  }
+  if (report.reportType === "xlsx-1c") {
+    if (!Number.isInteger(report.headerRow) || report.headerRow <= 0) {
+      throw new BadRequest("Header row must be a positive integer");
+    }
+    if (!Number.isInteger(report.dataStartRow) || report.dataStartRow <= 0) {
+      throw new BadRequest("Data start row must be a positive integer");
+    }
+    if (report.dataStartRow < report.headerRow) {
+      throw new BadRequest("Data start row cannot be before header row");
+    }
+  }
   if (!Number.isInteger(report.sortOrder)) {
     throw new BadRequest("Порядок сортування має бути цілим числом");
   }
@@ -1570,6 +1662,23 @@ async function ensureReportUniqueness({
   if (conflictingRoute) {
     throw new Conflict("Маршрут звіту має бути унікальним у межах філії");
   }
+}
+
+async function getReportMetadataColumnFlags() {
+  const [hasReportType, hasSheetName, hasHeaderRow, hasDataStartRow] =
+    await Promise.all([
+      hasReportDefinitionColumn("report_type"),
+      hasReportDefinitionColumn("sheet_name"),
+      hasReportDefinitionColumn("header_row"),
+      hasReportDefinitionColumn("data_start_row"),
+    ]);
+
+  return {
+    hasReportType,
+    hasSheetName,
+    hasHeaderRow,
+    hasDataStartRow,
+  };
 }
 
 export async function createBalancePage(user, payload) {
@@ -1696,6 +1805,80 @@ export async function setBalancePageActive(user, pageId, isActive) {
   return getBalancePageById(branchId, pageId);
 }
 
+export async function createReportDefinition(user, payload) {
+  const branchId = getUserBranchId(user);
+  const report = normalizeReportPayload(payload);
+  validateReportPayload(report);
+
+  await ensureReportUniqueness({
+    branchId,
+    reportKey: report.reportKey,
+    route: report.route,
+  });
+
+  const hasAllowedRoles = await hasReportAllowedRolesColumn();
+  const {
+    hasReportType,
+    hasSheetName,
+    hasHeaderRow,
+    hasDataStartRow,
+  } = await getReportMetadataColumnFlags();
+
+  if (report.reportType === "xlsx-1c" && !hasReportType) {
+    throw new BadRequest("Run report metadata migration before creating XLSX reports");
+  }
+
+  const columns = [
+    "branch_id",
+    "report_key",
+    "route",
+    "menu_title",
+    "file_name",
+  ];
+  const values = [
+    branchId,
+    report.reportKey,
+    report.route,
+    report.menuTitle,
+    report.fileName || null,
+  ];
+
+  if (hasReportType) {
+    columns.push("report_type");
+    values.push(report.reportType);
+  }
+  if (hasSheetName) {
+    columns.push("sheet_name");
+    values.push(report.sheetName || null);
+  }
+  if (hasHeaderRow) {
+    columns.push("header_row");
+    values.push(report.headerRow);
+  }
+  if (hasDataStartRow) {
+    columns.push("data_start_row");
+    values.push(report.dataStartRow);
+  }
+  if (hasAllowedRoles) {
+    columns.push("allowed_roles");
+    values.push(serializeReportAllowedRoles(report.allowedRoles));
+  }
+
+  columns.push("is_active", "sort_order");
+  values.push(report.isActive ? 1 : 0, report.sortOrder);
+
+  const placeholders = columns.map(() => "?").join(", ");
+  const [result] = await pool.query(
+    `
+    INSERT INTO report_definitions (${columns.join(", ")})
+    VALUES (${placeholders})
+    `,
+    values,
+  );
+
+  return getReportById(branchId, result.insertId);
+}
+
 export async function updateReportDefinition(user, reportId, payload) {
   const branchId = getUserBranchId(user);
   const report = normalizeReportPayload(payload);
@@ -1722,6 +1905,30 @@ export async function updateReportDefinition(user, reportId, payload) {
   });
 
   const hasAllowedRoles = await hasReportAllowedRolesColumn();
+  const {
+    hasReportType,
+    hasSheetName,
+    hasHeaderRow,
+    hasDataStartRow,
+  } = await getReportMetadataColumnFlags();
+
+  if (report.reportType === "xlsx-1c" && !hasReportType) {
+    throw new BadRequest("Run report metadata migration before saving XLSX reports");
+  }
+
+  const metadataSet = [
+    hasReportType ? "report_type = ?," : "",
+    hasSheetName ? "sheet_name = ?," : "",
+    hasHeaderRow ? "header_row = ?," : "",
+    hasDataStartRow ? "data_start_row = ?," : "",
+  ].join("\n      ");
+  const metadataValues = [
+    ...(hasReportType ? [report.reportType] : []),
+    ...(hasSheetName ? [report.sheetName || null] : []),
+    ...(hasHeaderRow ? [report.headerRow] : []),
+    ...(hasDataStartRow ? [report.dataStartRow] : []),
+  ];
+
   await pool.query(
     `
     UPDATE report_definitions
@@ -1730,6 +1937,7 @@ export async function updateReportDefinition(user, reportId, payload) {
       route = ?,
       menu_title = ?,
       file_name = ?,
+      ${metadataSet}
       ${hasAllowedRoles ? "allowed_roles = ?," : ""}
       is_active = ?,
       sort_order = ?
@@ -1741,6 +1949,7 @@ export async function updateReportDefinition(user, reportId, payload) {
       report.route,
       report.menuTitle,
       report.fileName || null,
+      ...metadataValues,
       ...(hasAllowedRoles ? [serializeReportAllowedRoles(report.allowedRoles)] : []),
       report.isActive ? 1 : 0,
       report.sortOrder,
@@ -1999,6 +2208,7 @@ export async function getBalancePageById(branchId, pageId) {
 
 export async function getReportById(branchId, reportId) {
   const allowedRolesSelect = await getReportAllowedRolesSelect();
+  const reportMetadataSelect = await getReportMetadataSelect();
   const [[report]] = await pool.query(
     `
     SELECT
@@ -2008,6 +2218,7 @@ export async function getReportById(branchId, reportId) {
       route,
       menu_title AS menuTitle,
       file_name AS fileName,
+      ${reportMetadataSelect}
       ${allowedRolesSelect}
       is_active AS isActive,
       sort_order AS sortOrder

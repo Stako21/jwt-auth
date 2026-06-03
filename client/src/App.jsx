@@ -11,7 +11,7 @@ import { ROLE_IDS } from "./utils/roles";
 import { AppConfigProvider, useAppConfig } from "./context/AppConfigContext";
 import {
   canAccessStaticReport,
-  getStaticReportEntry,
+  getReportComponent,
 } from "./components/Reports/reportRegistry";
 
 function renderBalanceRoutes(activeBalancePages, setLastUpdateTime) {
@@ -31,19 +31,22 @@ function renderBalanceRoutes(activeBalancePages, setLastUpdateTime) {
 
 function renderStaticReportRoutes(activeReports, setLastUpdateTime) {
   return activeReports.map((report) => {
-    const entry = getStaticReportEntry(report.reportKey);
+    const ReportComponent = getReportComponent(report);
 
-    if (!entry?.component) {
+    if (!ReportComponent) {
       return null;
     }
-
-    const ReportComponent = entry.component;
 
     return (
       <Route
         key={report.id}
         path={report.route}
-        element={<ReportComponent setLastUpdateTime={setLastUpdateTime} />}
+        element={
+          <ReportComponent
+            report={report}
+            setLastUpdateTime={setLastUpdateTime}
+          />
+        }
       />
     );
   });

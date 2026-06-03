@@ -1361,3 +1361,52 @@ Frontend:
   - branch scoping remains tied to `sales_reports.branch_id` and the TA/SV users' `branch_id`
 - Verification:
   - `node --check api/repositories/Reports.js` passed
+
+## 2026-06-03 - Configurable 1C XLSX reports checkpoint
+
+- Added configurable `Звіти XLSX з 1С` support:
+  - migration `010_xlsx_1c_reports.js` adds `report_type`, `sheet_name`, `header_row`, and `data_start_row` to `report_definitions`
+  - admin report configuration can create new report pages and store XLSX-specific parsing settings
+  - backend `/api/reports/static/:reportKey` now parses `xlsx-1c` reports from `IMPORT_DIR`
+  - frontend route registry renders generic XLSX report pages through `ReportXlsx1C`
+  - `api/package.json` now declares `xlsx` for backend XLSX parsing
+- Verification:
+  - `node --check` passed for touched backend controller/service/migration files
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Notes:
+  - generated `client/dist` changes from build were restored
+  - pre-existing local `client/public/Sorce/*` deletions and `documentation/old-setings*.txt` files were not touched
+
+## 2026-06-03 - 1C XLSX report readability and hierarchy checkpoint
+
+- Refined generic 1C XLSX report rendering:
+  - switched `ReportXlsx1C` table colors to a readable dark theme
+  - preserved Excel outline/group hierarchy through `sheet["!rows"].level`
+  - applied indentation and row-level styling based on the original XLSX hierarchy metadata
+- Verification:
+  - parsed `Max.xlsx` and confirmed outline levels are returned for grouped rows
+  - `node --check api/services/xlsx1cReport.service.js` passed
+  - `npm run lint` in `client` passed
+
+## 2026-06-04 - 1C XLSX hierarchy row alignment checkpoint
+
+- Corrected generic XLSX hierarchy extraction:
+  - stopped relying on `sheet_to_json` row arrays for report data because 1C sheets can shift visible row alignment
+  - now reads cells directly by Excel row/column addresses from `!ref`
+  - confirmed `Max.xlsx` hierarchy matches the original outline: row 16 level 1, rows 17-22 level 2, row 23 level 1, etc.
+  - adjusted dark table styling so level 1 rows read as parent/group rows and level 2 rows as children
+- Verification:
+  - `node --check api/services/xlsx1cReport.service.js` passed
+  - `npm run lint` in `client` passed
+
+## 2026-06-04 - 1C XLSX multi-row header checkpoint
+
+- Updated generic XLSX report headers:
+  - rows from configured `headerRow` through the row before `dataStartRow` are now treated as the table header
+  - backend returns `headerRows` preserving each header row separately
+  - frontend renders a multi-row `<thead>` instead of collapsing all header data into one label row
+- Verification:
+  - confirmed `Max.xlsx` with `headerRow=12` and `dataStartRow=15` returns header rows 12-14 and first data row 15
+  - `node --check api/services/xlsx1cReport.service.js` passed
+  - `npm run lint` in `client` passed

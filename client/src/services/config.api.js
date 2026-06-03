@@ -82,6 +82,11 @@ export async function fetchReportsConfig() {
   return data.reports || [];
 }
 
+export async function createReportConfig(payload) {
+  const { data } = await api.post("/reports", payload);
+  return data.report;
+}
+
 export async function updateReportConfig(id, payload) {
   const { data } = await api.put(`/reports/${id}`, payload);
   return data.report;

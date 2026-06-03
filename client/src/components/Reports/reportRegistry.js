@@ -2,6 +2,7 @@ import { ReportDebet } from "./ReportDebet";
 import { ReportBillOfLading } from "./ReportBillOfLading";
 import { ReportOrdersByTime } from "./ReportOrdersByTime";
 import { ReportRomashka } from "./ReportRomashka";
+import { ReportXlsx1C } from "./ReportXlsx1C";
 
 export const STATIC_REPORT_REGISTRY = {
   "report-romashka": {
@@ -22,11 +23,22 @@ export function getStaticReportEntry(reportKey) {
   return STATIC_REPORT_REGISTRY[reportKey] || null;
 }
 
+export function getReportComponent(report) {
+  const entry = getStaticReportEntry(report?.reportKey);
+  if (entry?.component) return entry.component;
+
+  if (report?.reportType === "xlsx-1c") {
+    return ReportXlsx1C;
+  }
+
+  return null;
+}
+
 export function canAccessStaticReport(report, role) {
   const reportKey = typeof report === "string" ? report : report?.reportKey;
   const entry = getStaticReportEntry(reportKey);
 
-  if (!entry) {
+  if (!entry && report?.reportType !== "xlsx-1c") {
     return false;
   }
 
