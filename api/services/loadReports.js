@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const logger = createTaskLogger("loadSalesReports");
+const SALES_REPORT_RETENTION_DAYS = 35;
 
 export async function loadSalesReports() {
   const source = await getImportSourcePath("loadSalesReports", "SalesReport.json");
@@ -93,7 +94,10 @@ export async function loadSalesReports() {
     }
 
     const importDate = new Date().toISOString().split("T")[0];
-    const minAllowedReportDate = shiftIsoDate(importDate, -5);
+    const minAllowedReportDate = shiftIsoDate(
+      importDate,
+      -SALES_REPORT_RETENTION_DAYS,
+    );
     const validReports = [];
     let skippedInvalidRows = 0;
     let skippedOutOfRangeRows = 0;
@@ -477,10 +481,10 @@ export async function loadSalesReports() {
       `
       DELETE
         FROM sales_reports
-      WHERE report_date < DATE_SUB(?, INTERVAL 5 DAY)
+      WHERE report_date < DATE_SUB(?, INTERVAL ? DAY)
         AND branch_id = ?
       `,
-      [reportDate, branchId],
+      [reportDate, SALES_REPORT_RETENTION_DAYS, branchId],
     );
     runLog.info("old rows cleanup completed", {
       reportDate,

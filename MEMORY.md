@@ -1118,6 +1118,40 @@ Frontend:
   - update `AGENTS.md` and/or `README.md` too when the change affects operating instructions, setup, runbooks, or current capabilities
 - Updated `README.md` current-state notes to mention config-driven static reports, the order-upload-by-hour report, and Header report select behavior.
 
+## 2026-06-04 - Universal 1C report JSON export draft
+
+- Added `documentation/1c-universal-report-json-module.bsl` as a first-stage draft for replacing XLSX output from saved 1C DCS report variants with structured JSON files.
+- The draft reuses the existing report name, DCS schema name, and saved variant key approach.
+- JSON output includes:
+  - stable external `reportKey`, report/variant metadata, generation time, and period values
+  - a generic column description array with `field_N`, source name, and title
+  - flattened DCS result rows with `_level` and `_hasChildren` hierarchy metadata
+  - normalized primitive values and ISO-like date strings
+- The output remains file-based in `D:\BAL\Exchange\`; HTTP POST integration is intentionally deferred until JSON generation is validated in 1C.
+- Verification limitation:
+  - the repository has no 1C/BSL compiler or runtime, so the module must be tested in the target 1C platform/version; DCS value-collection output APIs may require a small compatibility adjustment depending on platform version and report structure.
+
+## 2026-06-04 - Universal 1C JSON DCS collection-generator fix
+
+- First runtime test of `documentation/1c-universal-report-json-module.bsl` failed for both saved variants with `Ошибка вывода результата: Неизвестный тип макета`.
+- Fixed DCS collection output by generating the layout with:
+  - `Тип("ГенераторМакетаКомпоновкиДанныхДляКоллекцииЗначений")`
+- Replaced the compact `ПроцессорВывода.Вывести(Процессор)` call with the explicit and more compatible `НачатьВывод` / `Следующий` / `ВывестиЭлемент` / `ЗакончитьВывод` loop.
+- Remaining runtime caveat:
+  - if a saved DCS variant contains tables, diagrams, or nested reports, 1C may reject collection output with a separate unsupported-layout error; in that case an integration-specific detail-only report variant or another extraction strategy will be required.
+
+## 2026-06-04 - Universal 1C JSON tabular-document fallback
+
+- Runtime confirmed both current saved DCS variants contain table, diagram, or nested-report structures and cannot be generated into a universal value collection.
+- Changed `documentation/1c-universal-report-json-module.bsl` to:
+  - generate the normal DCS `ТабличныйДокумент`
+  - iterate through its visible rows and columns
+  - serialize non-empty rows as JSON cell arrays
+- JSON schema version is now `2` and declares `outputMode: "tabular-document-matrix"` with `width`, `height`, and `{ rowNumber, cells }` rows.
+- Tradeoff: this supports complex DCS layouts but stores displayed cell text rather than typed semantic fields or explicit hierarchy metadata.
+- Verification limitation:
+  - the repository has no 1C/BSL compiler or runtime, so the updated module must be rerun in the target 1C environment.
+
 ## 2026-05-29 - Static report role access checkpoint
 
 - Added configurable per-report role visibility:
@@ -1410,3 +1444,179 @@ Frontend:
   - confirmed `Max.xlsx` with `headerRow=12` and `dataStartRow=15` returns header rows 12-14 and first data row 15
   - `node --check api/services/xlsx1cReport.service.js` passed
   - `npm run lint` in `client` passed
+
+## 2026-06-05 - SalesAgent 1C GUID export checkpoint
+
+- Updated `client/public/Sorce/Sales agent JSON.epf_ Модуль объекта.txt` so `SalesAgent.json` can include stable 1C GUIDs while preserving the existing top-level array format.
+- The 1C query now selects references for:
+  - route
+  - regional division
+  - current sales agent
+  - supervisor / route group
+- Each JSON row now writes:
+  - `routeGuid`
+  - `regionalDivisionGuid`
+  - `currentAgentGuid`
+  - `supervisorGuid`
+- Removed noisy per-row `Сообщить` logging and kept only final file path plus exported row count.
+- Verification:
+  - reviewed `api/services/loadAgents.js`; the current importer expects a top-level array and ignores extra row fields, so this export remains backward-compatible until backend external-key persistence is added.
+
+## 2026-06-07 - DB-backed Montblanc/Lacmi XLSX sales reports
+
+- Added migration `api/migrations/011_xlsx_1c_sales_report_rows.js`:
+  - adds `report_definitions.retention_days`
+  - creates `xlsx_1c_sales_report_values`
+  - seeds separate `xlsx-1c-sales` report definitions for Montblanc and Lacmi
+- Added `api/services/xlsx1cSalesReport.service.js`:
+  - reads report date from the XLSX parameters row
+  - uses XLSX numeric cell values instead of formatted text
+  - builds dynamic metric keys/labels from XLSX header rows
+  - stores one DB row per report/date/TA/metric value
+  - matches visible TA rows by `users.user_name`
+  - stores unmatched leaf/TA-like rows with `user_id = NULL` so they can be listed as excluded
+  - treats full-person-name rows and `КАМ ...` rows as leaf/TA-like when they are not matched to `users.user_name`
+  - prunes rows by per-report `retentionDays`
+- Added `ReportXlsx1CSales` frontend view with date range filters, defaulting both dates to the current day, grouped display `СВ -> ТА`, dynamic metric columns, totals, and "В таблицю не включені" names.
+- Updated Reports config to support `xlsx-1c-sales` and the `Зберігати, днів` setting.
+- Verification:
+  - `node --check` passed for touched backend files
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+- Follow-up:
+  - renamed migration column `row_number` to `source_row_number` because `ROW_NUMBER` is reserved in MySQL versions with window functions
+
+## 2026-06-07 - Next plan: rebuild XLSX sales reports around imported 1C GUIDs
+
+- Current `xlsx-1c-sales` implementation is considered a draft and should be rolled back before the next clean implementation slice.
+- Do not make report parsing depend on reading `SalesAgent.json` directly at report time.
+- First extend the sales-agent import flow so `loadAgents.js` persists 1C identifiers from `SalesAgent.json`, especially:
+  - `currentAgentGuid`
+  - `supervisorGuid`
+  - `routeGuid`
+  - optionally `regionalDivisionGuid`
+- Then update user/sales-agent matching so duplicated `users.user_name` values can be resolved through the imported `currentAgentGuid`.
+- Fresh XLSX files now include GUIDs in leaf rows, e.g. `ТА name (guid)`, and Excel outline levels distinguish groups (`level=1`) from leaf rows (`level=2`).
+- Next clean report-loading design:
+  - parse `agentGuid` from XLSX leaf rows
+  - resolve it through DB-persisted sales-agent/user mappings
+  - store/report clean TA names without GUID suffixes
+  - keep unmatched GUID/name rows visible in the "not included" report warning
+- Assortment access should be handled later as a separate permission model; GUID matching solves duplicate TA names for the XLSX sales import itself.
+
+## 2026-06-08 - GUID-based Montblanc/Lacmi XLSX sales import rebuild
+
+- Reworked the `xlsx-1c-sales` import around stable 1C GUIDs instead of yesterday's name/leaf-row heuristics.
+- `api/migrations/011_xlsx_1c_sales_report_rows.js` now also adds:
+  - `users.current_agent_guid`
+  - `sales_agents.route_guid`
+  - `sales_agents.current_agent_guid`
+  - `sales_agents.supervisor_guid`
+  - `sales_agents.regional_division_guid`
+  - `xlsx_1c_sales_report_values.agent_guid`
+- `api/services/loadAgents.js` now imports and persists GUID fields from `SalesAgent.json`; `users.user_name` and `users.current_agent_guid` are synchronized from `sales_agents`.
+- `api/services/xlsx1cSalesReport.service.js` now:
+  - reads report date from the XLSX `Начало периода` parameter
+  - builds metric columns from configured multi-row XLSX headers and merged cells
+  - imports only rows whose first cell matches `TA name (guid)`
+  - stores clean TA names separately from `agent_guid`
+  - resolves visible rows through `sales_agents.current_agent_guid` and active users in the same branch
+  - leaves unmatched/ambiguous GUID rows with `user_id = NULL` and returns them in `excludedAgents`
+  - displays supervisors from `user_hierarchy`, not from XLSX group rows
+- Locally confirmed the new source files contain GUID leaf rows:
+  - `montblanc2026.xlsx`: 17 GUID rows
+  - `lacmi2026.xlsx`: 18 GUID rows
+- Verification:
+  - `node --check api/services/xlsx1cSalesReport.service.js`
+  - `node --check api/services/loadAgents.js`
+  - `node --check api/migrations/011_xlsx_1c_sales_report_rows.js`
+  - `node --check api/repositories/User.js`
+  - `node --check api/controllers/Reports.js`
+  - `node --check api/services/appConfig.service.js`
+  - `npm run lint` in `client`
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+
+## 2026-06-08 - SalesAgent GUID migration repair
+
+- `loadSalesAgents` failed with `Unknown column 'route_guid' in 'field list'` because local DB had already marked migration `011_xlsx_1c_sales_report_rows.js` as applied before the later GUID-column additions were present.
+- Added idempotent repair migration `api/migrations/012_sales_agent_guid_columns_repair.js`.
+- The repair migration safely ensures these columns/indexes exist even when `011` is skipped:
+  - `users.current_agent_guid`
+  - `sales_agents.route_guid`
+  - `sales_agents.current_agent_guid`
+  - `sales_agents.supervisor_guid`
+  - `sales_agents.regional_division_guid`
+  - `xlsx_1c_sales_report_values.agent_guid`
+- Verification:
+  - `node --check api/migrations/012_sales_agent_guid_columns_repair.js`
+
+## 2026-06-08 - XLSX sales table polish
+
+- Removed the empty service metric column `Группа / Супервайзер / Торговый агент по документу` from `xlsx-1c-sales` output.
+- Root cause: XLSX error cells (`t: "e"`) were parsed as `Number("") === 0`, so technical empty columns looked numeric and survived metric filtering.
+- `getCellNumber` now ignores Excel error cells and empty normalized values.
+- `ReportXlsx1CSales` styling was changed to the dark/green visual theme used by the generic `/montblanc-06-2026` XLSX view while preserving date filters, totals, supervisor grouping, and sticky first column.
+- Verification:
+  - confirmed first parsed Montblanc metric columns are now `Учет с НДС`, `Сумма с НДС`, `Вес, кг`, `КОНФЕТЫ / Вес`
+  - confirmed first parsed Lacmi metric columns are now `Учет с НДС`, `Сумма с НДС`, `БАТОНЫ / Вес`, `КОНФЕТЫ КОРОБОЧНЫЕ / Вес`
+  - `node --check api/services/xlsx1cSalesReport.service.js`
+  - `npm run lint` in `client`
+
+## 2026-06-08 - XLSX sales legacy metric cache fix
+
+- The service column `Группа / Супервайзер / Торговый агент по документу` could still appear after the parser fix because old metric rows were already stored in `xlsx_1c_sales_report_values` and sync skipped reimport when the XLSX file mtime had not changed.
+- Added `SERVICE_METRIC_LABEL_PREFIX` filtering in `api/services/xlsx1cSalesReport.service.js`:
+  - new imports skip service labels explicitly
+  - API queries exclude legacy service labels immediately
+  - `shouldImport` forces reimport when legacy service-label rows are found for the report
+- Verification:
+  - `node --check api/services/xlsx1cSalesReport.service.js`
+  - `npm run lint` in `client`
+
+## 2026-06-08 - Scheduled imports for DB-backed XLSX 1C sales reports
+
+- Added migration `api/migrations/013_report_scheduler_flag.js`.
+- New `report_definitions.scheduled_import_enabled` flag controls whether an `xlsx-1c-sales` report is imported by scheduler or refreshed when the report page is opened.
+- Migration enables scheduled import by default for:
+  - `report-montblanc-sales`
+  - `report-lacmi-sales`
+- Added scheduler task `loadScheduledXlsx1cSalesReports`:
+  - runs every 5 minutes by default
+  - requires system branch
+  - imports all active `xlsx-1c-sales` reports for the system branch with `scheduled_import_enabled = 1`
+  - reports per-report import results in scheduler last-run details
+- `getXlsx1cSalesReport` now skips sync-on-open when `scheduledImportEnabled` is true; in that mode user requests only read already-imported DB rows.
+- Reports Config now shows an update mode tag (`Schedule` / `Open`) and has an `Оновлювати за розкладом` checkbox for `xlsx-1c-sales`.
+- Verification:
+  - `node --check api/migrations/013_report_scheduler_flag.js`
+  - `node --check api/services/appConfig.service.js`
+  - `node --check api/services/xlsx1cSalesReport.service.js`
+  - `node --check api/services/scheduler.js`
+  - `npm run lint` in `client`
+
+## 2026-06-08 - Main sales report date range
+
+- Changed the main `/sales-report` from a single date to a date range.
+- Frontend `SalesReport` now:
+  - defaults both `dateFrom` and `dateTo` to tomorrow
+  - sends `dateFrom`/`dateTo` to `/api/reports/sales`
+  - sends the same period to `/api/reports/sales/pdf`
+  - keeps the range valid by moving the opposite bound when needed
+  - shows a compact report-date column in expanded document rows
+- Backend `ReportsController` now accepts `dateFrom`/`dateTo`, while still accepting legacy `date` as a one-day fallback.
+- `ReportsRepository.getSalesReport` filters by `sales_reports.report_date BETWEEN :date_from AND :date_to` for all role branches and sorts by report date before document number.
+- Sales report PDF now uses the same period label and includes a date column.
+- Verification:
+  - `node --check api/controllers/Reports.js`
+  - `node --check api/repositories/Reports.js`
+  - `node --check api/pdf/salesReport.template.js`
+  - `npm run lint` in `client`
+
+## 2026-06-09 - Sales report retention depth
+
+- Increased the regular sales report import/storage depth from 5 days to 35 days.
+- `api/services/loadReports.js` now uses `SALES_REPORT_RETENTION_DAYS = 35` for both:
+  - skipping source JSON rows older than the allowed import window
+  - deleting old `sales_reports` rows after import
+- Verification:
+  - `node --check api/services/loadReports.js`

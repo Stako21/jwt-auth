@@ -11,27 +11,44 @@ import {
 import { getOrdersByTimeReport } from "../services/ordersByTimeReport.service.js";
 import { getBillOfLadingReport } from "../services/billOfLadingReport.service.js";
 import { getXlsx1cReport } from "../services/xlsx1cReport.service.js";
+import { getXlsx1cSalesReport } from "../services/xlsx1cSalesReport.service.js";
 import fs from "fs/promises";
 import path from "path";
 
 const ORDERS_BY_TIME_REPORT_KEY = "report-orders-by-time";
 const BILL_OF_LADING_REPORT_KEY = "report-bill-of-lading";
 
+function normalizeSalesReportRange(query) {
+  const fallbackDate = query.date || query.dateFrom || query.dateTo;
+  const dateFrom = query.dateFrom || fallbackDate;
+  const dateTo = query.dateTo || fallbackDate;
+
+  if (!dateFrom || !dateTo) {
+    return null;
+  }
+
+  return {
+    dateFrom,
+    dateTo,
+  };
+}
+
 class ReportsController {
   static async getSalesReport(req, res) {
     try {
       const { id, role } = req.user;
       const branchId = getUserBranchId(req.user);
-      const { date } = req.query;
+      const range = normalizeSalesReportRange(req.query);
 
-      if (!date) {
-        return res.status(400).json({ message: "date is required" });
+      if (!range) {
+        return res.status(400).json({ message: "dateFrom and dateTo are required" });
       }
 
       const rows = await ReportsRepository.getSalesReport({
         userId: id,
         role,
-        reportDate: date,
+        dateFrom: range.dateFrom,
+        dateTo: range.dateTo,
         branchId,
       });
 
@@ -43,7 +60,8 @@ class ReportsController {
 
       return res.json({
         meta: {
-          date,
+          dateFrom: range.dateFrom,
+          dateTo: range.dateTo,
           rows: rows.length,
           lastUpdate,
         },
@@ -68,21 +86,27 @@ class ReportsController {
     try {
       const { id, role } = req.user;
       const branchId = getUserBranchId(req.user);
-      const { date } = req.query;
+      const range = normalizeSalesReportRange(req.query);
 
-      if (!date) {
-        return res.status(400).json({ message: "date is required" });
+      if (!range) {
+        return res.status(400).json({ message: "dateFrom and dateTo are required" });
       }
 
       const rows = await ReportsRepository.getSalesReport({
         userId: id,
         role,
-        reportDate: date,
+        dateFrom: range.dateFrom,
+        dateTo: range.dateTo,
         branchId,
       });
 
+      const periodLabel =
+        range.dateFrom === range.dateTo
+          ? range.dateFrom
+          : `${range.dateFrom} - ${range.dateTo}`;
+
       const html = renderSalesReportHtml({
-        date,
+        date: periodLabel,
         generatedAt: new Date(),
         rows,
       });
@@ -113,7 +137,7 @@ class ReportsController {
         headerTemplate: "<div></div>",
         footerTemplate: `
           <div style="width:100%;font-size:10px;text-align:center;color:#555;">
-            Sales report ${date} - <span class="pageNumber"></span>/<span class="totalPages"></span>
+            Sales report ${periodLabel} - <span class="pageNumber"></span>/<span class="totalPages"></span>
           </div>
         `,
         margin: {
@@ -126,7 +150,7 @@ class ReportsController {
 
       await browser.close();
 
-      const fileName = `sales-report-${date}.pdf`;
+      const fileName = `sales-report-${periodLabel}.pdf`;
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Length", pdf.length);
@@ -158,6 +182,16 @@ class ReportsController {
 
       if (report.reportType === "xlsx-1c") {
         const parsedReport = await getXlsx1cReport(report);
+        return res.json(parsedReport);
+      }
+
+      if (report.reportType === "xlsx-1c-sales") {
+        const parsedReport = await getXlsx1cSalesReport({
+          branchId,
+          report,
+          dateFrom: req.query.dateFrom,
+          dateTo: req.query.dateTo,
+        });
         return res.json(parsedReport);
       }
 

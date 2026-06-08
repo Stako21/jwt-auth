@@ -19,7 +19,7 @@ export async function fetchSalesReportPdf(params = {}) {
   });
 }
 
-export async function fetchStaticReport(reportKey) {
-  const { data } = await api.get(`/static/${reportKey}`);
+export async function fetchStaticReport(reportKey, params = {}) {
+  const { data } = await api.get(`/static/${reportKey}`, { params });
   return data;
 }

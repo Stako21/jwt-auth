@@ -9,6 +9,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const logger = createTaskLogger("loadSalesAgents");
 
+function cleanText(value) {
+  return String(value ?? "").trim();
+}
+
+function cleanGuid(value) {
+  const text = cleanText(value).toLowerCase();
+  return text || null;
+}
+
 export async function loadSalesAgents() {
   const source = await getImportSourcePath("loadSalesAgents", "SalesAgent.json");
   const salesAgentFile = source?.filePath;
@@ -146,8 +155,8 @@ export async function loadSalesAgents() {
     const importableAgents = [];
 
     for (const agent of candidateAgents) {
-      const login = String(agent.login).trim();
-      const fullName = String(agent.currentAgent || "").trim();
+      const login = cleanText(agent.login);
+      const fullName = cleanText(agent.currentAgent);
       const userId = userIdByLogin.get(login);
 
       if (!userId) {
@@ -163,8 +172,12 @@ export async function loadSalesAgents() {
         login,
         userId,
         fullName,
-        supervisorName: agent.supervisor,
-        city: agent.regionalDivision,
+        routeGuid: cleanGuid(agent.routeGuid),
+        currentAgentGuid: cleanGuid(agent.currentAgentGuid),
+        supervisorName: cleanText(agent.supervisor),
+        supervisorGuid: cleanGuid(agent.supervisorGuid),
+        city: cleanText(agent.regionalDivision),
+        regionalDivisionGuid: cleanGuid(agent.regionalDivisionGuid),
       });
     }
 
@@ -197,19 +210,38 @@ export async function loadSalesAgents() {
     for (const agent of importableAgents) {
       try {
         await connection.query(
-          `INSERT INTO sales_agents (user_id, login, full_name, supervisor_name, city, branch_id)
-           VALUES (?, ?, ?, ?, ?, ?)
+          `INSERT INTO sales_agents (
+             user_id,
+             login,
+             route_guid,
+             full_name,
+             current_agent_guid,
+             supervisor_name,
+             supervisor_guid,
+             city,
+             regional_division_guid,
+             branch_id
+           )
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE
+             route_guid = VALUES(route_guid),
              full_name = VALUES(full_name),
+             current_agent_guid = VALUES(current_agent_guid),
              supervisor_name = VALUES(supervisor_name),
+             supervisor_guid = VALUES(supervisor_guid),
              city = VALUES(city),
+             regional_division_guid = VALUES(regional_division_guid),
              branch_id = VALUES(branch_id)`,
           [
             agent.userId,
             agent.login,
+            agent.routeGuid,
             agent.fullName,
+            agent.currentAgentGuid,
             agent.supervisorName,
+            agent.supervisorGuid,
             agent.city,
+            agent.regionalDivisionGuid,
             branchId,
           ],
         );
@@ -320,7 +352,9 @@ async function syncUserNamesFromSalesAgents(connection, branchId) {
     `
     UPDATE users u
     JOIN sales_agents sa ON sa.user_id = u.id
-    SET u.user_name = sa.full_name
+    SET
+      u.user_name = sa.full_name,
+      u.current_agent_guid = sa.current_agent_guid
     WHERE
       sa.branch_id = ?
       AND u.branch_id = ?

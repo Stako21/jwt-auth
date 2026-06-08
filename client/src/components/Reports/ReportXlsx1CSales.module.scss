@@ -1,0 +1,205 @@
+.report {
+  background: #111;
+  color: #e1e1e1;
+  min-height: calc(100vh - 60px);
+  padding: 12px;
+}
+
+.header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.title {
+  color: #f1f1f1;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.subtitle {
+  color: #9e9e9e;
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.field {
+  display: grid;
+  gap: 3px;
+  min-width: 135px;
+
+  span {
+    color: #9e9e9e;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  input {
+    background: #1c1b1b;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #f1f1f1;
+    font-size: 13px;
+    height: 32px;
+    padding: 4px 8px;
+  }
+}
+
+.excluded {
+  background: #2a2116;
+  border: 1px solid #8a5a20;
+  border-radius: 4px;
+  color: #ffd9a0;
+  font-size: 12px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+}
+
+.state,
+.error {
+  color: #cfcfcf;
+  font-size: 14px;
+  padding: 16px 0;
+  text-align: center;
+}
+
+.error {
+  color: #ff8a80;
+}
+
+.tableShell {
+  background: #131313;
+  border: 1px solid #333;
+  border-radius: 4px;
+  max-height: calc(100vh - 190px);
+  overflow: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 900px;
+  width: 100%;
+
+  th,
+  td {
+    border: 1px solid #333;
+    padding: 5px 8px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  th {
+    background: #214927;
+    color: #f1f1f1;
+    font-weight: 700;
+    position: sticky;
+    text-align: right;
+    top: 0;
+    z-index: 2;
+  }
+
+  th:first-child {
+    left: 0;
+    min-width: 220px;
+    position: sticky;
+    text-align: left;
+    z-index: 3;
+  }
+
+  td:first-child {
+    left: 0;
+    position: sticky;
+    z-index: 1;
+  }
+
+  tbody tr:hover td {
+    background: #263126;
+  }
+}
+
+.nameCell {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.numberCell {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.totalRow {
+  td {
+    background: #1b3a1f;
+    color: #e8f5e9;
+    font-weight: 800;
+  }
+}
+
+.supervisorRow {
+  td {
+    background: #132917;
+    color: #f0f0f0;
+    font-weight: 700;
+  }
+}
+
+.agentRow {
+  td {
+    background: #141414;
+    color: #e1e1e1;
+  }
+
+  &:nth-child(even) td {
+    background: #191919;
+  }
+
+  .nameCell {
+    padding-left: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .report {
+    padding: 8px;
+  }
+
+  .header {
+    display: block;
+  }
+
+  .filters {
+    justify-content: flex-start;
+    margin-top: 10px;
+  }
+
+  .field {
+    min-width: 130px;
+  }
+
+  .tableShell {
+    max-height: calc(100vh - 230px);
+  }
+
+  .table {
+    font-size: 11px;
+
+    th,
+    td {
+      padding: 4px 6px;
+    }
+  }
+}

@@ -68,12 +68,20 @@ async function getReportAllowedRolesSelect() {
 }
 
 async function getReportMetadataSelect() {
-  const [hasReportType, hasSheetName, hasHeaderRow, hasDataStartRow] =
-    await Promise.all([
+  const [
+    hasReportType,
+    hasSheetName,
+    hasHeaderRow,
+    hasDataStartRow,
+    hasRetentionDays,
+    hasScheduledImportEnabled,
+  ] = await Promise.all([
       hasReportDefinitionColumn("report_type"),
       hasReportDefinitionColumn("sheet_name"),
       hasReportDefinitionColumn("header_row"),
       hasReportDefinitionColumn("data_start_row"),
+      hasReportDefinitionColumn("retention_days"),
+      hasReportDefinitionColumn("scheduled_import_enabled"),
     ]);
 
   return `
@@ -81,6 +89,8 @@ async function getReportMetadataSelect() {
       ${hasSheetName ? "sheet_name" : "NULL"} AS sheetName,
       ${hasHeaderRow ? "header_row" : "NULL"} AS headerRow,
       ${hasDataStartRow ? "data_start_row" : "NULL"} AS dataStartRow,
+      ${hasRetentionDays ? "retention_days" : "NULL"} AS retentionDays,
+      ${hasScheduledImportEnabled ? "scheduled_import_enabled" : "0"} AS scheduledImportEnabled,
   `;
 }
 
@@ -126,6 +136,8 @@ function mapReportDefinition(row) {
     reportType: row.reportType || "static-json",
     headerRow: row.headerRow === null ? null : Number(row.headerRow),
     dataStartRow: row.dataStartRow === null ? null : Number(row.dataStartRow),
+    retentionDays: row.retentionDays === null ? null : Number(row.retentionDays),
+    scheduledImportEnabled: Boolean(row.scheduledImportEnabled),
   };
 }
 
@@ -1495,6 +1507,19 @@ function normalizeReportPayload(payload = {}) {
     payload.data_start_row === ""
       ? null
       : Number(payload.dataStartRow ?? payload.data_start_row);
+  const retentionDays =
+    payload.retentionDays === null ||
+    payload.retentionDays === "" ||
+    payload.retention_days === null ||
+    payload.retention_days === ""
+      ? null
+      : Number(payload.retentionDays ?? payload.retention_days);
+  const scheduledImportEnabled =
+    typeof payload.scheduledImportEnabled === "boolean"
+      ? payload.scheduledImportEnabled
+      : typeof payload.scheduled_import_enabled === "boolean"
+        ? payload.scheduled_import_enabled
+        : false;
   const sortOrder = Number.isFinite(Number(payload.sortOrder))
     ? Number(payload.sortOrder)
     : Number.isFinite(Number(payload.sort_order))
@@ -1519,6 +1544,8 @@ function normalizeReportPayload(payload = {}) {
     sheetName,
     headerRow,
     dataStartRow,
+    retentionDays,
+    scheduledImportEnabled,
     allowedRoles,
     sortOrder,
     isActive,
@@ -1537,13 +1564,13 @@ function validateReportPayload(report) {
     throw new BadRequest("Маршрут має починатися з /");
   }
   if (!report.menuTitle) throw new BadRequest("Назва в меню є обов'язковою");
-  if (!["static-json", "xlsx-1c"].includes(report.reportType)) {
+  if (!["static-json", "xlsx-1c", "xlsx-1c-sales"].includes(report.reportType)) {
     throw new BadRequest("Unsupported report type");
   }
   if (!report.fileName) {
     throw new BadRequest("Report file name is required");
   }
-  if (report.reportType === "xlsx-1c") {
+  if (report.reportType === "xlsx-1c" || report.reportType === "xlsx-1c-sales") {
     if (!Number.isInteger(report.headerRow) || report.headerRow <= 0) {
       throw new BadRequest("Header row must be a positive integer");
     }
@@ -1553,6 +1580,12 @@ function validateReportPayload(report) {
     if (report.dataStartRow < report.headerRow) {
       throw new BadRequest("Data start row cannot be before header row");
     }
+  }
+  if (
+    report.retentionDays !== null &&
+    (!Number.isInteger(report.retentionDays) || report.retentionDays <= 0)
+  ) {
+    throw new BadRequest("Retention days must be a positive integer");
   }
   if (!Number.isInteger(report.sortOrder)) {
     throw new BadRequest("Порядок сортування має бути цілим числом");
@@ -1665,12 +1698,20 @@ async function ensureReportUniqueness({
 }
 
 async function getReportMetadataColumnFlags() {
-  const [hasReportType, hasSheetName, hasHeaderRow, hasDataStartRow] =
-    await Promise.all([
+  const [
+    hasReportType,
+    hasSheetName,
+    hasHeaderRow,
+    hasDataStartRow,
+    hasRetentionDays,
+    hasScheduledImportEnabled,
+  ] = await Promise.all([
       hasReportDefinitionColumn("report_type"),
       hasReportDefinitionColumn("sheet_name"),
       hasReportDefinitionColumn("header_row"),
       hasReportDefinitionColumn("data_start_row"),
+      hasReportDefinitionColumn("retention_days"),
+      hasReportDefinitionColumn("scheduled_import_enabled"),
     ]);
 
   return {
@@ -1678,6 +1719,8 @@ async function getReportMetadataColumnFlags() {
     hasSheetName,
     hasHeaderRow,
     hasDataStartRow,
+    hasRetentionDays,
+    hasScheduledImportEnabled,
   };
 }
 
@@ -1822,9 +1865,14 @@ export async function createReportDefinition(user, payload) {
     hasSheetName,
     hasHeaderRow,
     hasDataStartRow,
+    hasRetentionDays,
+    hasScheduledImportEnabled,
   } = await getReportMetadataColumnFlags();
 
-  if (report.reportType === "xlsx-1c" && !hasReportType) {
+  if (
+    (report.reportType === "xlsx-1c" || report.reportType === "xlsx-1c-sales") &&
+    !hasReportType
+  ) {
     throw new BadRequest("Run report metadata migration before creating XLSX reports");
   }
 
@@ -1858,6 +1906,14 @@ export async function createReportDefinition(user, payload) {
   if (hasDataStartRow) {
     columns.push("data_start_row");
     values.push(report.dataStartRow);
+  }
+  if (hasRetentionDays) {
+    columns.push("retention_days");
+    values.push(report.retentionDays || null);
+  }
+  if (hasScheduledImportEnabled) {
+    columns.push("scheduled_import_enabled");
+    values.push(report.scheduledImportEnabled ? 1 : 0);
   }
   if (hasAllowedRoles) {
     columns.push("allowed_roles");
@@ -1910,9 +1966,14 @@ export async function updateReportDefinition(user, reportId, payload) {
     hasSheetName,
     hasHeaderRow,
     hasDataStartRow,
+    hasRetentionDays,
+    hasScheduledImportEnabled,
   } = await getReportMetadataColumnFlags();
 
-  if (report.reportType === "xlsx-1c" && !hasReportType) {
+  if (
+    (report.reportType === "xlsx-1c" || report.reportType === "xlsx-1c-sales") &&
+    !hasReportType
+  ) {
     throw new BadRequest("Run report metadata migration before saving XLSX reports");
   }
 
@@ -1921,12 +1982,16 @@ export async function updateReportDefinition(user, reportId, payload) {
     hasSheetName ? "sheet_name = ?," : "",
     hasHeaderRow ? "header_row = ?," : "",
     hasDataStartRow ? "data_start_row = ?," : "",
+    hasRetentionDays ? "retention_days = ?," : "",
+    hasScheduledImportEnabled ? "scheduled_import_enabled = ?," : "",
   ].join("\n      ");
   const metadataValues = [
     ...(hasReportType ? [report.reportType] : []),
     ...(hasSheetName ? [report.sheetName || null] : []),
     ...(hasHeaderRow ? [report.headerRow] : []),
     ...(hasDataStartRow ? [report.dataStartRow] : []),
+    ...(hasRetentionDays ? [report.retentionDays || null] : []),
+    ...(hasScheduledImportEnabled ? [report.scheduledImportEnabled ? 1 : 0] : []),
   ];
 
   await pool.query(

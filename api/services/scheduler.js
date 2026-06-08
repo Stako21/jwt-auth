@@ -2,6 +2,7 @@ import { loadSalesAgents } from "./loadAgents.js";
 import { loadSalesReports } from "./loadReports.js";
 import { loadOrdersByTimeReport } from "./ordersByTimeReport.service.js";
 import { loadBillOfLadingReport } from "./billOfLadingReport.service.js";
+import { loadScheduledXlsx1cSalesReports } from "./xlsx1cSalesReport.service.js";
 import { loadProducts } from "./loadProducts.js";
 import { loadTradePoints } from "./loadTradePoints.js";
 import { retryFailedNotifications } from "./notify.retry.service.js";
@@ -379,6 +380,17 @@ const schedulerTaskDefinitions = {
     systemBranch: null,
     lastRun: null,
   },
+  loadScheduledXlsx1cSalesReports: {
+    key: "loadScheduledXlsx1cSalesReports",
+    label: "Load scheduled XLSX 1C sales reports",
+    intervalMs: 5 * 60 * 1000,
+    active: true,
+    run: null,
+    requiresSystemBranch: true,
+    blockedReason: null,
+    systemBranch: null,
+    lastRun: null,
+  },
   loadProducts: {
     key: "loadProducts",
     label: "Load products",
@@ -429,6 +441,10 @@ schedulerTaskDefinitions.loadOrdersByTimeReport.run = withLock(
 schedulerTaskDefinitions.loadBillOfLadingReport.run = withLock(
   schedulerTaskDefinitions.loadBillOfLadingReport,
   loadBillOfLadingReport,
+);
+schedulerTaskDefinitions.loadScheduledXlsx1cSalesReports.run = withLock(
+  schedulerTaskDefinitions.loadScheduledXlsx1cSalesReports,
+  loadScheduledXlsx1cSalesReports,
 );
 schedulerTaskDefinitions.loadProducts.run = withLock(
   schedulerTaskDefinitions.loadProducts,

@@ -18,6 +18,11 @@ function formatDateTime(value) {
   return new Date(value).toLocaleString("uk-UA");
 }
 
+function formatDate(value) {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString("uk-UA");
+}
+
 function groupSales(rows) {
   const map = new Map();
 
@@ -76,6 +81,7 @@ export function renderSalesReportHtml({ date, generatedAt, rows }) {
               (row, idx) => `
                 <tr ${row.status !== "ACTIVE" ? 'style="text-decoration: line-through;"' : ""}>
                   <td>${idx + 1}</td>
+                  <td>${escapeHtml(formatDate(row.report_date || row.document_date))}</td>
                   <td>${escapeHtml(row.document_number)}</td>
                   <td>${escapeHtml(row.customer)}</td>
                   <td>${escapeHtml(row.point_of_sale)}</td>
@@ -83,7 +89,7 @@ export function renderSalesReportHtml({ date, generatedAt, rows }) {
                   <td>${row.form2 ? "✔" : ""}</td>
                   <td>${money(row.amount)}</td>
                 </tr>
-                ${row.status !== "ACTIVE" ? '<tr><td></td><td colspan="5" style="background: #fff3cd; color: #856404;">' + escapeHtml(row.change_comment) + "</td></tr>" : ""}
+                ${row.status !== "ACTIVE" ? '<tr><td></td><td colspan="6" style="background: #fff3cd; color: #856404;">' + escapeHtml(row.change_comment) + "</td></tr>" : ""}
               `,
             )
             .join("");
@@ -95,6 +101,7 @@ export function renderSalesReportHtml({ date, generatedAt, rows }) {
                 <thead>
                   <tr>
                     <th>#</th>
+                    <th>Дата</th>
                     <th>Документ</th>
                     <th>Контрагент</th>
                     <th>ТТ</th>
@@ -142,7 +149,7 @@ export function renderSalesReportHtml({ date, generatedAt, rows }) {
       </head>
       <body>
         <h1>Звіт з продажів</h1>
-        <div class="meta">Дата звіту: ${escapeHtml(date)}</div>
+        <div class="meta">Період звіту: ${escapeHtml(date)}</div>
         <div class="meta">Сформовано: ${escapeHtml(formatDateTime(generatedAt))}</div>
         <div class="total">Загальна сума: ${money(grandTotal)}</div>
         ${body || "<p>Дані відсутні.</p>"}

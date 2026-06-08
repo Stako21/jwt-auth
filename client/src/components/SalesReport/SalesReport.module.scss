@@ -15,9 +15,16 @@
 .header {
   margin: 5px 0;
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: end;
   align-items: center;
+}
+
+.dateLabel {
+  color: #d8dadf;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .dateInput {

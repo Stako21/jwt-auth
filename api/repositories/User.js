@@ -94,7 +94,7 @@ class UserRepository {
   static async getAllUsers(branchId) {
     const [rows] = await pool.query(
       `
-      SELECT id, name, user_name, role, city, branch_id, is_active
+      SELECT id, name, user_name, current_agent_guid, role, city, branch_id, is_active
       FROM users
       WHERE is_active = 1
         AND branch_id = ?
@@ -108,7 +108,19 @@ class UserRepository {
   static async getSalesAgents(branchId) {
     const [rows] = await pool.query(
       `
-      SELECT id, user_id, login, full_name, supervisor_name, city, supervisor_id, branch_id
+      SELECT
+        id,
+        user_id,
+        login,
+        route_guid,
+        full_name,
+        current_agent_guid,
+        supervisor_name,
+        supervisor_guid,
+        city,
+        regional_division_guid,
+        supervisor_id,
+        branch_id
       FROM sales_agents
       WHERE branch_id = ?
       `,

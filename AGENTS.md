@@ -127,6 +127,7 @@ Already visible in code and considered current baseline:
   - protected `POST /api/auth/sign-up` is the intended create-user flow
 - Document number prefixes use `cities.document_prefix` instead of a hardcoded prefix map.
 - Reports repository/controller already include branch-aware filtering for sales report queries.
+- Main sales report `/sales-report` uses a date range (`dateFrom`/`dateTo`) with both dates defaulting to tomorrow; rows are filtered by `sales_reports.report_date`, aggregated in the existing hierarchy, and PDF export uses the same period. `loadSalesReports` keeps/imports a 35-day rolling window.
 - `region_notifications` and several document/report access paths were hardened for `branch_id` scope.
 - Import services use `IMPORT_DIR` through `getImportDir()` with legacy fallback to `client/public/Sorce`.
 - Import source filenames support branch placeholders such as `{branchSlug}`, `{branchId}`, `{branchShortName}`.
@@ -147,6 +148,7 @@ Already visible in code and considered current baseline:
 - `report-orders-by-time` is DB-backed through `orders_by_time_report_rows`; `OrderByTimet.json` is configured as import source `loadOrdersByTimeReport`, scheduler task `loadOrdersByTimeReport` can refresh it, rows are replaced by source day to avoid duplicates, and rows older than one month are pruned.
 - `report-bill-of-lading` is DB-backed through `bill_of_lading_report_rows`; `BillOfLading.json` is configured as import source `loadBillOfLadingReport`, scheduler task `loadBillOfLadingReport` can refresh it, report days run 08:00-08:00, rows are replaced by source day to avoid duplicates, and rows older than one month are pruned.
 - Generic `Звіти XLSX з 1С` are supported through `report_definitions.report_type = 'xlsx-1c'`; each report can configure display title, file name, optional Excel sheet name, header row, data start row, role visibility, route, active state, and sort order.
+- DB-backed 1C sales XLSX reports are supported through `report_definitions.report_type = 'xlsx-1c-sales'`; Montblanc and Lacmi use separate report definitions, parse only XLSX TA rows whose first cell contains `name (1C guid)` into `xlsx_1c_sales_report_values`, aggregate by selected date range, resolve visible users through imported `sales_agents.current_agent_guid`, and take supervisors from `user_hierarchy`. These reports can opt into scheduler imports through `report_definitions.scheduled_import_enabled`.
 
 ## Partial Or Unfinished
 
@@ -166,6 +168,7 @@ Already visible in code and considered current baseline:
 - Keep static report metadata in `report_definitions`; do not hardcode one-off report routing/menu logic when config/registry should drive it.
 - Keep static report role visibility in `report_definitions.allowed_roles`; do not restore hardcoded `allowedRoles` lists in frontend registry except for component mapping.
 - Keep generic 1C XLSX report pages config-driven via `report_definitions` metadata and `ReportXlsx1C`; do not create one-off React components for simple tabular XLSX reports unless the report needs custom business behavior.
+- Keep DB-backed 1C sales XLSX reports config-driven via `report_definitions.report_type = 'xlsx-1c-sales'` and `ReportXlsx1CSales`; use `retention_days` for storage retention, `scheduled_import_enabled` to choose scheduler import versus sync-on-open, and preserve the rule that visible TA rows require an unambiguous DB match by imported `currentAgentGuid`.
 - Treat phones and tablets as the primary app devices; report tables should be compact, adaptive, and touch-friendly by default.
 - Keep document prefixes in `cities.document_prefix`; do not restore `prefixMap`.
 - Keep branch/bootstrap seed values in `api/config/bootstrapBranchConfig.js`; do not duplicate them inline in migrations or services.
@@ -192,6 +195,7 @@ Already visible in code and considered current baseline:
 - Static report loading/access behavior in backend reports controller plus frontend report registry; report access is role-gated by `report_definitions.allowed_roles`, and Debet visibility is intentionally full-report for roles that can open the active report route.
 - Order-upload-by-hour report storage in `orders_by_time_report_rows`; keep replace-by-day import semantics and one-month retention.
 - Collected-bills report storage in `bill_of_lading_report_rows`; keep 08:00-08:00 report-day grouping, replace-by-day import semantics, and one-month retention.
+- DB-backed 1C sales XLSX report storage in `xlsx_1c_sales_report_values`; keep per-report/per-day replace semantics, dynamic metric columns from XLSX headers, GUID-based TA row parsing, range aggregation, scheduler support via `loadScheduledXlsx1cSalesReports`, and exclusion reporting for unmatched/ambiguous TA GUIDs.
 - Import jobs in `api/services/load*.js`.
 - Scheduler runtime/branch-resolution behavior in `api/services/scheduler.js`.
 - Notification retry and Rocket.Chat upload paths in `api/services/notificationRetry.service.js` and `api/services/notify.service.js`.

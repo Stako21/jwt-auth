@@ -15,6 +15,26 @@ import "react-datepicker/dist/react-datepicker.css";
 
 registerLocale("uk", uk);
 
+function toDateKey(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateKey(value) {
+  if (!value) return null;
+  const [year, month, day] = String(value).split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function getTomorrowKey() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return toDateKey(date);
+}
+
 function groupSales(rows) {
   const map = new Map();
 
@@ -118,11 +138,8 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
     });
   }, []);
 
-  const [date, setDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0];
-  });
+  const [dateFrom, setDateFrom] = useState(getTomorrowKey);
+  const [dateTo, setDateTo] = useState(getTomorrowKey);
 
   const role = userInfo?.role;
 
@@ -137,12 +154,21 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
     });
   }
 
+  function formatDate(value) {
+    if (!value) return "";
+    return new Date(value).toLocaleDateString("uk-UA", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+    });
+  }
+
   useEffect(() => {
     if (!userInfo) return;
 
     setLoading(true);
 
-    fetchSalesReport({ date })
+    fetchSalesReport({ dateFrom, dateTo })
       .then((data) => {
         const rows = data?.data || [];
         const grouped = groupSales(rows);
@@ -184,12 +210,12 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
         }
       })
       .finally(() => setLoading(false));
-  }, [userInfo, date, role, setLastUpdateTime]);
+  }, [userInfo, dateFrom, dateTo, role, setLastUpdateTime]);
 
   async function handleOpenPdf() {
     try {
       setPdfLoading(true);
-      const res = await fetchSalesReportPdf({ date });
+      const res = await fetchSalesReportPdf({ dateFrom, dateTo });
 
       const contentType = res.headers["content-type"] || "application/pdf";
       const blob = new Blob([res.data], { type: contentType });
@@ -216,16 +242,37 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   return (
     <div className={cn(style.salesReportWrapper, { open: isOpen })}>
       <div className={style.header}>
-        <h2 className={style.title}>Звіт з продажів за </h2>
+        <h2 className={style.title}>Звіт з продажів за період</h2>
+        <span className={style.dateLabel}>з</span>
         <DatePicker
           locale="uk"
-          selected={new Date(date)}
-          onChange={(nextDate) => setDate(nextDate.toISOString().split("T")[0])}
+          selected={parseDateKey(dateFrom)}
+          onChange={(nextDate) => {
+            if (!nextDate) return;
+            const nextKey = toDateKey(nextDate);
+            setDateFrom(nextKey);
+            if (dateTo < nextKey) setDateTo(nextKey);
+          }}
           dateFormat="dd.MM.yyyy"
           className={style.dateInput}
           minDate={minDate ? new Date(minDate) : null}
+          maxDate={dateTo ? parseDateKey(dateTo) : maxDate ? new Date(maxDate) : null}
+        />
+        <span className={style.dateLabel}>по</span>
+        <DatePicker
+          locale="uk"
+          selected={parseDateKey(dateTo)}
+          onChange={(nextDate) => {
+            if (!nextDate) return;
+            const nextKey = toDateKey(nextDate);
+            setDateTo(nextKey);
+            if (dateFrom > nextKey) setDateFrom(nextKey);
+          }}
+          dateFormat="dd.MM.yyyy"
+          className={style.dateInput}
+          minDate={dateFrom ? parseDateKey(dateFrom) : minDate ? new Date(minDate) : null}
           maxDate={maxDate ? new Date(maxDate) : null}
-        ></DatePicker>
+        />
         <button
           className={`button is-small is-light ${pdfLoading ? "is-loading" : ""}`}
           onClick={handleOpenPdf}
@@ -290,6 +337,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                           <thead className={style.tableHeader}>
                             <tr>
                               <th>№</th>
+                              <th>Дата</th>
                               <th>Документ</th>
                               {showBranchColumn && <th>Філія</th>}
                               <th>Контрагент</th>
@@ -320,6 +368,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                                   }
                                 >
                                   <td>{i + 1}</td>
+                                  <td>{formatDate(r.report_date || r.document_date)}</td>
                                   <td>
                                     {statusIcon(r.status)} {shortDoc(r.document_number)}
                                   </td>
@@ -348,7 +397,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                                     key={`${r.id}-comment`}
                                     className={style.commentRow}
                                   >
-                                    <td colSpan={showBranchColumn ? 7 : 6}>
+                                    <td colSpan={showBranchColumn ? 8 : 7}>
                                       <strong>
                                         Причина зміни статусу:{" "}
                                         {r.change_comment}
@@ -361,7 +410,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                           </tbody>
                           <tfoot className={style.tableFooter}>
                             <tr>
-                              <td colSpan={showBranchColumn ? 7 : 6}>
+                              <td colSpan={showBranchColumn ? 8 : 7}>
                                 Всього:
                               </td>
                               <td>{money(ag.total)}</td>

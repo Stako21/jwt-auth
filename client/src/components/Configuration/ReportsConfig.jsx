@@ -35,6 +35,8 @@ const defaultForm = {
   sheetName: "",
   headerRow: 12,
   dataStartRow: 15,
+  retentionDays: 31,
+  scheduledImportEnabled: false,
   allowedRoles: ALL_NON_ADMIN_ROLE_IDS,
   sortOrder: 0,
   isActive: true,
@@ -77,6 +79,8 @@ function normalizeForm(report) {
     sheetName: report.sheetName || "",
     headerRow: report.headerRow ?? "",
     dataStartRow: report.dataStartRow ?? "",
+    retentionDays: report.retentionDays ?? 31,
+    scheduledImportEnabled: Boolean(report.scheduledImportEnabled),
     allowedRoles: allowedRoles === null ? ALL_NON_ADMIN_ROLE_IDS : allowedRoles,
     sortOrder: Number(report.sortOrder) || 0,
     isActive: Boolean(report.isActive),
@@ -159,7 +163,7 @@ export function ReportsConfig() {
 
     if (!form.menuTitle.trim()) nextErrors.menuTitle = "Обов'язкове поле";
     if (!form.fileName.trim()) nextErrors.fileName = "Обов'язкове поле";
-    if (form.reportType === "xlsx-1c") {
+    if (form.reportType === "xlsx-1c" || form.reportType === "xlsx-1c-sales") {
       if (!Number.isInteger(Number(form.headerRow)) || Number(form.headerRow) <= 0) {
         nextErrors.headerRow = "Додатне ціле число";
       }
@@ -176,6 +180,14 @@ export function ReportsConfig() {
       ) {
         nextErrors.dataStartRow = "Не раніше рядка заголовків";
       }
+    }
+
+    if (
+      form.retentionDays !== "" &&
+      (!Number.isInteger(Number(form.retentionDays)) ||
+        Number(form.retentionDays) <= 0)
+    ) {
+      nextErrors.retentionDays = "Додатне ціле число";
     }
 
     if (!Number.isInteger(Number(form.sortOrder))) {
@@ -206,9 +218,18 @@ export function ReportsConfig() {
         reportType: form.reportType,
         sheetName: form.sheetName.trim() || null,
         headerRow:
-          form.reportType === "xlsx-1c" ? Number(form.headerRow) : null,
+          form.reportType === "xlsx-1c" || form.reportType === "xlsx-1c-sales"
+            ? Number(form.headerRow)
+            : null,
         dataStartRow:
-          form.reportType === "xlsx-1c" ? Number(form.dataStartRow) : null,
+          form.reportType === "xlsx-1c" || form.reportType === "xlsx-1c-sales"
+            ? Number(form.dataStartRow)
+            : null,
+        retentionDays: form.retentionDays ? Number(form.retentionDays) : null,
+        scheduledImportEnabled:
+          form.reportType === "xlsx-1c-sales"
+            ? Boolean(form.scheduledImportEnabled)
+            : false,
         allowedRoles: form.allowedRoles,
         sortOrder: Number(form.sortOrder),
         isActive: Boolean(form.isActive),
@@ -302,6 +323,7 @@ export function ReportsConfig() {
                     <th>Маршрут</th>
                     <th>Назва</th>
                     <th>Файл</th>
+                    <th>Оновл.</th>
                     <th>Ролі</th>
                     <th>Пор.</th>
                     <th>Статус</th>
@@ -324,6 +346,19 @@ export function ReportsConfig() {
                       </td>
                       <td style={compactCellStyle} title={report.fileName || "—"}>
                         {report.fileName || "—"}
+                      </td>
+                      <td style={compactCellStyle}>
+                        {report.reportType === "xlsx-1c-sales" ? (
+                          <span
+                            className={`tag is-small ${
+                              report.scheduledImportEnabled ? "is-success" : "is-light"
+                            }`}
+                          >
+                            {report.scheduledImportEnabled ? "Schedule" : "Open"}
+                          </span>
+                        ) : (
+                          <span className="tag is-small is-light">Open</span>
+                        )}
                       </td>
                       <td>
                         <div style={rolesCellStyle}>
@@ -381,7 +416,7 @@ export function ReportsConfig() {
                   ))}
                   {!sortedReports.length && (
                     <tr>
-                      <td colSpan="8" className="has-text-centered has-text-grey">
+                      <td colSpan="9" className="has-text-centered has-text-grey">
                         Звіти ще не налаштовані
                       </td>
                     </tr>
@@ -486,13 +521,15 @@ export function ReportsConfig() {
                     }
                   >
                     <option value="xlsx-1c">Звіти XLSX з 1С</option>
+                    <option value="xlsx-1c-sales">XLSX 1C sales DB</option>
                     <option value="static-json">Static JSON</option>
                   </select>
                 </div>
               </div>
             </div>
 
-            {form.reportType === "xlsx-1c" && (
+            {(form.reportType === "xlsx-1c" ||
+              form.reportType === "xlsx-1c-sales") && (
               <>
                 <div className={formFieldClassName}>
                   <label className={labelClassName}>Лист Excel</label>
@@ -553,6 +590,48 @@ export function ReportsConfig() {
                     )}
                   </div>
                 </div>
+
+                <div className={formFieldClassName}>
+                  <label className={labelClassName}>Зберігати, днів</label>
+                  <input
+                    className={`input is-small ${
+                      errors.retentionDays ? "is-danger" : ""
+                    }`}
+                    type="number"
+                    min="1"
+                    value={form.retentionDays}
+                    onChange={(e) =>
+                      setForm((current) => ({
+                        ...current,
+                        retentionDays: e.target.value,
+                      }))
+                    }
+                  />
+                  {errors.retentionDays && (
+                    <p className="help is-danger">{errors.retentionDays}</p>
+                  )}
+                </div>
+
+                {form.reportType === "xlsx-1c-sales" && (
+                  <div className={formFieldClassName}>
+                    <label className="checkbox" style={{ fontSize: 12 }}>
+                      <input
+                        type="checkbox"
+                        checked={form.scheduledImportEnabled}
+                        onChange={(e) =>
+                          setForm((current) => ({
+                            ...current,
+                            scheduledImportEnabled: e.target.checked,
+                          }))
+                        }
+                      />{" "}
+                      Оновлювати за розкладом
+                    </label>
+                    <p className="help" style={{ fontSize: 11, lineHeight: 1.25 }}>
+                      Якщо вимкнено, звіт оновлюється при відкритті сторінки.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 

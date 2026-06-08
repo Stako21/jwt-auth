@@ -19,10 +19,11 @@ function getBranchScopeCondition(alias, role) {
 }
 
 class ReportsRepository {
-  static async getSalesReport({ userId, role, reportDate, branchId }) {
+  static async getSalesReport({ userId, role, dateFrom, dateTo, branchId }) {
     let sql;
     const params = {
-      report_date: reportDate,
+      date_from: dateFrom,
+      date_to: dateTo,
       current_user_id: userId,
       branch_id: Number(branchId),
     };
@@ -32,6 +33,7 @@ class ReportsRepository {
       sql = `
         SELECT
           sr.id,
+          sr.report_date,
           sr.document_number,
           sr.document_date,
           sr.amount,
@@ -57,7 +59,7 @@ class ReportsRepository {
         LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
         LEFT JOIN users sup ON sup.id = h.parent_user_id
         WHERE
-          sr.report_date = :report_date
+          sr.report_date BETWEEN :date_from AND :date_to
           AND ${branchScope}
           AND sr.user_id = :current_user_id
           AND EXISTS (
@@ -66,12 +68,13 @@ class ReportsRepository {
             WHERE u2.NAME = sr.login_agent
               AND u2.branch_id = sr.branch_id
           )
-        ORDER BY b.name, sr.document_number
+        ORDER BY b.name, sr.report_date, sr.document_number
       `;
     } else if (role === ROLE_IDS.SV) {
       sql = `
         SELECT
           sr.id,
+          sr.report_date,
           sr.document_number,
           sr.document_date,
           sr.amount,
@@ -97,7 +100,7 @@ class ReportsRepository {
         LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
         LEFT JOIN users sup ON sup.id = h.parent_user_id
         WHERE
-          sr.report_date = :report_date
+          sr.report_date BETWEEN :date_from AND :date_to
           AND ${branchScope}
           AND sr.user_id IN (
             SELECT child_user_id
@@ -110,7 +113,7 @@ class ReportsRepository {
             WHERE u2.NAME = sr.login_agent
               AND u2.branch_id = sr.branch_id
           )
-        ORDER BY b.name, supervisor_name, agent_name, sr.document_number
+        ORDER BY b.name, supervisor_name, agent_name, sr.report_date, sr.document_number
       `;
     } else if (role === ROLE_IDS.NTO) {
       sql = `
@@ -127,6 +130,7 @@ class ReportsRepository {
         )
         SELECT
           sr.id,
+          sr.report_date,
           sr.document_number,
           sr.document_date,
           sr.amount,
@@ -152,7 +156,7 @@ class ReportsRepository {
         LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
         LEFT JOIN users sup ON sup.id = h.parent_user_id
         WHERE
-          sr.report_date = :report_date
+          sr.report_date BETWEEN :date_from AND :date_to
           AND ${branchScope}
           AND (
             sr.user_id IN (SELECT child_user_id FROM user_tree)
@@ -186,12 +190,13 @@ class ReportsRepository {
             WHERE u2.NAME = sr.login_agent
               AND u2.branch_id = sr.branch_id
           )
-        ORDER BY b.name, supervisor_name, agent_name, sr.document_number
+        ORDER BY b.name, supervisor_name, agent_name, sr.report_date, sr.document_number
       `;
     } else if (role === ROLE_IDS.Accountant) {
       sql = `
         SELECT
           sr.id,
+          sr.report_date,
           sr.document_number,
           sr.document_date,
           sr.amount,
@@ -218,7 +223,7 @@ class ReportsRepository {
         LEFT JOIN users sup ON sup.id = h.parent_user_id
         JOIN users me ON me.id = :current_user_id
         WHERE
-          sr.report_date = :report_date
+          sr.report_date BETWEEN :date_from AND :date_to
           AND ${branchScope}
           AND u.role = ${ROLE_IDS.TA}
           AND u.is_active = 1
@@ -232,12 +237,13 @@ class ReportsRepository {
             WHERE u2.NAME = sr.login_agent
               AND u2.branch_id = sr.branch_id
           )
-        ORDER BY b.name, supervisor_name, agent_name, sr.document_number
+        ORDER BY b.name, supervisor_name, agent_name, sr.report_date, sr.document_number
       `;
     } else {
       sql = `
         SELECT
           sr.id,
+          sr.report_date,
           sr.document_number,
           sr.document_date,
           sr.amount,
@@ -263,7 +269,7 @@ class ReportsRepository {
         LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
         LEFT JOIN users sup ON sup.id = h.parent_user_id
         WHERE
-          sr.report_date = :report_date
+          sr.report_date BETWEEN :date_from AND :date_to
           AND ${branchScope}
           AND EXISTS (
             SELECT 1
@@ -271,7 +277,7 @@ class ReportsRepository {
             WHERE u2.NAME = sr.login_agent
               AND u2.branch_id = sr.branch_id
           )
-        ORDER BY b.name, supervisor_name, agent_name, sr.document_number
+        ORDER BY b.name, supervisor_name, agent_name, sr.report_date, sr.document_number
       `;
     }
 
