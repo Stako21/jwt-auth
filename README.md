@@ -20,6 +20,7 @@ Implemented in the current workspace:
 - frontend `AppConfigContext` and Admin "Configuration" UI
 - dynamic balance routes via `/balance/:slug`
 - authenticated static balance/report file access through backend routes
+- balance XLSX files can expose a `Price`/`Ціна` column; product rows show price on tap/click, and balance page config can apply an optional percent markup
 - config-driven reports, including Debet, DB-backed order-upload-by-hour, DB-backed collected-bills, generic 1C XLSX views, and DB-backed Montblanc/Lacmi 1C XLSX sales reports with GUID-based TA matching, date-range aggregation, per-report retention, optional scheduler import, import-source/scheduler management, per-report role access, and Header report navigation collapsed into a select when multiple reports are active
 - branch switching for eligible users
 - user branch/city access management

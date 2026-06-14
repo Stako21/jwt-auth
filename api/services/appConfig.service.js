@@ -15,6 +15,7 @@ export function getUserBranchId(user) {
 const VALID_REPORT_ROLE_IDS = new Set(Object.values(ROLE_IDS).map(Number));
 let reportAllowedRolesColumnExistsCache = null;
 const reportDefinitionColumnExistsCache = new Map();
+const balancePageColumnExistsCache = new Map();
 
 export async function hasReportAllowedRolesColumn() {
   if (reportAllowedRolesColumnExistsCache === true) {
@@ -59,6 +60,36 @@ async function hasReportDefinitionColumn(columnName) {
   const exists = rows.length > 0;
   reportDefinitionColumnExistsCache.set(columnName, exists);
   return exists;
+}
+
+async function hasBalancePageColumn(columnName) {
+  if (balancePageColumnExistsCache.has(columnName)) {
+    return balancePageColumnExistsCache.get(columnName);
+  }
+
+  const [rows] = await pool.query(
+    `
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = 'balance_pages'
+      AND column_name = ?
+    LIMIT 1
+    `,
+    [columnName],
+  );
+
+  const exists = rows.length > 0;
+  balancePageColumnExistsCache.set(columnName, exists);
+  return exists;
+}
+
+async function getBalancePagePriceMultiplierSelect(alias = "bp") {
+  const prefix = alias ? `${alias}.` : "";
+
+  return (await hasBalancePageColumn("price_multiplier_percent"))
+    ? `${prefix}price_multiplier_percent AS priceMultiplierPercent,`
+    : "NULL AS priceMultiplierPercent,";
 }
 
 async function getReportAllowedRolesSelect() {
@@ -251,6 +282,7 @@ export async function getAppConfig(user) {
   const branchId = getUserBranchId(user);
   const allowedRolesSelect = await getReportAllowedRolesSelect();
   const reportMetadataSelect = await getReportMetadataSelect();
+  const balancePriceMultiplierSelect = await getBalancePagePriceMultiplierSelect();
 
   const [[branch]] = await pool.query(
     `
@@ -291,6 +323,7 @@ export async function getAppConfig(user) {
       bp.menu_title AS menuTitle,
       bp.header_title AS headerTitle,
       bp.file_name AS fileName,
+      ${balancePriceMultiplierSelect}
       bp.is_active AS isActive,
       bp.sort_order AS sortOrder,
       c.short_name AS cityShortName,
@@ -964,6 +997,7 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
     cityIdMap.set(Number(city.id), Number(result.insertId));
   }
 
+  const balancePriceMultiplierSelect = await getBalancePagePriceMultiplierSelect("");
   const [sourceBalancePages] = await executor.query(
     `
     SELECT
@@ -972,6 +1006,7 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
       menu_title AS menuTitle,
       header_title AS headerTitle,
       file_name AS fileName,
+      ${balancePriceMultiplierSelect}
       is_active AS isActive,
       sort_order AS sortOrder
     FROM balance_pages
@@ -982,30 +1017,39 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
   );
 
   for (const page of sourceBalancePages) {
+    const hasPriceMultiplier = await hasBalancePageColumn("price_multiplier_percent");
+    const columns = [
+      "branch_id",
+      "city_id",
+      "slug",
+      "menu_title",
+      "header_title",
+      "file_name",
+    ];
+    const values = [
+      targetBranchId,
+      page.cityId === null ? null : cityIdMap.get(Number(page.cityId)) || null,
+      page.slug,
+      page.menuTitle,
+      page.headerTitle,
+      page.fileName,
+    ];
+
+    if (hasPriceMultiplier) {
+      columns.push("price_multiplier_percent");
+      values.push(page.priceMultiplierPercent);
+    }
+
+    columns.push("is_active", "sort_order");
+    values.push(page.isActive ? 1 : 0, page.sortOrder);
+
+    const placeholders = columns.map(() => "?").join(", ");
     await executor.query(
       `
-      INSERT INTO balance_pages (
-        branch_id,
-        city_id,
-        slug,
-        menu_title,
-        header_title,
-        file_name,
-        is_active,
-        sort_order
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO balance_pages (${columns.join(", ")})
+      VALUES (${placeholders})
       `,
-      [
-        targetBranchId,
-        page.cityId === null ? null : cityIdMap.get(Number(page.cityId)) || null,
-        page.slug,
-        page.menuTitle,
-        page.headerTitle,
-        page.fileName,
-        page.isActive ? 1 : 0,
-        page.sortOrder,
-      ],
+      values,
     );
   }
 
@@ -1331,6 +1375,7 @@ export async function setCityActive(user, cityId, isActive) {
 
 export async function getBalancePagesForBranch(user) {
   const branchId = getUserBranchId(user);
+  const priceMultiplierSelect = await getBalancePagePriceMultiplierSelect();
   const [pages] = await pool.query(
     `
     SELECT
@@ -1341,6 +1386,7 @@ export async function getBalancePagesForBranch(user) {
       bp.menu_title AS menuTitle,
       bp.header_title AS headerTitle,
       bp.file_name AS fileName,
+      ${priceMultiplierSelect}
       bp.is_active AS isActive,
       bp.sort_order AS sortOrder,
       c.short_name AS cityShortName,
@@ -1430,6 +1476,14 @@ function normalizeBalancePagePayload(payload = {}) {
     payload.headerTitle || payload.header_title || "",
   ).trim();
   const fileName = String(payload.fileName || payload.file_name || "").trim();
+  const rawPriceMultiplier =
+    payload.priceMultiplierPercent ?? payload.price_multiplier_percent;
+  const priceMultiplierPercent =
+    rawPriceMultiplier === null ||
+    rawPriceMultiplier === undefined ||
+    rawPriceMultiplier === ""
+      ? null
+      : Number(rawPriceMultiplier);
   const cityId =
     payload.cityId === null ||
     payload.cityId === "" ||
@@ -1454,6 +1508,7 @@ function normalizeBalancePagePayload(payload = {}) {
     menuTitle,
     headerTitle,
     fileName,
+    priceMultiplierPercent,
     cityId,
     sortOrder,
     isActive,
@@ -1470,6 +1525,13 @@ function validateBalancePagePayload(page) {
   if (!page.menuTitle) throw new BadRequest("Назва в меню є обов'язковою");
   if (!page.headerTitle) throw new BadRequest("Заголовок сторінки є обов'язковим");
   if (!page.fileName) throw new BadRequest("Назва файлу є обов'язковою");
+  if (
+    page.priceMultiplierPercent !== null &&
+    (!Number.isFinite(page.priceMultiplierPercent) ||
+      page.priceMultiplierPercent < 0)
+  ) {
+    throw new BadRequest("Price multiplier percent must be a non-negative number or empty");
+  }
   if (!Number.isInteger(page.sortOrder)) {
     throw new BadRequest("Порядок сортування має бути цілим числом");
   }
@@ -1735,30 +1797,39 @@ export async function createBalancePage(user, payload) {
     fileName: page.fileName,
   });
 
+  const hasPriceMultiplier = await hasBalancePageColumn("price_multiplier_percent");
+  const columns = [
+    "branch_id",
+    "city_id",
+    "slug",
+    "menu_title",
+    "header_title",
+    "file_name",
+  ];
+  const values = [
+    branchId,
+    page.cityId,
+    page.slug,
+    page.menuTitle,
+    page.headerTitle,
+    page.fileName,
+  ];
+
+  if (hasPriceMultiplier) {
+    columns.push("price_multiplier_percent");
+    values.push(page.priceMultiplierPercent);
+  }
+
+  columns.push("is_active", "sort_order");
+  values.push(page.isActive ? 1 : 0, page.sortOrder);
+
+  const placeholders = columns.map(() => "?").join(", ");
   const [result] = await pool.query(
     `
-    INSERT INTO balance_pages (
-      branch_id,
-      city_id,
-      slug,
-      menu_title,
-      header_title,
-      file_name,
-      is_active,
-      sort_order
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO balance_pages (${columns.join(", ")})
+    VALUES (${placeholders})
     `,
-    [
-      branchId,
-      page.cityId,
-      page.slug,
-      page.menuTitle,
-      page.headerTitle,
-      page.fileName,
-      page.isActive ? 1 : 0,
-      page.sortOrder,
-    ],
+    values,
   );
 
   return getBalancePageById(branchId, result.insertId);
@@ -1790,6 +1861,14 @@ export async function updateBalancePage(user, pageId, payload) {
     excludeId: pageId,
   });
 
+  const hasPriceMultiplier = await hasBalancePageColumn("price_multiplier_percent");
+  const priceMultiplierSet = hasPriceMultiplier
+    ? "price_multiplier_percent = ?,"
+    : "";
+  const priceMultiplierValues = hasPriceMultiplier
+    ? [page.priceMultiplierPercent]
+    : [];
+
   await pool.query(
     `
     UPDATE balance_pages
@@ -1799,6 +1878,7 @@ export async function updateBalancePage(user, pageId, payload) {
       menu_title = ?,
       header_title = ?,
       file_name = ?,
+      ${priceMultiplierSet}
       is_active = ?,
       sort_order = ?
     WHERE id = ?
@@ -1810,6 +1890,7 @@ export async function updateBalancePage(user, pageId, payload) {
       page.menuTitle,
       page.headerTitle,
       page.fileName,
+      ...priceMultiplierValues,
       page.isActive ? 1 : 0,
       page.sortOrder,
       pageId,
@@ -2117,6 +2198,7 @@ export async function setImportSourceActive(sourceId, isActive) {
 
 export async function getBalancePageBySlug(user, slug) {
   const branchId = getUserBranchId(user);
+  const priceMultiplierSelect = await getBalancePagePriceMultiplierSelect("");
 
   const [[page]] = await pool.query(
     `
@@ -2128,6 +2210,7 @@ export async function getBalancePageBySlug(user, slug) {
       menu_title AS menuTitle,
       header_title AS headerTitle,
       file_name AS fileName,
+      ${priceMultiplierSelect}
       is_active AS isActive
     FROM balance_pages
     WHERE branch_id = ?
@@ -2245,6 +2328,7 @@ export async function getImportSourcePath(sourceKey, fallbackFileName) {
 }
 
 export async function getBalancePageById(branchId, pageId) {
+  const priceMultiplierSelect = await getBalancePagePriceMultiplierSelect();
   const [[page]] = await pool.query(
     `
     SELECT
@@ -2255,6 +2339,7 @@ export async function getBalancePageById(branchId, pageId) {
       bp.menu_title AS menuTitle,
       bp.header_title AS headerTitle,
       bp.file_name AS fileName,
+      ${priceMultiplierSelect}
       bp.is_active AS isActive,
       bp.sort_order AS sortOrder,
       c.short_name AS cityShortName,

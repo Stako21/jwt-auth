@@ -24,6 +24,9 @@ function flattenData(data, level = 0, parentId = "") {
       id: itemId,
       productNameCell: item.productNameCell,
       productQuantityCell: item.productQuantityCell,
+      priceCell: item.priceCell,
+      adjustedPriceCell: item.adjustedPriceCell,
+      priceMultiplierPercent: item.priceMultiplierPercent,
       level,
       parentId,
       hasChildren: !!(item.children && item.children.length > 0),
@@ -39,10 +42,22 @@ function flattenData(data, level = 0, parentId = "") {
 
 export const Table = ({ data }) => {
   const [visibility, setVisibility] = useState(() => buildVisibilityMap(data));
+  const [activePriceRowId, setActivePriceRowId] = useState(null);
 
   useEffect(() => {
     setVisibility(buildVisibilityMap(data));
+    setActivePriceRowId(null);
   }, [data]);
+
+  useEffect(() => {
+    if (!activePriceRowId) return undefined;
+
+    const timeoutId = setTimeout(() => {
+      setActivePriceRowId(null);
+    }, 10000);
+
+    return () => clearTimeout(timeoutId);
+  }, [activePriceRowId]);
 
   const flatData = useMemo(() => flattenData(data), [data]);
   const rowMap = useMemo(
@@ -68,6 +83,12 @@ export const Table = ({ data }) => {
 
     return true;
   };
+
+  const formatPrice = (value) =>
+    new Intl.NumberFormat("uk-UA", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
 
   const leafRowOrder = useMemo(() => {
     const result = {};
@@ -98,6 +119,11 @@ export const Table = ({ data }) => {
               {flatData.map((row) => {
                 const isLeafRow = !row.hasChildren;
                 const leafRowIndex = isLeafRow ? leafRowOrder[row.id] : -1;
+                const hasPrice = isLeafRow && typeof row.priceCell === "number";
+                const displayPrice =
+                  typeof row.adjustedPriceCell === "number"
+                    ? row.adjustedPriceCell
+                    : row.priceCell;
 
                 if (!isRowVisible(row)) return null;
 
@@ -134,7 +160,43 @@ export const Table = ({ data }) => {
                           ></i>
                         </button>
                       )}
-                      <span className={style.productText}>{row.productNameCell}</span>
+                      <span
+                        className={cn(style.productText, {
+                          [style.productTextWithPrice]: hasPrice,
+                        })}
+                        onClick={
+                          hasPrice
+                            ? () =>
+                                setActivePriceRowId((currentId) =>
+                                  currentId === row.id ? null : row.id,
+                                )
+                            : undefined
+                        }
+                        role={hasPrice ? "button" : undefined}
+                        tabIndex={hasPrice ? 0 : undefined}
+                        onKeyDown={
+                          hasPrice
+                            ? (event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  setActivePriceRowId((currentId) =>
+                                    currentId === row.id ? null : row.id,
+                                  );
+                                }
+                              }
+                            : undefined
+                        }
+                      >
+                        {row.productNameCell}
+                      </span>
+                      {hasPrice && activePriceRowId === row.id && (
+                        <div className={style.pricePopover}>
+                          <div className={style.priceLine}>
+                            <span>Ціна</span>
+                            <strong>{formatPrice(displayPrice)}</strong>
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td
                       className={cn(

@@ -139,6 +139,7 @@ Already visible in code and considered current baseline:
 - Protected top-level route mounts in `api/server.js` are the current norm for `/api/config`, `/api/balances`, `/api/documents`, `/api/directories`, `/api/reports`, and `/api/region-notifications`.
 - Frontend API clients share the normalized authenticated retry/refresh flow from `client/src/services/createAuthenticatedApi.js`.
 - Balance parser and balance UI were recently refined for better search/filter UX and mobile density.
+- Balance XLSX parsing now supports a separate price column; product rows can show price in a click/tap popover, and `balance_pages.price_multiplier_percent` can optionally adjust displayed price by percent.
 - Debet static report was recently added and refined with a grouping switch:
   - collector view: TA -> contractor/trade point -> documents
   - contractor view: contractor/trade point -> TA -> documents
@@ -165,6 +166,7 @@ Already visible in code and considered current baseline:
 - Any query that reads business data in a multi-branch table should be checked for branch scoping.
 - Keep city data in `cities`; do not duplicate city lists in frontend components.
 - Keep balance page metadata in `balance_pages`; do not hardcode balance file names in routes.
+- Keep balance price multiplier metadata in `balance_pages.price_multiplier_percent`; an empty value means display the source XLSX price without adjustment, while a numeric value is added as a percent markup.
 - Keep static report metadata in `report_definitions`; do not hardcode one-off report routing/menu logic when config/registry should drive it.
 - Keep static report role visibility in `report_definitions.allowed_roles`; do not restore hardcoded `allowedRoles` lists in frontend registry except for component mapping.
 - Keep generic 1C XLSX report pages config-driven via `report_definitions` metadata and `ReportXlsx1C`; do not create one-off React components for simple tabular XLSX reports unless the report needs custom business behavior.

@@ -60,6 +60,73 @@ function normalizeQuantityCells(cells) {
   return cells.filter((value) => value !== null && value !== undefined && value !== "");
 }
 
+function normalizeHeaderText(value) {
+  return String(value || "").trim().toLocaleLowerCase();
+}
+
+function findMetricColumns(rows, dataStartIndex) {
+  const headerRows = rows.slice(Math.max(0, dataStartIndex - 6), dataStartIndex);
+  let priceColumnIndex = null;
+  let quantityColumnIndexes = [];
+
+  headerRows.forEach((row) => {
+    row.forEach((cell, index) => {
+      const normalized = normalizeHeaderText(cell);
+      if (!normalized) return;
+
+      if (/ц[іиі]?на|цена/.test(normalized)) {
+        priceColumnIndex = index;
+      }
+
+      if (/остат|залиш|свобод/.test(normalized)) {
+        quantityColumnIndexes.push(index);
+      }
+    });
+  });
+
+  quantityColumnIndexes = [...new Set(quantityColumnIndexes)].filter(
+    (index) => index > 0 && index !== priceColumnIndex,
+  );
+
+  return {
+    priceColumnIndex,
+    quantityColumnIndexes,
+  };
+}
+
+function getNumericCell(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function getPriceCell(cells, priceColumnIndex) {
+  if (!priceColumnIndex) return null;
+  return getNumericCell(cells[priceColumnIndex]);
+}
+
+function getQuantityCells(cells, quantityColumnIndexes, priceColumnIndex) {
+  if (quantityColumnIndexes.length) {
+    return normalizeQuantityCells(quantityColumnIndexes.map((index) => cells[index]));
+  }
+
+  return normalizeQuantityCells(
+    cells.slice(1).filter((_, offset) => offset + 1 !== priceColumnIndex),
+  );
+}
+
+function normalizePriceMultiplierPercent(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue >= 0 ? numberValue : null;
+}
+
+function applyPriceMultiplier(price, priceMultiplierPercent) {
+  if (price === null || priceMultiplierPercent === null) return null;
+  return price * (1 + priceMultiplierPercent / 100);
+}
+
 function getEffectiveLevel(baseLevel, isGroupRow, nextBaseLevel) {
   if (!isGroupRow) {
     return baseLevel;
@@ -76,6 +143,9 @@ function createNode(row) {
   return {
     productNameCell: row.productNameCell,
     productQuantityCell: row.productQuantityCell,
+    priceCell: row.priceCell,
+    adjustedPriceCell: row.adjustedPriceCell,
+    priceMultiplierPercent: row.priceMultiplierPercent,
     children: [],
   };
 }
@@ -103,14 +173,26 @@ function attachNode(rootNodes, stack, row) {
   }
 }
 
-function buildHierarchy(rows, rowMeta, dataStartIndex) {
+function buildHierarchy(rows, rowMeta, dataStartIndex, options = {}) {
+  const priceMultiplierPercent = normalizePriceMultiplierPercent(
+    options.priceMultiplierPercent,
+  );
+  const { priceColumnIndex, quantityColumnIndexes } = findMetricColumns(
+    rows,
+    dataStartIndex,
+  );
   const parsedRows = rows
     .slice(dataStartIndex)
     .map((cells, offset) => {
       const rowIndex = dataStartIndex + offset;
       const productNameCell =
         typeof cells?.[0] === "string" ? cells[0].trim() : String(cells?.[0] || "").trim();
-      const productQuantityCell = normalizeQuantityCells(cells.slice(1));
+      const priceCell = getPriceCell(cells, priceColumnIndex);
+      const productQuantityCell = getQuantityCells(
+        cells,
+        quantityColumnIndexes,
+        priceColumnIndex,
+      );
       const baseLevel = Number.isInteger(rowMeta?.[rowIndex]?.level)
         ? Number(rowMeta[rowIndex].level)
         : 0;
@@ -119,6 +201,9 @@ function buildHierarchy(rows, rowMeta, dataStartIndex) {
         rowIndex,
         productNameCell,
         productQuantityCell,
+        priceCell,
+        adjustedPriceCell: applyPriceMultiplier(priceCell, priceMultiplierPercent),
+        priceMultiplierPercent,
         baseLevel,
       };
     })
@@ -173,7 +258,7 @@ function buildHierarchy(rows, rowMeta, dataStartIndex) {
   return result;
 }
 
-export function parseBalanceWorkbookData(data) {
+export function parseBalanceWorkbookData(data, options = {}) {
   const workbook = XLSX.read(data, { type: "array", cellStyles: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
@@ -188,7 +273,7 @@ export function parseBalanceWorkbookData(data) {
   }
 
   return {
-    hierarchy: buildHierarchy(rows, rowMeta, dataStartIndex),
+    hierarchy: buildHierarchy(rows, rowMeta, dataStartIndex, options),
     lastUpdateTime: extractLastUpdateTime(rows),
   };
 }

@@ -5,7 +5,7 @@
 }
 
 .tableShell {
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(77, 84, 95, 0.2);
   border-radius: 0;
   background: #f5f7fa;
@@ -14,6 +14,7 @@
 
 .scrollContainer {
   overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -58,6 +59,7 @@
 }
 
 .productCell {
+  position: relative;
   color: $dark-text-color;
   word-break: break-word;
 }
@@ -69,6 +71,49 @@
   line-height: 1.2;
   font-weight: 700;
   font-size: 12px;
+}
+
+.productTextWithPrice {
+  cursor: pointer;
+}
+
+.productTextWithPrice:hover,
+.productTextWithPrice:focus-visible {
+  color: #0f5f8f;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pricePopover {
+  position: absolute;
+  left: 10px;
+  top: calc(100% - 2px);
+  z-index: 5;
+  min-width: 150px;
+  padding: 8px 10px;
+  border: 1px solid rgba(28, 41, 56, 0.16);
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  color: #1f2937;
+}
+
+.priceLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.priceLine span {
+  color: #64748b;
+}
+
+.priceLine strong {
+  color: #111827;
+  font-variant-numeric: tabular-nums;
 }
 
 .quantityCell {
@@ -89,8 +134,8 @@
   height: 18px;
   margin-right: 5px;
   border: 0;
-  border-radius: 0;
-  background: rgba(46, 61, 87, 0.08);
+  border-radius: 50%;
+  background: rgba(135, 136, 138, 0.01);
   color: #46566f;
   cursor: pointer;
   transition:
@@ -99,7 +144,7 @@
 }
 
 .toggleButton:hover {
-  background: rgba(46, 61, 87, 0.14);
+  background: rgba(221, 221, 221, 0.14);
   color: #243146;
 }
 

@@ -22,6 +22,7 @@ function renderBalanceRoutes(activeBalancePages, setLastUpdateTime) {
       element={
         <ParseExcel
           balanceSlug={page.slug}
+          priceMultiplierPercent={page.priceMultiplierPercent}
           setLastUpdateTime={setLastUpdateTime}
         />
       }

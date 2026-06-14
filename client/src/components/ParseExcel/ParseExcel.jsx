@@ -67,7 +67,12 @@ function countLeafRows(items) {
   }, 0);
 }
 
-export const ParseExcel = ({ fileName, balanceSlug, setLastUpdateTime }) => {
+export const ParseExcel = ({
+  fileName,
+  balanceSlug,
+  priceMultiplierPercent,
+  setLastUpdateTime,
+}) => {
   const [parsedData, setParsedData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -89,7 +94,9 @@ export const ParseExcel = ({ fileName, balanceSlug, setLastUpdateTime }) => {
         data = await response.arrayBuffer();
       }
 
-      const { hierarchy, lastUpdateTime } = parseBalanceWorkbookData(data);
+      const { hierarchy, lastUpdateTime } = parseBalanceWorkbookData(data, {
+        priceMultiplierPercent,
+      });
       setLastUpdateTime(lastUpdateTime);
       setParsedData(hierarchy);
     } catch (error) {
@@ -106,7 +113,7 @@ export const ParseExcel = ({ fileName, balanceSlug, setLastUpdateTime }) => {
     } finally {
       setIsRendered(true);
     }
-  }, [balanceSlug, fileName, setLastUpdateTime]);
+  }, [balanceSlug, fileName, priceMultiplierPercent, setLastUpdateTime]);
 
   useEffect(() => {
     loadFile();

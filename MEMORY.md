@@ -1,5 +1,35 @@
 # MEMORY.md
 
+## 2026-06-12 - Existing non-Docker server update runbook checkpoint
+
+- Added `documentation/update-existing-non-docker-server-to-branches-config.md` for upgrading the current Ubuntu/PM2/Nginx production-style server from `resbr6` to `branches-config`.
+- The runbook captures the observed server layout: `/var/www/apps/jwt-auth`, PM2 process `jwt-auth-api`, Nginx `client/dist` root, MySQL `auth`, and import directory `/var/www/data/excel`.
+- It includes backup, root-owned worktree repair, token-safe Git remote cleanup, `.env` DB/branch/import settings, migration execution, existing-user access seeding, post-migration verification, PM2/Nginx restart checks, secret rotation, and rollback steps.
+- No migrations or server commands were run from this workspace.
+
+## 2026-06-14 - Two-production release runbook checkpoint
+
+- Extended `documentation/update-existing-non-docker-server-to-branches-config.md` with an ongoing release procedure for keeping both production sites on the same stage:
+  - Docker production `https://balance.sweetglobal.com.ua/`
+  - PM2/Nginx production `https://balance.roshen.zp.ua/`
+- Added a shared release flow around one `RELEASE_SHA`, backups on both servers, Docker update/rebuild/publish steps, PM2 update/build/restart steps, migration checks, final SHA/schema/health comparison, and an emergency note for split-stage production.
+- No production commands were run from this workspace.
+
+## 2026-06-14 - Balance price popover and multiplier checkpoint
+
+- Added migration `api/migrations/014_balance_price_multiplier.js` for nullable `balance_pages.price_multiplier_percent`.
+- Balance page config now reads/saves the optional price multiplier percent and exposes it through app config.
+- Balance XLSX parsing now detects separate `Price`/`Ціна` and balance quantity columns when present, preserving old-file behavior when no price column exists.
+- Product leaf rows with a parsed price now show a click/tap price popover; if a multiplier is configured, the displayed price includes that percent as markup.
+- Deployment runbook was updated to reference migration `014`.
+- Verification:
+  - parser smoke on `client/public/Sorce/balanceCH.xlsx` confirmed quantity and price are separated
+  - `node --check api/services/appConfig.service.js`
+  - `node --check api/migrations/014_balance_price_multiplier.js`
+  - `node --check api/scripts/bootstrapDoctor.js`
+  - `npm run lint` in `client`
+  - `npm run build` in `client` passed with known Sass legacy API and chunk-size warnings
+
 ## Purpose Of Current Work
 
 The current branch `branches-config` is moving the application from hardcoded city-specific behavior toward configurable branch/city support.

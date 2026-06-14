@@ -45,7 +45,15 @@ const CORE_TABLES = {
     "document_prefix",
     "is_active",
   ],
-  balance_pages: ["id", "branch_id", "slug", "menu_title", "header_title", "file_name"],
+  balance_pages: [
+    "id",
+    "branch_id",
+    "slug",
+    "menu_title",
+    "header_title",
+    "file_name",
+    "price_multiplier_percent",
+  ],
   report_definitions: [
     "id",
     "branch_id",

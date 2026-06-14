@@ -13,6 +13,7 @@ const defaultForm = {
   menuTitle: "",
   headerTitle: "",
   fileName: "",
+  priceMultiplierPercent: "",
   cityId: "",
   sortOrder: 0,
   isActive: true,
@@ -26,6 +27,7 @@ function normalizeForm(page) {
     menuTitle: page.menuTitle || "",
     headerTitle: page.headerTitle || "",
     fileName: page.fileName || "",
+    priceMultiplierPercent: page.priceMultiplierPercent ?? "",
     cityId: page.cityId ?? "",
     sortOrder: Number(page.sortOrder) || 0,
     isActive: Boolean(page.isActive),
@@ -88,6 +90,13 @@ export function BalancePagesConfig() {
     if (!form.menuTitle.trim()) nextErrors.menuTitle = "Обов'язкове поле";
     if (!form.headerTitle.trim()) nextErrors.headerTitle = "Обов'язкове поле";
     if (!form.fileName.trim()) nextErrors.fileName = "Обов'язкове поле";
+    if (
+      form.priceMultiplierPercent !== "" &&
+      (!Number.isFinite(Number(form.priceMultiplierPercent)) ||
+        Number(form.priceMultiplierPercent) < 0)
+    ) {
+      nextErrors.priceMultiplierPercent = "Non-negative number or empty";
+    }
     if (!Number.isInteger(Number(form.sortOrder))) {
       nextErrors.sortOrder = "Має бути цілим числом";
     }
@@ -113,6 +122,10 @@ export function BalancePagesConfig() {
         menuTitle: form.menuTitle.trim(),
         headerTitle: form.headerTitle.trim(),
         fileName: form.fileName.trim(),
+        priceMultiplierPercent:
+          form.priceMultiplierPercent === ""
+            ? null
+            : Number(form.priceMultiplierPercent),
         cityId: form.cityId === "" ? null : Number(form.cityId),
         sortOrder: Number(form.sortOrder),
         isActive: Boolean(form.isActive),
@@ -189,6 +202,7 @@ export function BalancePagesConfig() {
                     <th>Місто</th>
                     <th>Порядок</th>
                     <th>Статус</th>
+                    <th>Price, %</th>
                     <th className="has-text-right">Дії</th>
                   </tr>
                 </thead>
@@ -212,6 +226,7 @@ export function BalancePagesConfig() {
                           {page.isActive ? "Активна" : "Неактивна"}
                         </span>
                       </td>
+                      <td>{page.priceMultiplierPercent ?? "-"}</td>
                       <td className="has-text-right">
                         <div className="buttons is-right are-small">
                           <button
@@ -242,7 +257,7 @@ export function BalancePagesConfig() {
                   ))}
                   {!sortedPages.length && (
                     <tr>
-                      <td colSpan="8" className="has-text-centered has-text-grey">
+                      <td colSpan="9" className="has-text-centered has-text-grey">
                         Сторінки залишків ще не налаштовані
                       </td>
                     </tr>
@@ -330,6 +345,35 @@ export function BalancePagesConfig() {
               </div>
               {errors.fileName && (
                 <p className="help is-danger">{errors.fileName}</p>
+              )}
+            </div>
+
+            <div className="field">
+              <label className="label">Множитель цены, %</label>
+              <div className="control">
+                <input
+                  className={`input ${
+                    errors.priceMultiplierPercent ? "is-danger" : ""
+                  }`}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.priceMultiplierPercent}
+                  onChange={(e) =>
+                    setForm((current) => ({
+                      ...current,
+                      priceMultiplierPercent: e.target.value,
+                    }))
+                  }
+                  placeholder="100"
+                />
+              </div>
+              {errors.priceMultiplierPercent ? (
+                <p className="help is-danger">
+                  {errors.priceMultiplierPercent}
+                </p>
+              ) : (
+                <p className="help">Пусто или 0 = цена без изменения.</p>
               )}
             </div>
 
