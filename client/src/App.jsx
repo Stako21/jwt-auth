@@ -13,6 +13,8 @@ import {
   canAccessStaticReport,
   getReportComponent,
 } from "./components/Reports/reportRegistry";
+import SettingsPage from "./pages/SettingsPage";
+import { DataLoader } from "./components/DataLoader/DataLoader";
 
 function renderBalanceRoutes(activeBalancePages, setLastUpdateTime) {
   return activeBalancePages.map((page) => (
@@ -60,13 +62,19 @@ const AppContent = () => {
   const [lastUpdateTime, setLastUpdateTime] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
-  const accessibleStaticReports = activeReports.filter((report) =>
-    canAccessStaticReport(report, userInfo?.role),
+  const accessibleStaticReports = activeReports.filter(
+    (report) =>
+      canAccessStaticReport(report, userInfo?.role) &&
+      (Number(userInfo?.role) !== ROLE_IDS.Picker ||
+        report.reportKey === "report-bill-of-lading"),
   );
   const isAdmin = userInfo?.role === ROLE_IDS.Admin;
+  const isDirector = userInfo?.role === ROLE_IDS.Director;
+  const isPicker = userInfo?.role === ROLE_IDS.Picker;
 
   const defaultLoggedPath = useMemo(() => {
     if (isAdmin) return "/admin-page";
+    if (isPicker) return "/bill-of-lading";
 
     const userCityPage = activeBalancePages.find(
       (page) => Number(page.cityId) === Number(userInfo?.city),
@@ -75,7 +83,7 @@ const AppContent = () => {
     if (userCityPage) return `/balance/${userCityPage.slug}`;
     if (activeBalancePages[0]) return `/balance/${activeBalancePages[0].slug}`;
     return "/documents";
-  }, [activeBalancePages, isAdmin, userInfo]);
+  }, [activeBalancePages, isAdmin, isPicker, userInfo]);
 
   return (
     <>
@@ -86,7 +94,7 @@ const AppContent = () => {
       />
 
       {isUserLogged && configLoading ? (
-        <progress className="progress is-small is-primary" />
+        <DataLoader label="Завантаження конфігурації…" fullPage />
       ) : (
         <Routes>
           {isUserLogged ? (
@@ -99,8 +107,11 @@ const AppContent = () => {
                 />
                 {renderStaticReportRoutes(accessibleStaticReports, setLastUpdateTime)}
                 <Route path="/admin-page" element={<AdminPage />} />
+                <Route path="/settings/*" element={<SettingsPage />} />
                 {renderBalanceRoutes(activeBalancePages, setLastUpdateTime)}
               </>
+            ) : isPicker ? (
+              <>{renderStaticReportRoutes(accessibleStaticReports, setLastUpdateTime)}</>
             ) : (
               <>
                 {renderStaticReportRoutes(accessibleStaticReports, setLastUpdateTime)}
@@ -115,6 +126,9 @@ const AppContent = () => {
                 />
                 {renderBalanceRoutes(activeBalancePages, setLastUpdateTime)}
                 <Route path="/documents" element={<DocumentsPage />} />
+                {isDirector ? (
+                  <Route path="/settings/*" element={<SettingsPage />} />
+                ) : null}
               </>
             )
           ) : (

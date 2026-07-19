@@ -96,7 +96,7 @@ class UserController {
 
   static async updateUser(req, res) {
     const { id } = req.params;
-    const { userName, user_name, role, city } = req.body;
+    const { userName, user_name, userGuid, role, city } = req.body;
     const branchId = getUserBranchId(req.user);
 
     try {
@@ -120,6 +120,17 @@ class UserController {
         }
       }
 
+
+      if (userGuid) {
+        const existingByGuid = await UserRepository.getUserByGuid(
+          userGuid,
+          branchId,
+        );
+        if (existingByGuid && Number(existingByGuid.id) !== Number(id)) {
+          throw new Conflict("Користувач з таким UserGUID вже існує у філії");
+        }
+      }
+
       await ensureCityInBranch(normalizedCity, branchId);
       const { supervisor, subordinates } = await loadBranchUserHierarchy(id, branchId);
       assertRoleChangeKeepsHierarchyValid({
@@ -132,6 +143,7 @@ class UserController {
         {
           userName,
           user_name,
+          userGuid,
           role: normalizedRole,
           city: normalizedCity,
         },

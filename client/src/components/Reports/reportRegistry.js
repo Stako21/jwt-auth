@@ -4,6 +4,8 @@ import { ReportOrdersByTime } from "./ReportOrdersByTime";
 import { ReportRomashka } from "./ReportRomashka";
 import { ReportXlsx1C } from "./ReportXlsx1C";
 import { ReportXlsx1CSales } from "./ReportXlsx1CSales";
+import { ReportPickerEarnings } from "./ReportPickerEarnings";
+import { ROLE_IDS } from "../../utils/roles";
 
 export const STATIC_REPORT_REGISTRY = {
   "report-romashka": {
@@ -17,6 +19,9 @@ export const STATIC_REPORT_REGISTRY = {
   },
   "report-bill-of-lading": {
     component: ReportBillOfLading,
+  },
+  "report-picker-earnings": {
+    component: ReportPickerEarnings,
   },
 };
 
@@ -42,6 +47,10 @@ export function getReportComponent(report) {
 export function canAccessStaticReport(report, role) {
   const reportKey = typeof report === "string" ? report : report?.reportKey;
   const entry = getStaticReportEntry(reportKey);
+
+  if (Number(role) === ROLE_IDS.Picker) {
+    return reportKey === "report-bill-of-lading";
+  }
 
   if (
     !entry &&

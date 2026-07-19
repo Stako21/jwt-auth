@@ -5,6 +5,7 @@ import {
   runSchedulerTaskNow,
   updateSchedulerTaskConfig,
 } from "../../services/scheduler.api";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 const BASE_POLL_INTERVAL_MS = 30 * 1000;
 const FAST_POLL_INTERVAL_MS = 3 * 1000;
@@ -317,7 +318,7 @@ export function SchedulerConfig({ title = "Планувальник" }) {
           Оновити
         </button>
       </div>
-      {loading && <p>Завантаження задач...</p>}
+      {loading && <DataLoader label="Завантаження задач планувальника…" compact />}
       {!loading && tasks.length === 0 && (
         <p>Немає доступних задач планувальника.</p>
       )}

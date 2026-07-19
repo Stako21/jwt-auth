@@ -14,6 +14,7 @@ import securityHeaders from "./middlewares/securityHeaders.js";
 import { createRateLimit } from "./middlewares/rateLimit.js";
 import authMiddleware from "./middlewares/authMiddleware.js";
 import { startScheduler } from "./services/scheduler.js";
+import { denyRole, ROLE_IDS } from "./utils/roles.js";
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ function isAllowedOrigin(origin) {
 }
 
 const app = express();
+const pickerRestricted = denyRole([ROLE_IDS.Picker]);
 
 app.use(cookieParser());
 app.use(express.json());
@@ -93,11 +95,22 @@ const documentsRateLimit = createRateLimit({
 
 app.use("/api/auth", authRateLimit, AuthRootRouter);
 app.use("/api/config", authMiddleware, configRoutes);
-app.use("/api/balances", authMiddleware, balanceRoutes);
+app.use("/api/balances", authMiddleware, pickerRestricted, balanceRoutes);
 app.use("/api/reports", authMiddleware, reportRoutes);
-app.use("/api/region-notifications", authMiddleware, regionNotificationsRoutes);
-app.use("/api/documents", documentsRateLimit, authMiddleware, documentRoutes);
-app.use("/api/directories", authMiddleware, directoryRoutes);
+app.use(
+  "/api/region-notifications",
+  authMiddleware,
+  pickerRestricted,
+  regionNotificationsRoutes,
+);
+app.use(
+  "/api/documents",
+  documentsRateLimit,
+  authMiddleware,
+  pickerRestricted,
+  documentRoutes,
+);
+app.use("/api/directories", authMiddleware, pickerRestricted, directoryRoutes);
 
 const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server started successfully on port ${PORT}`);

@@ -12,6 +12,7 @@ import {
 import DatePicker, { registerLocale } from "react-datepicker";
 import { uk } from "date-fns/locale/uk";
 import "react-datepicker/dist/react-datepicker.css";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 registerLocale("uk", uk);
 
@@ -283,7 +284,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
         </button>
       </div>
 
-      {loading && <p>Завантаження...</p>}
+      {loading && <DataLoader label="Формування звіту продажів…" />}
 
       {showGrandTotal && (
         <div className={style.grandTotal}>

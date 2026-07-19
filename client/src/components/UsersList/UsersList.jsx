@@ -4,6 +4,7 @@ import style from "./UsersList.module.scss";
 import { ROLE_IDS, ROLE_LABELS } from "../../utils/roles";
 import { useAppConfig } from "../../context/AppConfigContext";
 import { AuthClient } from "../../context/AuthContext";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 const HIERARCHY_ROLES = new Set([ROLE_IDS.NTO, ROLE_IDS.SV, ROLE_IDS.TA]);
 
@@ -23,6 +24,7 @@ export const UsersList = ({
   const [searchField, setSearchField] = useState("all");
   const [viewMode, setViewMode] = useState("list");
   const [detachingUserId, setDetachingUserId] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState({
     key: "fullName",
     direction: "asc",
@@ -30,6 +32,7 @@ export const UsersList = ({
 
   useEffect(() => {
     const fetchUsers = async () => {
+      setLoading(true);
       try {
         const response = await AuthClient.get("/users/tree");
         setUsers(response.data);
@@ -38,6 +41,8 @@ export const UsersList = ({
         enqueueSnackbar("Не вдалося завантажити користувачів", {
           variant: "error",
         });
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -434,6 +439,10 @@ export const UsersList = ({
       </div>
     );
   };
+
+  if (loading) {
+    return <DataLoader label="Завантаження користувачів…" fullPage />;
+  }
 
   return (
     <div className={style.wrapperUserList}>

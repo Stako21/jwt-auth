@@ -12,6 +12,7 @@ import { useAppConfig } from "../../context/AppConfigContext";
 const defaultValues = {
   userName: "",
   user_name: "",
+  userGuid: "",
   password: "",
   role: 1,
   city: 1,
@@ -38,6 +39,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
       ? {
           userName: user.name || "",
           user_name: user.user_name || "",
+          userGuid: user.user_guid || "",
           password: "",
           role: user.role || 1,
           city: user.city || activeCities[0]?.id || 1,
@@ -110,6 +112,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
       setFormValues({
         userName: user.name || "",
         user_name: user.user_name || "",
+        userGuid: user.user_guid || "",
         password: "",
         role: user.role || 1,
         city: user.city || activeCities[0]?.id || 1,
@@ -219,6 +222,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
     const {
       userName,
       user_name,
+      userGuid,
       password,
       role,
       city,
@@ -237,6 +241,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
     const data = {
       userName,
       user_name,
+      userGuid: userGuid.trim() || null,
       password,
       role: Number(role),
       city: Number(city),
@@ -277,12 +282,13 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
   const handleUpdate = async () => {
     if (!user) return;
 
-    const { userName, user_name, role, city, supervisorId } = formValues;
+    const { userName, user_name, userGuid, role, city, supervisorId } = formValues;
 
     try {
       await AuthClient.put(`/users/${user.id}`, {
         userName,
         user_name,
+        userGuid: userGuid.trim() || null,
         role,
         city,
       });
@@ -358,6 +364,25 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
                 onChange={handleChange}
               />
             </div>
+          </div>
+
+          <div className="field">
+            <label className="label">UserGUID (необов'язково):</label>
+            <div className="control">
+              <input
+                className="input"
+                type="text"
+                name="userGuid"
+                value={formValues.userGuid}
+                onChange={handleChange}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              />
+            </div>
+            {Number(formValues.role) === ROLE_IDS.Picker && !formValues.userGuid.trim() ? (
+              <p className="help is-warning">
+                Без UserGUID комплектувальник не зможе побачити власний звіт.
+              </p>
+            ) : null}
           </div>
 
           {!user && (

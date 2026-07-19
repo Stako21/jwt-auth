@@ -6,6 +6,7 @@ export const ROLE_LABELS = {
   5: "TA",
   6: "Бухгалтер",
   7: "Склад",
+  8: "Комплектувальник (Picker)",
 };
 
 export const ROLE_IDS = {
@@ -16,6 +17,7 @@ export const ROLE_IDS = {
   TA: 5,
   Accountant: 6,
   Warehouse: 7,
+  Picker: 8,
 };
 
 export function roleName(id) {
@@ -32,6 +34,17 @@ export function ensureRole(allowed) {
     if (!req.user) return res.status(401).json({ error: "Unauthorized" });
     if (!hasRole(req.user.role, allowed))
       return res.status(403).json({ error: "Forbidden" });
+    next();
+  };
+}
+
+export function denyRole(denied) {
+  const deniedRoles = Array.isArray(denied) ? denied : [denied];
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    if (deniedRoles.includes(Number(req.user.role))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
     next();
   };
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import style from "./ReportDebet.module.scss";
 import { fetchStaticReport } from "../../services/reports.api";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 const GROUPING_MODES = {
   collector: "collector",
@@ -426,7 +427,7 @@ export function ReportDebet({ setLastUpdateTime }) {
         <strong>{formatMoney(grandTotal)}</strong>
       </div>
 
-      {loading ? <p className={style.state}>Завантаження...</p> : null}
+      {loading ? <DataLoader label="Завантаження дебіторської заборгованості…" /> : null}
       {!loading && error ? <p className={style.error}>{error}</p> : null}
       {!loading && !error && groupedRows.length === 0 ? (
         <p className={style.state}>Немає даних для відображення</p>

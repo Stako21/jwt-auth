@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchStaticReport } from "../../services/reports.api";
 import style from "./ReportXlsx1C.module.scss";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 function isNumericLike(value) {
   return /^-?\d+(?:[.,]\d+)?$/.test(String(value || "").replace(/\s/g, ""));
@@ -57,7 +58,7 @@ export function ReportXlsx1C({ report, setLastUpdateTime }) {
   }, [columns]);
 
   if (loading) {
-    return <div className={style.state}>Завантаження звіту...</div>;
+    return <DataLoader label="Завантаження звіту…" fullPage />;
   }
 
   if (error) {

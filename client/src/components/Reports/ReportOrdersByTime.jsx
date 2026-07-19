@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import style from "./ReportOrdersByTime.module.scss";
 import { fetchStaticReport } from "../../services/reports.api";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 const REPORT_KEY = "report-orders-by-time";
 
@@ -399,7 +400,7 @@ export function ReportOrdersByTime({ setLastUpdateTime }) {
         </div>
       </div>
 
-      {loading ? <p className={style.state}>Завантаження...</p> : null}
+      {loading ? <DataLoader label="Завантаження замовлень по годинах…" /> : null}
       {!loading && error ? <p className={style.error}>{error}</p> : null}
       {!loading && !error && groups.length === 0 ? (
         <p className={style.state}>Немає даних для відображення</p>

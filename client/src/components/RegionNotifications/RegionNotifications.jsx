@@ -8,6 +8,7 @@ import {
 } from "../../services/regionNotifications.api";
 import styles from "./RegionNotifications.module.scss";
 import { useAppConfig } from "../../context/AppConfigContext";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 export function RegionNotifications() {
   const { enqueueSnackbar } = useSnackbar();
@@ -109,7 +110,7 @@ export function RegionNotifications() {
     cities.find((c) => Number(c.id) === Number(cityId))?.name || cityId;
 
   if (loading) {
-    return <div className="has-text-centered mt-5">Завантаження...</div>;
+    return <DataLoader label="Завантаження налаштувань сповіщень…" />;
   }
 
   return (

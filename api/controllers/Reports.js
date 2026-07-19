@@ -9,14 +9,19 @@ import {
   getUserBranchId,
 } from "../services/appConfig.service.js";
 import { getOrdersByTimeReport } from "../services/ordersByTimeReport.service.js";
-import { getBillOfLadingReport } from "../services/billOfLadingReport.service.js";
+import {
+  getBillOfLadingReport,
+  getPickerEarningsReport,
+} from "../services/billOfLadingReport.service.js";
 import { getXlsx1cReport } from "../services/xlsx1cReport.service.js";
 import { getXlsx1cSalesReport } from "../services/xlsx1cSalesReport.service.js";
 import fs from "fs/promises";
 import path from "path";
+import { ROLE_IDS } from "../utils/roles.js";
 
 const ORDERS_BY_TIME_REPORT_KEY = "report-orders-by-time";
 const BILL_OF_LADING_REPORT_KEY = "report-bill-of-lading";
+const PICKER_EARNINGS_REPORT_KEY = "report-picker-earnings";
 
 function normalizeSalesReportRange(query) {
   const fallbackDate = query.date || query.dateFrom || query.dateTo;
@@ -170,6 +175,13 @@ class ReportsController {
       const branchId = getUserBranchId(req.user);
       const { reportKey } = req.params;
 
+      if (
+        Number(req.user.role) === ROLE_IDS.Picker &&
+        reportKey !== BILL_OF_LADING_REPORT_KEY
+      ) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
       const report = await getActiveStaticReportDefinition(branchId, reportKey);
 
       if (!report?.fileName) {
@@ -207,10 +219,26 @@ class ReportsController {
       if (reportKey === BILL_OF_LADING_REPORT_KEY) {
         const rows = await getBillOfLadingReport({
           branchId,
+          userId: req.user.id,
+          role: req.user.role,
           fileName: report.fileName,
+          retentionDays: report.retentionDays,
+          dateFrom: req.query.dateFrom,
+          dateTo: req.query.dateTo,
         });
 
         return res.json(rows);
+      }
+
+      if (reportKey === PICKER_EARNINGS_REPORT_KEY) {
+        const result = await getPickerEarningsReport({
+          branchId,
+          fileName: report.fileName,
+          dateFrom: req.query.dateFrom,
+          dateTo: req.query.dateTo,
+        });
+
+        return res.json(result);
       }
 
       const safeFileName = path.basename(report.fileName);

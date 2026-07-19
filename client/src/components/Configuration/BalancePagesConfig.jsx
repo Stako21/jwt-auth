@@ -7,6 +7,7 @@ import {
   updateBalancePageConfig,
 } from "../../services/config.api";
 import { useAppConfig } from "../../context/AppConfigContext";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 const defaultForm = {
   slug: "",
@@ -189,7 +190,7 @@ export function BalancePagesConfig() {
           <h3 className="title is-5 mb-3">Сторінки залишків</h3>
 
           {loading ? (
-            <p>Завантаження...</p>
+            <DataLoader label="Завантаження сторінок залишків…" compact />
           ) : (
             <div className="table-container">
               <table className="table is-fullwidth is-striped is-hoverable">

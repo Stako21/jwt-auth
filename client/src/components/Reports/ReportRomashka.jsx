@@ -2,15 +2,21 @@ import React, { useEffect, useMemo, useState } from "react";
 import cn from "classnames";
 import style from "./ReportRomashka.module.scss";
 import { fetchStaticReport } from "../../services/reports.api";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 export const ReportRomashka = ({ isOpen, setLastUpdateTime }) => {
   const [romashkaReports, setRomashkaReports] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStaticReport("report-romashka").then((data) =>
-      setRomashkaReports(data || []),
-    );
+    fetchStaticReport("report-romashka")
+      .then((data) => setRomashkaReports(data || []))
+      .catch((error) => {
+        console.error("Failed to load Romashka report:", error);
+        setRomashkaReports([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -57,6 +63,10 @@ export const ReportRomashka = ({ isOpen, setLastUpdateTime }) => {
   const toggleFullscreen = () => {
     setIsFullscreen((prev) => !prev);
   };
+
+  if (loading) {
+    return <DataLoader label="Завантаження звіту Ромашка…" fullPage />;
+  }
 
   return (
     <div>

@@ -5,6 +5,7 @@ import {
   setImportSourceConfigActive,
   updateImportSourceConfig,
 } from "../../services/config.api";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 const defaultForm = {
   sourceKey: "",
@@ -147,7 +148,7 @@ export function ImportSourcesConfig() {
           <h3 className="title is-5 mb-3">Імпорт</h3>
 
           {loading ? (
-            <p>Завантаження...</p>
+            <DataLoader label="Завантаження джерел імпорту…" compact />
           ) : (
             <div className="table-container">
               <table className="table is-fullwidth is-striped is-hoverable">

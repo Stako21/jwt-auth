@@ -3,14 +3,22 @@ import pool from "../db.cjs";
 class UserRepository {
   static async insertUser(
     executor,
-    { userName, user_name, hashedPassword, role, city, branchId },
+    { userName, user_name, userGuid, hashedPassword, role, city, branchId },
   ) {
     const [insertResult] = await executor.query(
       `
-      INSERT INTO users (name, user_name, password, role, city, branch_id)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO users (name, user_name, user_guid, password, role, city, branch_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-      [userName || null, user_name || null, hashedPassword, role, city, branchId],
+      [
+        userName || null,
+        user_name || null,
+        userGuid || null,
+        hashedPassword,
+        role,
+        city,
+        branchId,
+      ],
     );
 
     const userId = insertResult.insertId;
@@ -25,6 +33,7 @@ class UserRepository {
   static async createUser({
     userName,
     user_name,
+    userGuid,
     hashedPassword,
     role,
     city,
@@ -36,6 +45,7 @@ class UserRepository {
       const user = await this.insertUser(connection, {
         userName,
         user_name,
+        userGuid,
         hashedPassword,
         role,
         city,
@@ -91,10 +101,25 @@ class UserRepository {
     return rows.length > 0 ? rows[0] : null;
   }
 
+  static async getUserByGuid(userGuid, branchId) {
+    if (!userGuid) return null;
+    const [rows] = await pool.query(
+      `
+      SELECT *
+      FROM users
+      WHERE user_guid = ?
+        AND branch_id = ?
+      LIMIT 1
+      `,
+      [userGuid, branchId],
+    );
+    return rows[0] || null;
+  }
+
   static async getAllUsers(branchId) {
     const [rows] = await pool.query(
       `
-      SELECT id, name, user_name, current_agent_guid, role, city, branch_id, is_active
+      SELECT id, name, user_name, current_agent_guid, user_guid, role, city, branch_id, is_active
       FROM users
       WHERE is_active = 1
         AND branch_id = ?
@@ -156,15 +181,19 @@ class UserRepository {
     return result;
   }
 
-  static async updateUserById(userId, { userName, user_name, role, city }, branchId) {
+  static async updateUserById(
+    userId,
+    { userName, user_name, userGuid, role, city },
+    branchId,
+  ) {
     const [result] = await pool.query(
       `
       UPDATE users
-      SET name = ?, user_name = ?, role = ?, city = ?
+      SET name = ?, user_name = ?, user_guid = ?, role = ?, city = ?
       WHERE id = ?
         AND branch_id = ?
       `,
-      [userName || null, user_name || null, role, city, userId, branchId],
+      [userName || null, user_name || null, userGuid || null, role, city, userId, branchId],
     );
     return result;
   }
@@ -263,6 +292,7 @@ class UserRepository {
         u.id,
         u.NAME AS name,
         u.user_name,
+        u.user_guid,
         u.role,
         u.city,
         u.branch_id,

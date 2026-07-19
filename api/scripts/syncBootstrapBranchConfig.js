@@ -382,15 +382,17 @@ async function upsertReports(connection, branchId, reports) {
         menu_title,
         file_name,
         allowed_roles,
+        retention_days,
         is_active,
         sort_order
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         route = VALUES(route),
         menu_title = VALUES(menu_title),
         file_name = VALUES(file_name),
         allowed_roles = VALUES(allowed_roles),
+        retention_days = VALUES(retention_days),
         is_active = VALUES(is_active),
         sort_order = VALUES(sort_order)
       `,
@@ -401,6 +403,7 @@ async function upsertReports(connection, branchId, reports) {
         report.menuTitle,
         report.fileName,
         serializeAllowedRoles(report.allowedRoles),
+        report.retentionDays || null,
         report.isActive ? 1 : 0,
         Number(report.sortOrder),
       ],

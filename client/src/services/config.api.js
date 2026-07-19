@@ -126,3 +126,24 @@ export async function updateUserAccessConfig(userId, payload) {
   const { data } = await api.put(`/users/${userId}/access`, payload);
   return data.access;
 }
+
+export async function fetchWarehouseSettings() {
+  const { data } = await api.get("/warehouse-settings");
+  return data.warehouses || [];
+}
+
+export async function previewWarehouseRate(warehouseId, payload) {
+  const { data } = await api.post(
+    `/warehouse-settings/${warehouseId}/rates/preview`,
+    payload,
+  );
+  return data.impact;
+}
+
+export async function saveWarehouseRate(warehouseId, payload) {
+  const { data } = await api.post(
+    `/warehouse-settings/${warehouseId}/rates`,
+    payload,
+  );
+  return data;
+}

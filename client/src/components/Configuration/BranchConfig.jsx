@@ -8,6 +8,7 @@ import {
   updateBranchByIdConfig,
 } from "../../services/config.api";
 import { useAppConfig } from "../../context/AppConfigContext";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 const defaultForm = {
   slug: "",
@@ -229,7 +230,7 @@ export function BranchConfig() {
           )}
 
           {loading ? (
-            <p>Завантаження...</p>
+            <DataLoader label="Завантаження філій…" compact />
           ) : (
             <div className="table-container">
               <table className="table is-fullwidth is-striped is-hoverable">

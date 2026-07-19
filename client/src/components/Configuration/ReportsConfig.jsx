@@ -8,10 +8,13 @@ import {
 } from "../../services/config.api";
 import { useAppConfig } from "../../context/AppConfigContext";
 import { ROLE_IDS, ROLE_OPTIONS } from "../../utils/roles";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 const ALL_NON_ADMIN_ROLE_IDS = ROLE_OPTIONS.map((option) =>
   Number(option.value),
-).filter((roleId) => roleId !== ROLE_IDS.Admin);
+).filter(
+  (roleId) => roleId !== ROLE_IDS.Admin && roleId !== ROLE_IDS.Picker,
+);
 
 const compactCellStyle = {
   verticalAlign: "middle",
@@ -79,9 +82,16 @@ function normalizeForm(report) {
     sheetName: report.sheetName || "",
     headerRow: report.headerRow ?? "",
     dataStartRow: report.dataStartRow ?? "",
-    retentionDays: report.retentionDays ?? 31,
+    retentionDays:
+      report.retentionDays ??
+      (report.reportKey === "report-bill-of-lading"
+        ? 365
+        : 31),
     scheduledImportEnabled: Boolean(report.scheduledImportEnabled),
-    allowedRoles: allowedRoles === null ? ALL_NON_ADMIN_ROLE_IDS : allowedRoles,
+    allowedRoles:
+      allowedRoles === null
+        ? ALL_NON_ADMIN_ROLE_IDS
+        : allowedRoles.filter((roleId) => roleId !== ROLE_IDS.Picker),
     sortOrder: Number(report.sortOrder) || 0,
     isActive: Boolean(report.isActive),
   };
@@ -188,6 +198,12 @@ export function ReportsConfig() {
         Number(form.retentionDays) <= 0)
     ) {
       nextErrors.retentionDays = "Додатне ціле число";
+    }
+    if (
+      form.reportKey === "report-bill-of-lading" &&
+      Number(form.retentionDays) < 180
+    ) {
+      nextErrors.retentionDays = "Не менше 180 днів";
     }
 
     if (!Number.isInteger(Number(form.sortOrder))) {
@@ -310,7 +326,7 @@ export function ReportsConfig() {
           </div>
 
           {loading ? (
-            <p>Завантаження...</p>
+            <DataLoader label="Завантаження конфігурації звітів…" compact />
           ) : (
             <div className="table-container">
               <table
@@ -635,6 +651,32 @@ export function ReportsConfig() {
               </>
             )}
 
+            {form.reportKey === "report-bill-of-lading" &&
+            form.reportType === "static-json" ? (
+              <div className={formFieldClassName}>
+                <label className={labelClassName}>
+                  Зберігати дані, днів (мінімум 180)
+                </label>
+                <input
+                  className={`input is-small ${
+                    errors.retentionDays ? "is-danger" : ""
+                  }`}
+                  type="number"
+                  min="180"
+                  value={form.retentionDays}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      retentionDays: event.target.value,
+                    }))
+                  }
+                />
+                {errors.retentionDays ? (
+                  <p className="help is-danger">{errors.retentionDays}</p>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className={formFieldClassName}>
               <label className={labelClassName}>Ролі з доступом</label>
               <div
@@ -644,11 +686,14 @@ export function ReportsConfig() {
                 {ROLE_OPTIONS.map((roleOption) => {
                   const roleId = Number(roleOption.value);
                   const isAdminRole = roleId === ROLE_IDS.Admin;
+                  const isPickerRole = roleId === ROLE_IDS.Picker;
                   const selectedRoles = Array.isArray(form.allowedRoles)
                     ? form.allowedRoles.map(Number)
                     : [];
                   const isChecked =
-                    isAdminRole || selectedRoles.includes(roleId);
+                    isAdminRole ||
+                    (isPickerRole && form.reportKey === "report-bill-of-lading") ||
+                    selectedRoles.includes(roleId);
 
                   return (
                     <label
@@ -659,7 +704,7 @@ export function ReportsConfig() {
                       <input
                         type="checkbox"
                         checked={isChecked}
-                        disabled={isAdminRole}
+                        disabled={isAdminRole || isPickerRole}
                         onChange={(e) =>
                           handleRoleChange(roleId, e.target.checked)
                         }
@@ -671,7 +716,8 @@ export function ReportsConfig() {
               </div>
               <p className="help mb-1" style={{ fontSize: 11, lineHeight: 1.25 }}>
                 Адмін завжди має доступ. Зніміть усі інші ролі, щоб залишити
-                звіт тільки для адміна.
+                звіт тільки для адміна. Комплектувальник завжди бачить лише
+                власні рядки звіту зібраних накладних.
               </p>
             </div>
 

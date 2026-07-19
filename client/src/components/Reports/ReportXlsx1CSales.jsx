@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { fetchStaticReport } from "../../services/reports.api";
 import style from "./ReportXlsx1CSales.module.scss";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 function pad(value) {
   return String(value).padStart(2, "0");
@@ -184,7 +185,7 @@ export function ReportXlsx1CSales({ report, setLastUpdateTime }) {
         </div>
       ) : null}
 
-      {loading ? <p className={style.state}>Завантаження...</p> : null}
+      {loading ? <DataLoader label="Формування звіту за вибраний період…" /> : null}
       {!loading && error ? <p className={style.error}>{error}</p> : null}
       {!loading && !error && groups.length === 0 ? (
         <p className={style.state}>Немає даних для вибраного періоду</p>

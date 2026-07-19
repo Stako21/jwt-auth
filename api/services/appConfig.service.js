@@ -179,6 +179,9 @@ function mapReportDefinitions(rows) {
 export function canUserAccessReportDefinition(user, report) {
   const role = Number(user?.role);
   if (role === ROLE_IDS.Admin) return true;
+  if (role === ROLE_IDS.Picker) {
+    return report?.reportKey === "report-bill-of-lading";
+  }
 
   const allowedRoles = normalizeReportAllowedRoles(report?.allowedRoles);
   if (!allowedRoles) return true;
@@ -1648,6 +1651,14 @@ function validateReportPayload(report) {
     (!Number.isInteger(report.retentionDays) || report.retentionDays <= 0)
   ) {
     throw new BadRequest("Retention days must be a positive integer");
+  }
+  if (
+    report.reportKey === "report-bill-of-lading" &&
+    (report.retentionDays === null || report.retentionDays < 180)
+  ) {
+    throw new BadRequest(
+      "Для звітів комплектувальників строк зберігання має бути не менше 180 днів",
+    );
   }
   if (!Number.isInteger(report.sortOrder)) {
     throw new BadRequest("Порядок сортування має бути цілим числом");

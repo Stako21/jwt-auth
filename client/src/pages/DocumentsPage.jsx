@@ -10,6 +10,7 @@ import {
   fetchTradePoints,
 } from "../services/directories.api.js";
 import CreateExchangeDocumentModal from "../modals/CreateExchangeDocumentModal.jsx";
+import { DataLoader } from "../components/DataLoader/DataLoader.jsx";
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState([]);
@@ -166,7 +167,7 @@ export default function DocumentsPage() {
           />
         )}
 
-        {loading && <progress className="progress is-small is-primary" />}
+        {loading && <DataLoader label="Завантаження документів…" />}
 
         {error && <div className="notification is-danger">{error}</div>}
 

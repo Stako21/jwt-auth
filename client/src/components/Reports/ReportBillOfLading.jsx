@@ -1,5 +1,8 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useContext, useEffect, useMemo, useState } from "react";
 import { fetchStaticReport } from "../../services/reports.api";
+import { AuthContext } from "../../context/AuthContext";
+import { ROLE_IDS } from "../../utils/roles";
+import { DataLoader } from "../DataLoader/DataLoader";
 import style from "./ReportBillOfLading.module.scss";
 
 const REPORT_KEY = "report-bill-of-lading";
@@ -10,25 +13,25 @@ function parseDate(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function pad(value) {
-  return String(value).padStart(2, "0");
+function dateKey(date = new Date()) {
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
 
-function getShiftDateKey(value) {
-  const date = parseDate(value);
-  if (!date) return "";
-
-  if (date.getHours() < 8) {
-    date.setDate(date.getDate() - 1);
-  }
-
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+function initialRange() {
+  const today = dateKey();
+  return { dateFrom: today, dateTo: today };
 }
 
-function formatDateLabel(dateKey) {
-  if (!dateKey) return "";
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("uk-UA");
+function formatReportBoundary(value, addDays = 0) {
+  const [year, month, day] = String(value || "")
+    .split("-")
+    .map(Number);
+  if (!year || !month || !day) return "";
+
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + addDays);
+  return `${date.toLocaleDateString("uk-UA")} 08:00`;
 }
 
 function formatDateTime(value, { showSeconds = false } = {}) {
@@ -55,8 +58,9 @@ function formatNumber(value, digits = 0) {
   });
 }
 
-function getRowShiftDate(row) {
-  return row.reportDate || getShiftDateKey(row.scanDate);
+function getTotalEarnings(row) {
+  if (row.rowEarnings === null || row.kilogramEarnings === null) return null;
+  return Number(row.rowEarnings || 0) + Number(row.kilogramEarnings || 0);
 }
 
 function shortenPickerName(value) {
@@ -78,6 +82,9 @@ function createGroup(label, displayLabel = label) {
     rowsCount: 0,
     weight: 0,
     amount: 0,
+    rowEarnings: 0,
+    kilogramEarnings: 0,
+    missingRateRows: 0,
     children: new Map(),
     rows: [],
   };
@@ -88,6 +95,9 @@ function addTotals(target, row) {
   target.rowsCount += Number(row.rowsCount || 0);
   target.weight += Number(row.weight || 0);
   target.amount += Number(row.amount || 0);
+  target.rowEarnings += Number(row.rowEarnings || 0);
+  target.kilogramEarnings += Number(row.kilogramEarnings || 0);
+  target.missingRateRows += row.rowRate === null ? 1 : 0;
 }
 
 function finalizePicker(group) {
@@ -144,15 +154,21 @@ function TotalsCells({ group }) {
       <td>{formatNumber(group.rowsCount)}</td>
       <td>{formatNumber(group.weight, 3)}</td>
       <td>{formatNumber(group.amount, 2)}</td>
+      <td>{formatNumber(group.rowEarnings, 2)}</td>
+      <td>{formatNumber(group.kilogramEarnings, 2)}</td>
+      <td>{formatNumber(group.rowEarnings + group.kilogramEarnings, 2)}</td>
     </>
   );
 }
 
 export function ReportBillOfLading({ setLastUpdateTime }) {
+  const { userInfo } = useContext(AuthContext);
+  const isPicker = Number(userInfo?.role) === ROLE_IDS.Picker;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [range, setRange] = useState(initialRange);
+  const [appliedRange, setAppliedRange] = useState(initialRange);
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
   const [query, setQuery] = useState("");
   const [collapsedWarehouses, setCollapsedWarehouses] = useState(() => new Set());
@@ -164,7 +180,7 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
     setLoading(true);
     setError("");
 
-    fetchStaticReport(REPORT_KEY)
+    fetchStaticReport(REPORT_KEY, appliedRange)
       .then((data) => {
         if (!isActive) return;
         setRows(Array.isArray(data) ? data : []);
@@ -178,6 +194,7 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
         setRows([]);
         setError(
           loadError?.response?.data?.message ||
+            loadError?.response?.data?.error ||
             "Не вдалося завантажити звіт",
         );
       })
@@ -188,13 +205,7 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
     return () => {
       isActive = false;
     };
-  }, [setLastUpdateTime]);
-
-  const dateOptions = useMemo(() => {
-    return Array.from(new Set(rows.map(getRowShiftDate).filter(Boolean))).sort(
-      (left, right) => right.localeCompare(left),
-    );
-  }, [rows]);
+  }, [appliedRange, setLastUpdateTime]);
 
   const warehouseOptions = useMemo(() => {
     return Array.from(
@@ -205,16 +216,15 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
   }, [rows]);
 
   useEffect(() => {
-    if (!selectedDate && dateOptions[0]) {
-      setSelectedDate(dateOptions[0]);
+    if (selectedWarehouse && !warehouseOptions.includes(selectedWarehouse)) {
+      setSelectedWarehouse("");
     }
-  }, [dateOptions, selectedDate]);
+  }, [selectedWarehouse, warehouseOptions]);
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
 
     return rows.filter((row) => {
-      if (selectedDate && getRowShiftDate(row) !== selectedDate) return false;
       if (
         selectedWarehouse &&
         String(row.warehouseName || "").trim() !== selectedWarehouse
@@ -236,7 +246,7 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
         .toLocaleLowerCase()
         .includes(normalizedQuery);
     });
-  }, [query, rows, selectedDate, selectedWarehouse]);
+  }, [query, rows, selectedWarehouse]);
 
   const groups = useMemo(() => buildGroups(filteredRows), [filteredRows]);
 
@@ -264,6 +274,15 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
     });
   };
 
+  const applyRange = (event) => {
+    event.preventDefault();
+    if (range.dateFrom > range.dateTo) {
+      setError("Початкова дата не може бути пізніше кінцевої");
+      return;
+    }
+    setAppliedRange({ ...range });
+  };
+
   return (
     <section className={style.report}>
       <div className={style.header}>
@@ -277,24 +296,68 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
                 <span>Рядків: {formatNumber(warehouse.rowsCount)}</span>
                 <span>Вага: {formatNumber(warehouse.weight, 3)}</span>
                 <span>Сума: {formatNumber(warehouse.amount, 2)}</span>
+                {isPicker ? (
+                  <span className={style.pickerEarnings}>
+                    Заробіток разом:{" "}
+                    {formatNumber(
+                      warehouse.rowEarnings + warehouse.kilogramEarnings,
+                      2,
+                    )}{" "}
+                    грн
+                  </span>
+                ) : (
+                  <>
+                    <span>
+                      За рядки: {formatNumber(warehouse.rowEarnings, 2)} грн
+                    </span>
+                    <span>
+                      За кг: {formatNumber(warehouse.kilogramEarnings, 2)} грн
+                    </span>
+                  </>
+                )}
+                {warehouse.missingRateRows > 0 ? (
+                  <span className={style.warning}>
+                    Без ставки: {warehouse.missingRateRows}
+                  </span>
+                ) : null}
               </p>
             ))}
           </div>
         </div>
 
-        <div className={style.filters}>
+        <form className={style.filters} onSubmit={applyRange}>
           <label className={style.field}>
-            <span>День</span>
-            <select
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-            >
-              {dateOptions.map((dateKey) => (
-                <option key={dateKey} value={dateKey}>
-                  {formatDateLabel(dateKey)} 08:00-08:00
-                </option>
-              ))}
-            </select>
+            <span className={style.dateLabel}>
+              З
+              <small>{formatReportBoundary(range.dateFrom)}</small>
+            </span>
+            <input
+              type="date"
+              value={range.dateFrom}
+              onChange={(event) =>
+                setRange((current) => ({
+                  ...current,
+                  dateFrom: event.target.value,
+                }))
+              }
+            />
+          </label>
+
+          <label className={style.field}>
+            <span className={style.dateLabel}>
+              По
+              <small>{formatReportBoundary(range.dateTo, 1)}</small>
+            </span>
+            <input
+              type="date"
+              value={range.dateTo}
+              onChange={(event) =>
+                setRange((current) => ({
+                  ...current,
+                  dateTo: event.target.value,
+                }))
+              }
+            />
           </label>
 
           <label className={style.field}>
@@ -321,10 +384,13 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
               placeholder="Склад, збирач, накладна"
             />
           </label>
-        </div>
+          <button className="button is-primary is-small" type="submit">
+            Показати
+          </button>
+        </form>
       </div>
 
-      {loading ? <p className={style.state}>Завантаження...</p> : null}
+      {loading ? <DataLoader label="Завантаження зібраних накладних…" /> : null}
       {!loading && error ? <p className={style.error}>{error}</p> : null}
       {!loading && !error && groups.length === 0 ? (
         <p className={style.state}>Немає даних для відображення</p>
@@ -338,10 +404,13 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
                 <th>Склад / збирач / накладна</th>
                 <th>Дата накладної</th>
                 <th>Сканування</th>
-                <th>Док.</th>
-                <th>Рядки</th>
-                <th>Вага</th>
-                <th>Сума</th>
+                <th>Док. (шт.)</th>
+                <th>Рядки (шт.)</th>
+                <th>Вага (кг.)</th>
+                <th>Сума накладної (грн)</th>
+                <th>За рядки (грн.)</th>
+                <th>За кг (грн.)</th>
+                <th>Заробіток разом (грн.)</th>
               </tr>
             </thead>
             <tbody>
@@ -405,6 +474,21 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
                                     <td>{formatNumber(row.rowsCount)}</td>
                                     <td>{formatNumber(row.weight, 3)}</td>
                                     <td>{formatNumber(row.amount, 2)}</td>
+                                    <td>
+                                      {row.rowEarnings === null
+                                        ? "—"
+                                        : formatNumber(row.rowEarnings, 2)}
+                                    </td>
+                                    <td>
+                                      {row.kilogramEarnings === null
+                                        ? "—"
+                                        : formatNumber(row.kilogramEarnings, 2)}
+                                    </td>
+                                    <td>
+                                      {getTotalEarnings(row) === null
+                                        ? "—"
+                                        : formatNumber(getTotalEarnings(row), 2)}
+                                    </td>
                                   </tr>
                                 ))
                               : null}

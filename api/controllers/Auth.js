@@ -36,6 +36,7 @@ class AuthController {
     const {
       userName,
       user_name,
+      userGuid,
       password,
       role,
       city,
@@ -60,12 +61,23 @@ class AuthController {
         }
       }
 
+      if (userGuid) {
+        const existingByGuid = await UserRepository.getUserByGuid(
+          userGuid,
+          branchId,
+        );
+        if (existingByGuid) {
+          throw new Conflict("Користувач з таким UserGUID вже існує у філії");
+        }
+      }
+
       await ensureCityInBranch(city, branchId);
 
       const { user } = await AuthService.signUp({
         currentUser: req.user,
         userName,
         user_name,
+        userGuid,
         password,
         role,
         city,
@@ -146,6 +158,7 @@ class AuthController {
         id: user.id,
         login: user.NAME,
         displayName: user.user_name || user.NAME,
+        userGuid: user.user_guid || null,
         role: user.role,
         city: user.city,
         branchId: currentBranchId,

@@ -4,6 +4,7 @@ import { Table } from "../Table/Table";
 import { fetchBalanceFile } from "../../services/balances.api";
 import { parseBalanceWorkbookData } from "../../utils/balanceWorkbookParser";
 import style from "./ParseExcel.module.scss";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 function matchesProductFilter(productName, selectedFilter) {
   if (selectedFilter === "all") {
@@ -145,9 +146,7 @@ export const ParseExcel = ({
       />
 
       {!isRendered ? (
-        <div className={style.stateCard}>
-          <p className={style.stateText}>Завантаження залишків...</p>
-        </div>
+        <DataLoader label="Завантаження залишків…" />
       ) : errorMessage ? (
         <div className={`${style.stateCard} ${style.errorState}`}>
           <p className={style.stateText}>{errorMessage}</p>

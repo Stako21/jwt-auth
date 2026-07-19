@@ -12,6 +12,19 @@ const optionalNullablePositiveInteger = positiveInteger
   )
   .nullable();
 
+const optionalGuid = Yup.string()
+  .transform((value, originalValue) =>
+    originalValue === "" || originalValue === null
+      ? null
+      : String(value).trim().toLowerCase(),
+  )
+  .matches(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    "UserGUID має некоректний формат",
+  )
+  .nullable()
+  .notRequired();
+
 const userIdParams = Yup.object({
   id: positiveInteger.required("Required field"),
 });
@@ -21,7 +34,8 @@ const updateUserSchema = Yup.object({
   body: Yup.object({
     userName: Yup.string().nullable().max(25, "Maximum length is 25 characters"),
     user_name: Yup.string().nullable().max(50, "Maximum length is 50 characters"),
-    role: positiveInteger.max(7, "Maximum value is 7").required("Required field"),
+    userGuid: optionalGuid,
+    role: positiveInteger.max(8, "Maximum value is 8").required("Required field"),
     city: positiveInteger.required("Required field"),
   }),
 });

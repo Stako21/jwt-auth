@@ -174,3 +174,11 @@ client/
 - Important deployment limitation: the repository still does not contain a full migration history for the legacy schema. `bootstrap:env` can create the DB, run current branch-config migrations, and seed the admin user, but a truly clean production bootstrap still requires either:
   - importing the legacy base schema first
   - or continuing the project until all remaining legacy tables are migrated into code
+
+## Picker And Warehouse Earnings
+
+- Migration `015_picker_warehouse_earnings.js` adds Picker users, warehouse GUID storage, automatic warehouse discovery, effective-dated row/kg rates, retroactive-change audit, and Picker earnings analytics. Apply it only after confirming the configured database target.
+- Role `Picker` (`8`) is restricted to its own `report-bill-of-lading` rows by matching `users.user_guid` to imported `pickerGUID` in the active branch.
+- Admin and Director manage effective-dated rates under `Налаштування -> Налаштування складу`. A backdated change that affects imported rows requires explicit confirmation and is audited.
+- Collected-bills retention is configured on `report-bill-of-lading`, cannot be below 180 days, and is shared by the Picker earnings analytics dataset.
+- Migration `016_bill_of_lading_query_performance.js` indexes the latest-import check. The operational report requests only the selected DB date range and defaults to today's 08:00–08:00 report day.

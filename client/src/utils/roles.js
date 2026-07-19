@@ -6,6 +6,7 @@ export const ROLE_LABELS = {
   5: "TA",
   6: "Бухгалтер",
   7: "Склад",
+  8: "Комплектувальник (Picker)",
 };
 
 export const ROLE_IDS = {
@@ -16,6 +17,7 @@ export const ROLE_IDS = {
   TA: 5,
   Accountant: 6,
   Warehouse: 7,
+  Picker: 8,
 };
 
 export const ROLE_OPTIONS = Object.entries(ROLE_LABELS).map(

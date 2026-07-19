@@ -28,11 +28,35 @@ import {
   updateUserAccessController,
 } from "../controllers/configController.js";
 import { ensureRole } from "../utils/roles.js";
+import {
+  listWarehouses,
+  previewRate,
+  saveRate,
+} from "../controllers/warehouseSettingsController.js";
 
 const router = Router();
 const adminOnly = ensureRole([1]);
+const warehouseSettingsRoles = ensureRole([1, 2]);
 
 router.get("/app", authMiddleware, getConfig);
+router.get(
+  "/warehouse-settings",
+  authMiddleware,
+  warehouseSettingsRoles,
+  listWarehouses,
+);
+router.post(
+  "/warehouse-settings/:id/rates/preview",
+  authMiddleware,
+  warehouseSettingsRoles,
+  previewRate,
+);
+router.post(
+  "/warehouse-settings/:id/rates",
+  authMiddleware,
+  warehouseSettingsRoles,
+  saveRate,
+);
 router.get("/branches", authMiddleware, adminOnly, getBranchesController);
 router.post("/branches", authMiddleware, adminOnly, createBranchController);
 router.put("/branches/:id", authMiddleware, adminOnly, updateBranchByIdController);

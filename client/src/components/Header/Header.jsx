@@ -43,17 +43,25 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   const currentBalancePage = activeBalancePages.find(
     (page) => location.pathname === `/balance/${page.slug}`,
   );
-  const accessibleStaticReports = activeReports.filter((report) =>
-    canAccessStaticReport(report, userInfo?.role),
+  const accessibleStaticReports = activeReports.filter(
+    (report) =>
+      canAccessStaticReport(report, userInfo?.role) &&
+      (Number(userInfo?.role) !== ROLE_IDS.Picker ||
+        report.reportKey === "report-bill-of-lading"),
   );
   const currentStaticReport = accessibleStaticReports.find(
     (report) => location.pathname === report.route,
   );
   const showReportsSelect = accessibleStaticReports.length > 1;
+  const isPicker = Number(userInfo?.role) === ROLE_IDS.Picker;
+  const canOpenSettings =
+    Number(userInfo?.role) === ROLE_IDS.Admin ||
+    Number(userInfo?.role) === ROLE_IDS.Director;
   const titleByPath = {
     "/admin-page": "Адміністрування",
     "/sales-report": "Продажі",
     "/documents": "Документи",
+    "/settings/warehouses": "Налаштування складу",
   };
   const headerTitle =
     currentBalancePage?.headerTitle ||
@@ -75,7 +83,7 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
       {isUserLogged && (
         <nav className={cn(style.navPages, { [style.open]: isOpen })}>
           <ul className={style.listPages}>
-            {activeBalancePages.map((page) => {
+            {!isPicker && activeBalancePages.map((page) => {
               const path = `/balance/${page.slug}`;
               return (
                 <li
@@ -90,7 +98,7 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
                 </li>
               );
             })}
-            <li
+            {!isPicker ? <li
               className={cn(style.headerList, {
                 [style.activePage]: location.pathname === "/sales-report",
               })}
@@ -98,8 +106,8 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
               <Link to="/sales-report" onClick={handleLinkClick}>
                 Продажі
               </Link>
-            </li>
-            <li
+            </li> : null}
+            {!isPicker ? <li
               className={cn(style.headerList, {
                 [style.activePage]: location.pathname === "/documents",
               })}
@@ -107,7 +115,7 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
               <Link to="/documents" onClick={handleLinkClick}>
                 Документи
               </Link>
-            </li>
+            </li> : null}
 
             {userInfo &&
               (userInfo.role === ROLE_IDS.Admin ||
@@ -126,6 +134,27 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
                   )}
                 </>
               )}
+            {canOpenSettings ? (
+              <li
+                className={cn(style.headerList, style.reportSelectItem, {
+                  [style.activePage]: location.pathname.startsWith("/settings"),
+                })}
+              >
+                <select
+                  className={style.reportSelect}
+                  value={
+                    location.pathname === "/settings/warehouses"
+                      ? "/settings/warehouses"
+                      : ""
+                  }
+                  onChange={handleReportSelect}
+                  aria-label="Налаштування"
+                >
+                  <option value="" disabled>Налаштування</option>
+                  <option value="/settings/warehouses">Налаштування складу</option>
+                </select>
+              </li>
+            ) : null}
             {showReportsSelect ? (
               <li
                 className={cn(style.headerList, style.reportSelectItem, {

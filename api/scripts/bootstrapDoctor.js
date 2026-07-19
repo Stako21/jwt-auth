@@ -61,6 +61,7 @@ const CORE_TABLES = {
     "route",
     "menu_title",
     "allowed_roles",
+    "retention_days",
   ],
   import_sources: ["id", "source_key", "file_name", "is_active"],
   orders_by_time_report_rows: [
@@ -75,15 +76,27 @@ const CORE_TABLES = {
     "branch_id",
     "report_date",
     "warehouse_name",
+    "warehouse_guid",
     "picker",
+    "picker_guid",
     "scan_datetime",
   ],
+  warehouses: ["id", "branch_id", "warehouse_guid", "warehouse_name"],
+  warehouse_rate_history: [
+    "id",
+    "branch_id",
+    "warehouse_id",
+    "effective_from",
+    "row_rate",
+    "kilogram_rate",
+  ],
+  warehouse_rate_audit: ["id", "branch_id", "warehouse_id", "changed_at"],
   scheduler_tasks: ["id", "task_key", "is_active", "interval_ms"],
   schema_migrations: ["name", "executed_at"],
 };
 
 const LEGACY_TABLES = {
-  users: ["id", "name", "password", "role"],
+  users: ["id", "name", "password", "role", "user_guid"],
   refresh_sessions: ["id", "user_id", "refresh_token", "finger_print"],
   user_hierarchy: ["parent_user_id", "child_user_id"],
   sales_reports: ["id", "report_date", "document_number", "login_agent", "branch_id"],

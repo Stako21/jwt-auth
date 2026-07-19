@@ -1,11 +1,11 @@
 import { createContext, useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import config from "../config";
-import style from "../app.module.scss";
 import showErrorMessage from "../utils/showErrorMessage";
 import inMemoryJWT from "../services/inMemoryJWT";
 import { useSnackbar } from "notistack";
 import { ROLE_LABELS } from "../utils/roles";
+import { DataLoader } from "../components/DataLoader/DataLoader";
 
 export const AuthClient = axios.create({
   baseURL: `${config.API_URL}/auth`,
@@ -297,9 +297,7 @@ const AuthProvider = ({ children }) => {
       {isAppReady ? (
         children
       ) : (
-        <div className={style.centered}>
-          <progress className="progress is-small is-primary" max="100" />
-        </div>
+        <DataLoader label="Підготовка застосунку…" fullPage />
       )}
     </AuthContext.Provider>
   );

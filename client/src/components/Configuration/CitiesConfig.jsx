@@ -7,6 +7,7 @@ import {
   updateCityConfig,
 } from "../../services/config.api";
 import { useAppConfig } from "../../context/AppConfigContext";
+import { DataLoader } from "../DataLoader/DataLoader";
 
 const defaultForm = {
   slug: "",
@@ -169,7 +170,7 @@ export function CitiesConfig() {
           </div>
 
           {loading ? (
-            <p>Завантаження...</p>
+            <DataLoader label="Завантаження міст…" compact />
           ) : (
             <div className="table-container">
               <table className="table is-fullwidth is-striped is-hoverable">

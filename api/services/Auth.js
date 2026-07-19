@@ -94,6 +94,7 @@ class AuthService {
     currentUser,
     userName,
     user_name,
+    userGuid,
     password,
     role,
     city,
@@ -112,6 +113,7 @@ class AuthService {
       const user = await UserRepository.insertUser(connection, {
         userName,
         user_name,
+        userGuid,
         hashedPassword,
         role,
         city,
