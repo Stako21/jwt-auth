@@ -586,7 +586,12 @@ async function checkCanChangeStatus(conn, user, documentId, nextStatus) {
       throw new Error("NTO может менять статус только из PREPARED");
     }
 
-    const allowed = await canNtoAccessAuthor(conn, user.id, doc.author_user_id);
+    const allowed = await canNtoAccessAuthor(
+      conn,
+      user.id,
+      doc.author_user_id,
+      branchId,
+    );
     if (!allowed) {
       throw new Error("NTO не может менять статус этого документа");
     }
@@ -601,7 +606,12 @@ async function checkCanChangeStatus(conn, user, documentId, nextStatus) {
     }
 
     if (user.role === 3) {
-      const allowed = await canNtoAccessAuthor(conn, user.id, doc.author_user_id);
+      const allowed = await canNtoAccessAuthor(
+        conn,
+        user.id,
+        doc.author_user_id,
+        branchId,
+      );
       if (!allowed) {
         throw new Error("NTO не может одобрить этот документ");
       }
@@ -758,7 +768,7 @@ export async function rejectDocumentService(user, documentId, comment) {
 }
 
 export async function getDocumentsService(user, query) {
-  const { status, from, to, limit = 20, offset = 0 } = query;
+  const { status, from, to } = query;
   const branchId = getUserBranchId(user);
   const params = [];
   const where = [];
@@ -888,6 +898,7 @@ export async function getDocumentsService(user, query) {
       d.status,
       tp.name AS trade_point,
       c.name AS contractor,
+      d.author_user_id,
       u.user_name AS author,
       d.created_at
     FROM documents d
@@ -897,15 +908,9 @@ export async function getDocumentsService(user, query) {
     JOIN users u ON u.id = d.author_user_id
     ${whereSql}
     ORDER BY d.created_at DESC
-    LIMIT ?
-    OFFSET ?
   `;
 
-  const [rows] = await pool.query(sql, [
-    ...params,
-    Number(limit),
-    Number(offset),
-  ]);
+  const [rows] = await pool.query(sql, params);
 
   return rows;
 }

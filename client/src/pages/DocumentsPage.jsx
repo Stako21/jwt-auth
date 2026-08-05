@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import DocumentTable from "../components/Documents/DocumentsTable.jsx";
 import { fetchDocuments, getDocumentById } from "../services/documents.api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
@@ -11,6 +11,21 @@ import {
 } from "../services/directories.api.js";
 import CreateExchangeDocumentModal from "../modals/CreateExchangeDocumentModal.jsx";
 import { DataLoader } from "../components/DataLoader/DataLoader.jsx";
+
+function dateKey(date) {
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function initialPeriod() {
+  const now = new Date();
+  return {
+    from: dateKey(new Date(now.getFullYear(), now.getMonth(), 1)),
+    to: dateKey(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+    withoutFrom: false,
+    withoutTo: false,
+  };
+}
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState([]);
@@ -25,6 +40,8 @@ export default function DocumentsPage() {
   const [showCreateExchange, setShowCreateExchange] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
   const [isViewOnly, setIsViewOnly] = useState(false);
+  const [period, setPeriod] = useState(initialPeriod);
+  const [appliedPeriod, setAppliedPeriod] = useState(initialPeriod);
   const currentBranchName =
     userInfo?.currentBranch?.name ||
     userInfo?.currentBranch?.shortName ||
@@ -38,23 +55,27 @@ export default function DocumentsPage() {
     fetchProductGroups().then((data) => setProductGroups(data));
   }, []);
 
-  async function loadDocuments({ silent = false } = {}) {
+  const loadDocuments = useCallback(async ({ silent = false } = {}) => {
     try {
       if (!silent) {
         setLoading(true);
       }
-      const data = await fetchDocuments();
+      setError(null);
+      const data = await fetchDocuments({
+        ...(appliedPeriod.withoutFrom ? {} : { from: appliedPeriod.from }),
+        ...(appliedPeriod.withoutTo ? {} : { to: appliedPeriod.to }),
+      });
       setDocuments(data);
     } catch (e) {
       setError("Помилка завантаження документів");
     } finally {
       setLoading(false);
     }
-  }
+  }, [appliedPeriod]);
 
   useEffect(() => {
     loadDocuments();
-  }, []);
+  }, [loadDocuments]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -64,7 +85,20 @@ export default function DocumentsPage() {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [loadDocuments]);
+
+  const applyPeriod = (event) => {
+    event.preventDefault();
+    if (
+      !period.withoutFrom &&
+      !period.withoutTo &&
+      period.from > period.to
+    ) {
+      setError("Початкова дата не може бути пізніше кінцевої");
+      return;
+    }
+    setAppliedPeriod({ ...period });
+  };
 
   const openDocumentModal = (doc, viewOnly = false) => {
     setIsViewOnly(viewOnly);
@@ -170,6 +204,75 @@ export default function DocumentsPage() {
         {loading && <DataLoader label="Завантаження документів…" />}
 
         {error && <div className="notification is-danger">{error}</div>}
+
+        <form
+          className="field is-grouped is-grouped-multiline mb-4"
+          onSubmit={applyPeriod}
+        >
+          <div className="control">
+            <label className="label is-small" htmlFor="documents-date-from">
+              З
+            </label>
+            <input
+              id="documents-date-from"
+              className="input is-small"
+              type="date"
+              value={period.from}
+              disabled={period.withoutFrom}
+              onChange={(event) =>
+                setPeriod((current) => ({ ...current, from: event.target.value }))
+              }
+            />
+            <label className="checkbox is-size-7 mt-1">
+              <input
+                type="checkbox"
+                className="mr-1"
+                checked={period.withoutFrom}
+                onChange={(event) =>
+                  setPeriod((current) => ({
+                    ...current,
+                    withoutFrom: event.target.checked,
+                  }))
+                }
+              />
+              Без ограничения
+            </label>
+          </div>
+          <div className="control">
+            <label className="label is-small" htmlFor="documents-date-to">
+              По
+            </label>
+            <input
+              id="documents-date-to"
+              className="input is-small"
+              type="date"
+              value={period.to}
+              disabled={period.withoutTo}
+              onChange={(event) =>
+                setPeriod((current) => ({ ...current, to: event.target.value }))
+              }
+            />
+            <label className="checkbox is-size-7 mt-1">
+              <input
+                type="checkbox"
+                className="mr-1"
+                checked={period.withoutTo}
+                onChange={(event) =>
+                  setPeriod((current) => ({
+                    ...current,
+                    withoutTo: event.target.checked,
+                  }))
+                }
+              />
+              Без ограничения
+            </label>
+          </div>
+          <div className="control is-align-self-flex-end">
+            <button className="button is-primary is-small" type="submit">
+              Показати
+            </button>
+          </div>
+        </form>
 
         {!loading && !error && (
           <DocumentTable

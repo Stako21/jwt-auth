@@ -4,10 +4,11 @@
 .header p { margin: 3px 0 0; color: #b9c4d9; font-size: 12px; }
 .filters { display: flex; align-items: end; gap: 8px; flex-wrap: wrap; }
 .filters label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
-.filters input { height: 30px; padding: 0 7px; border: 1px solid #3a4860; background: #162132; color: #fff; }
+.filters input, .filters select { height: 30px; padding: 0 7px; border: 1px solid #3a4860; background: #162132; color: #fff; }
 .dateLabel { display: flex; align-items: baseline; gap: 5px; }
 .dateLabel small { color: #9eacc2; font-size: 10px; font-weight: 400; white-space: nowrap; }
 .searchField { min-width: 230px; }
+.warehouseField { min-width: 190px; }
 .tableShell { overflow-x: auto; border: 1px solid #24324a; }
 .table { width: 100%; min-width: 850px; border-collapse: collapse; background: #121b2b; font-size: 11px; }
 .table th, .table td { padding: 5px 7px; border-right: 1px solid #24324a; border-bottom: 1px solid #24324a; text-align: right; }

@@ -3,6 +3,7 @@ import DocumentRowActions from "./DocumentRowAction";
 import StatusBadge from "./StatusBadge";
 import { useState } from "react";
 import { ROLE_IDS } from "../../utils/roles.js";
+import style from "./DocumentsTable.module.scss";
 
 export default function DocumentTable({
   documents,
@@ -50,7 +51,7 @@ export default function DocumentTable({
   }
 
   return (
-    <div className="table-container" style={{ fontSize: "12px" }}>
+    <div className={`table-container ${style.tableContainer}`}>
       <table className="table is-striped is-hoverable is-fullwidth">
         <thead>
           <tr>

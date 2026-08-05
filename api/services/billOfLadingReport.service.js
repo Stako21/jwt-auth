@@ -4,7 +4,10 @@ import pool from "../db.cjs";
 import { getImportDir, getImportSourcePath } from "./appConfig.service.js";
 import { BadRequest } from "../utils/Errors.js";
 import { ROLE_IDS } from "../utils/roles.js";
-import { syncWarehousesFromRows } from "./warehouseSettings.service.js";
+import {
+  getWarehouses,
+  syncWarehousesFromRows,
+} from "./warehouseSettings.service.js";
 
 const MIN_RETENTION_DAYS = 180;
 const DEFAULT_RETENTION_DAYS = 365;
@@ -483,8 +486,16 @@ export async function getPickerEarningsReport({
     [branchId, normalizedFrom, normalizedTo],
   );
 
+  const warehouses = (await getWarehouses(branchId))
+    .filter((warehouse) => warehouse.isActive)
+    .map((warehouse) => ({
+      warehouseGuid: warehouse.warehouseGuid,
+      warehouseName: warehouse.warehouseName,
+    }));
+
   return {
     meta: { dateFrom: normalizedFrom, dateTo: normalizedTo },
+    warehouses,
     rows,
   };
 }

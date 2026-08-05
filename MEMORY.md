@@ -1,5 +1,48 @@
 # MEMORY.md
 
+## 2026-08-05 - Documents period result completeness
+
+- Removed the legacy default `LIMIT 20` / `OFFSET` from `getDocumentsService`.
+- The Documents API now returns every branch/role-visible document matching the selected date boundaries; the frontend scroll container limits only the table height and no longer hides older matching documents.
+- Verification:
+  - `node --check api/services/DocumentService.js`
+
+## 2026-08-05 - Documents table theme alignment
+
+- Removed the forced light border and white sticky-header background from the Documents scroll container so the table inherits the active application theme.
+- Verification:
+  - `npm run lint` in `client`
+  - `npm run build` in `client`
+
+## 2026-08-05 - Document period and Picker warehouse filters
+
+- Documents now default to the current calendar month, support independently disabling the lower/upper date boundary with `Без ограничения`, and keep the selected period during background refreshes and modal updates.
+- The 20-row Documents table now uses a bounded vertical/horizontal scroll container with a sticky header.
+- `report-picker-earnings` now returns the active branch warehouse options from the configured `warehouses` directory and provides a warehouse dropdown alongside the existing search.
+- Preserved the pending branch-scoped NTO orphan-TA approval/signature fix and TA document-list author field in the same change set.
+- Verification:
+  - `node --check api/services/DocumentService.js`
+  - `node --check api/services/billOfLadingReport.service.js`
+  - `npm run lint` in `client`
+  - `npm run build` in `client` (passed with existing Sass legacy API and chunk-size warnings)
+
+## 2026-07-14 - NTO orphan-TA document approval checkpoint
+
+- Fixed NTO document workflow for TA users without an assigned SV:
+  - `prepareDocumentService` / `checkCanChangeStatus` now passes the active `branchId` into the shared NTO access helper.
+  - NTO can now move visible orphan-TA return/exchange documents from `NEW` / `REVISION` to `PREPARED` (`Погоджено до підпису`) using the same branch-scoped rule already used for signing.
+  - NTO revision/reject checks from `PREPARED` now also use the same branch-scoped orphan-TA access rule.
+- Verification:
+  - `node --check api/services/DocumentService.js`
+
+## 2026-07-14 - TA document list editability checkpoint
+
+- Fixed TA editing from the document list for own return/exchange documents in `NEW` and `REVISION` statuses.
+- `getDocumentsService` now returns `author_user_id`, allowing the existing frontend row-click logic to recognize the current TA as the author and open the edit modal instead of read-only view.
+- Backend `updateDocumentService` already enforced author-only editing for those statuses, so no workflow permission expansion was needed.
+- Verification:
+  - `node --check api/services/DocumentService.js`
+
 ## 2026-06-12 - Existing non-Docker server update runbook checkpoint
 
 - Added `documentation/update-existing-non-docker-server-to-branches-config.md` for upgrading the current Ubuntu/PM2/Nginx production-style server from `resbr6` to `branches-config`.
@@ -1650,3 +1693,50 @@ Frontend:
   - deleting old `sales_reports` rows after import
 - Verification:
   - `node --check api/services/loadReports.js`
+
+## 2026-07-18 - Picker role and warehouse earnings
+
+- Added migration `015_picker_warehouse_earnings.js` (prepared, not executed) for:
+  - role 8 Picker user linkage through `users.user_guid`
+  - `warehouse_guid` / `picker_guid` storage on collected-bills rows
+  - branch-scoped warehouses, effective-dated row/kg rates, and rate-change audit
+  - config-driven `report-picker-earnings` definition
+- `BillOfLading.json` import now stores both GUIDs, automatically upserts warehouses, preserves 08:00 report-day and replace-by-day behavior, and uses configurable retention with a 180-day minimum.
+- Picker can access only `report-bill-of-lading`; backend always filters it by active branch and `users.user_guid = picker_guid`. Report `allowed_roles` continues to control full operational access for other roles.
+- Added `Налаштування -> Налаштування складу` for Admin and Director. Backdated rate changes preview affected rows/pickers and require explicit confirmation; changes are audited.
+- Added separate row and kilogram earnings to the operational report plus period analytics grouped by Picker and warehouse with missing-user/rate diagnostics.
+- Verification:
+  - backend `node --check` passed for all changed and newly added JS files
+  - `npm run lint` in `client`
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+
+## 2026-07-18 - Collected-bills period and report filter polish
+
+- `report-bill-of-lading` now sends `dateFrom` / `dateTo` to the backend and queries only that `report_date` range; both dates default to today (08:00 today through 08:00 tomorrow).
+- Replaced the open-time full-table `COUNT/MAX` import check with a latest-row lookup and added migration `016_bill_of_lading_query_performance.js` for `(branch_id, updated_at)`.
+- Added explicit units to operational and Picker-earnings table headers.
+- Picker earnings in the operational summary are highlighted green.
+- Added client-side Picker/warehouse search to `report-picker-earnings`.
+- Verification:
+  - `node --check api/services/billOfLadingReport.service.js`
+  - `node --check api/controllers/Reports.js`
+  - `node --check api/migrations/016_bill_of_lading_query_performance.js`
+  - `npm run lint` in `client`
+
+## 2026-07-18 - Collected-bills real period labels
+
+- Added small calculated boundary labels beside the `З` / `По` date captions in `ReportBillOfLading`.
+- `З` displays `dateFrom 08:00`; `По` displays the day after `dateTo` at 08:00, making the actual inclusive/exclusive report interval visible to users.
+- Added the same calculated boundary labels to `report-picker-earnings`.
+
+## 2026-07-19 - Shared data-loading indicator
+
+- Added reusable `DataLoader` with animated ring, glow, accessible status text, compact section mode, and full-page mode.
+- Replaced page-level loading text/progress indicators across reports, balances, documents, users, notifications, app bootstrap/config loading, warehouse settings, and admin configuration sections.
+- Kept local Bulma `is-loading` indicators for individual buttons and background actions.
+
+## 2026-07-19 - Picker total earnings columns
+
+- Added `Заробіток разом` columns to the operational collected-bills report (including Picker view) and Picker earnings analytics.
+- Total earnings are calculated as row earnings plus kilogram earnings at document, warehouse, and Picker aggregate levels.
+- Picker operational-report header now shows one green `Заробіток разом` value instead of separate row/kg earnings labels; detailed columns remain unchanged.

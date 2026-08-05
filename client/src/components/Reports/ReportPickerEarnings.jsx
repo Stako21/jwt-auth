@@ -39,9 +39,11 @@ export function ReportPickerEarnings({ setLastUpdateTime }) {
   const [range, setRange] = useState(initialRange);
   const [appliedRange, setAppliedRange] = useState(initialRange);
   const [rows, setRows] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [warehouseGuid, setWarehouseGuid] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -51,6 +53,18 @@ export function ReportPickerEarnings({ setLastUpdateTime }) {
       .then((result) => {
         if (!active) return;
         setRows(Array.isArray(result?.rows) ? result.rows : []);
+        const configuredWarehouses = Array.isArray(result?.warehouses)
+          ? result.warehouses
+          : [];
+        setWarehouses(configuredWarehouses);
+        setWarehouseGuid((current) =>
+          !current ||
+          configuredWarehouses.some(
+            (warehouse) => warehouse.warehouseGuid === current,
+          )
+            ? current
+            : "",
+        );
         if (typeof setLastUpdateTime === "function") setLastUpdateTime("");
       })
       .catch((loadError) => {
@@ -72,15 +86,16 @@ export function ReportPickerEarnings({ setLastUpdateTime }) {
 
   const filteredRows = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
-    if (!normalized) return rows;
-    return rows.filter((row) =>
-      [row.picker, row.warehouseName]
+    return rows.filter((row) => {
+      if (warehouseGuid && row.warehouseGuid !== warehouseGuid) return false;
+      if (!normalized) return true;
+      return [row.picker, row.warehouseName]
         .filter(Boolean)
         .join(" ")
         .toLocaleLowerCase()
-        .includes(normalized),
-    );
-  }, [query, rows]);
+        .includes(normalized);
+    });
+  }, [query, rows, warehouseGuid]);
 
   const groups = useMemo(() => {
     const map = new Map();
@@ -153,6 +168,23 @@ export function ReportPickerEarnings({ setLastUpdateTime }) {
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Комплектувальник або склад"
             />
+          </label>
+          <label className={style.warehouseField}>
+            Склад
+            <select
+              value={warehouseGuid}
+              onChange={(event) => setWarehouseGuid(event.target.value)}
+            >
+              <option value="">Усі склади</option>
+              {warehouses.map((warehouse) => (
+                <option
+                  key={warehouse.warehouseGuid}
+                  value={warehouse.warehouseGuid}
+                >
+                  {warehouse.warehouseName}
+                </option>
+              ))}
+            </select>
           </label>
           <button className="button is-primary is-small" type="submit">Показати</button>
         </form>
