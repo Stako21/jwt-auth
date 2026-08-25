@@ -1,152 +1,364 @@
 @use "../../variables.scss" as *;
 
-/* Scoped styles for SalesReport component to avoid overriding global Bulma table styles */
 .salesReportWrapper {
-  margin: 0 20px;
-  // height: 100vh;
-}
-
-@media screen and (max-width: 720px) {
-  .salesReportWrapper {
-    margin: 0;
-  }
+  padding: $space-5;
+  color: $table-text;
 }
 
 .header {
-  margin: 5px 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: end;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto;
   align-items: center;
+  gap: $space-4;
+  margin-bottom: $space-4;
+  padding: $space-4;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-xl;
+  background: $surface-glass;
+  box-shadow: 0 18px 40px rgba(1, 15, 31, 0.16);
+  backdrop-filter: blur($backdrop-blur);
+  -webkit-backdrop-filter: blur($backdrop-blur);
+}
+
+.title {
+  margin: 0;
+  color: $text-high;
+  font-family: Manrope, Inter, Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.periodControls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-2;
 }
 
 .dateLabel {
-  color: #d8dadf;
+  color: $text-muted;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dateInput {
+  width: 142px;
+}
+
+.pdfButton {
+  height: $control-height-md;
+  min-width: 54px;
+  padding: 0 $space-3;
+  border: 1px solid $primary-accent;
+  border-radius: $radius-md;
+  background: transparent;
+  color: $primary-accent-light;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  transition:
+    border-color $motion-fast $motion-ease,
+    background-color $motion-fast $motion-ease,
+    color $motion-fast $motion-ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    border-color: $primary-accent-light;
+    outline: 0;
+    background: $select-option-hover-surface;
+    color: $text-high;
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.58;
+  }
+}
+
+.grandTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  margin-bottom: $space-3;
+  padding: 10px $space-4;
+  border: 1px solid $table-border;
+  border-radius: $radius-lg;
+  background: $table-group-primary;
+  color: $table-text;
+  font-size: 13px;
+
+  strong {
+    color: $primary-accent-light;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.supervisorBlock {
+  margin-bottom: $space-3;
+  overflow: hidden;
+  border: 1px solid $table-border;
+  border-radius: $radius-lg;
+  background: $table-row-odd;
+}
+
+.supervisorHeader,
+.agentHeader {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $space-2;
+  min-height: 42px;
+  padding: 7px $space-3;
+  color: $table-text;
+  cursor: pointer;
+  transition: background-color $motion-fast $motion-ease;
+
+  &:hover {
+    background-image: linear-gradient(
+      $table-row-hover,
+      $table-row-hover
+    );
+  }
+}
+
+.supervisorHeader {
+  background-color: $table-group-primary;
   font-size: 13px;
   font-weight: 700;
 }
 
-.dateInput {
-  width: 150px;
-}
-
-.grandTotal {
-  margin: 10px 0;
-  padding: 4px;
-  display: flex;
-  justify-content: space-between;
-  background-color: #adb2c585;
-}
-
-.supervisorHeader {
-  // padding-left: 10px;
-  margin-top: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #d8dadf;
-  background-color: #6f717c85;
+.agentBlock {
+  border-top: 1px solid $table-border;
 }
 
 .agentHeader {
-  margin-top: 4px;
-  padding-left: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #d8dadf;
-  background-color: #868797a4;
+  min-height: 38px;
+  padding-left: $space-5;
+  background-color: $table-group-accent;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.agentTitle {
-  margin-top: 10px;
+.toggleMarker {
+  color: $primary-accent-light;
+  font-size: 12px;
+  text-align: center;
 }
 
-.wrapperTable {
-  /* let wrapper expand with content so page height grows */
-  height: auto;
-  overflow: visible;
+.groupName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.scrollContainer {
-  /* allow page to grow vertically; allow horizontal scroll if needed */
-  overflow-y: visible;
+.groupAmount {
+  color: $table-text;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tableShell {
+  width: 100%;
   overflow-x: auto;
+  border-top: 1px solid $table-border;
+  background: $table-shell-surface;
+  -webkit-overflow-scrolling: touch;
 }
 
 .salesTable {
   width: 100%;
+  min-width: 920px;
+  margin: 0;
   border-collapse: collapse;
-  // text-align: center;
+  background: $table-row-odd;
+  color: $table-text;
   font-size: 11px;
   font-weight: 500;
-  background: $table-shell-surface;
-  color: $table-text;
+
+  th,
+  td {
+    padding: 6px $space-2;
+    border-right: 1px solid $table-border;
+    border-bottom: 1px solid $table-border;
+    line-height: 1.25;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th:last-child,
+  td:last-child {
+    border-right: 0;
+    text-align: right;
+  }
+
+  th:first-child,
+  td:first-child,
+  th:nth-last-child(2),
+  td:nth-last-child(2) {
+    text-align: center;
+  }
+
+  th:first-child,
+  td:first-child {
+    width: 42px;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: $table-head-surface;
+    color: $table-text;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  tbody tr:nth-child(odd) td {
+    background: $table-row-odd;
+  }
+
+  tbody tr:nth-child(even) td {
+    background: $table-row-even;
+  }
+
+  tbody tr:not(.commentRow) {
+    cursor: pointer;
+  }
+
+  tbody tr:not(.commentRow):hover td {
+    background: $table-row-hover;
+  }
+
+  tfoot td {
+    border-bottom: 0;
+    background: $table-head-surface;
+    color: $table-text;
+    font-weight: 800;
+  }
+
+  tfoot td:first-child {
+    text-align: right;
+  }
 }
 
-.tableHeader tr th,
-.tableFooter tr td {
-  color: $table-text-strong;
-  background-color: $table-head-surface;
-  font-size: 12px;
-  font-weight: 700;
+.cancelledRow td {
+  background: $negative-surface !important;
+  color: $negative-muted !important;
+  text-decoration: line-through;
 }
 
-.salesTable th,
-.salesTable td {
-  border-right: 1px solid $table-border;
+.movedRow td {
+  background: rgba(185, 199, 224, 0.08) !important;
+  font-style: italic;
 }
 
-.table.is-striped .salesTable .salesTableBody > tr > td,
-.salesTable .salesTableBody > tr > td {
-  color: $table-text !important;
+.commentRow td {
+  padding: 7px $space-3;
+  background: rgba(217, 164, 65, 0.1) !important;
+  color: $warning !important;
+  font-style: italic;
+  text-align: left !important;
+
+  strong {
+    color: inherit;
+  }
 }
 
-.table.is-striped .salesTable .salesTableBody > tr:nth-child(odd),
-.salesTable .salesTableBody > tr:nth-child(odd) {
-  background-color: $table-row-odd !important;
+.cancelledIcon {
+  margin-right: $space-1;
+  color: $negative;
 }
 
-.table.is-striped .salesTable .salesTableBody > tr:nth-child(even),
-.salesTable .salesTableBody > tr:nth-child(even) {
-  background-color: $table-row-even !important;
+.movedIcon {
+  margin-right: $space-1;
+  color: $info;
 }
 
-.salesTable .salesTableBody > tr:hover {
-  background-color: $table-row-hover !important;
-}
-
-// .tableFooter {
-//   /* footer scrolls with the page */
-//   background-color: $header-background-color;
-//   color: $light-text-color;
-// }
-
-.checkIcon {
-  color: rgb(8, 156, 8);
+.form2Icon {
+  color: $primary-accent-light;
 }
 
 .open {
   display: none !important;
 }
 
-.cancelledRow {
-  background-color: #fa0101 !important;
-  opacity: 0.6;
-  text-decoration: line-through;
+@media (max-width: 768px) {
+  .salesReportWrapper {
+    padding: $space-3 0;
+  }
+
+  .header {
+    grid-template-columns: 1fr;
+    gap: $space-3;
+    margin-bottom: $space-3;
+    padding: $space-3;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .periodControls {
+    display: grid;
+    grid-template-columns: auto minmax(110px, 1fr) auto minmax(110px, 1fr) auto;
+    justify-content: stretch;
+  }
+
+  .dateInput {
+    width: 100%;
+  }
+
+  .grandTotal {
+    margin-right: $space-3;
+    margin-left: $space-3;
+  }
+
+  .supervisorBlock {
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .supervisorHeader {
+    min-height: 44px;
+  }
+
+  .agentHeader {
+    min-height: 42px;
+    padding-left: $space-4;
+  }
+
+  .salesTable {
+    min-width: 820px;
+    font-size: 10.5px;
+
+    th,
+    td {
+      padding: 6px;
+    }
+  }
 }
 
-.movedRow {
-  opacity: 0.8;
-  font-style: italic;
-}
+@media (max-width: 420px) {
+  .periodControls {
+    grid-template-columns: auto 1fr auto 1fr;
+  }
 
-.commentRow td {
-  background-color: #bad3d6 !important;
-  font-style: italic;
-
-  strong {
-    color: #374151 !important;
+  .pdfButton {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }

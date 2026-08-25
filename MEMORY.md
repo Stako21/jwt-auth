@@ -1913,3 +1913,16 @@ Frontend:
   - headless desktop check confirmed the sign-in composition remains visually intact
   - generated `client/dist` source-file changes from build were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-25 - Sales report hierarchy and table polish
+
+- Restyled the existing sales-report page without changing date-range loading, grouping, totals, permissions, PDF export, status handling, or row data.
+- Rebuilt the page heading as a compact glass panel with a clear title, shared date controls, and a token-driven PDF action that collapses safely on phones.
+- Mapped supervisor and agent headers to the approved Variant C first/second hierarchy surfaces, with aligned disclosure markers, truncated names, and tabular totals.
+- Wrapped each agent table in its own touch-friendly horizontal scroll shell; tables now use the shared header, zebra, border, hover, and muted text tokens with denser alignment for numeric/status columns.
+- Replaced legacy bright red/light-blue status and comment fills with dark semantic cancelled, moved, warning-comment, and Form 2 icon states that remain distinct from zebra rows.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file changes from build were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

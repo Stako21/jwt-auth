@@ -89,15 +89,19 @@ function shortDoc(num) {
 
 function statusIcon(status) {
   if (status === "CANCELLED") {
-    return <i className="fa-solid fa-xmark" style={{ color: "#ED0202" }}></i>;
+    return (
+      <i
+        className={`fa-solid fa-xmark ${style.cancelledIcon}`}
+        aria-hidden="true"
+      ></i>
+    );
   }
 
   if (status === "MOVED") {
     return (
       <i
-        className="fa fa-refresh"
+        className={`fa fa-refresh ${style.movedIcon}`}
         aria-hidden="true"
-        style={{ color: "#2402ED" }}
       ></i>
     );
   }
@@ -233,41 +237,44 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   return (
     <div className={cn(style.salesReportWrapper, { open: isOpen })}>
       <div className={style.header}>
-        <h2 className={style.title}>Звіт з продажів за період</h2>
-        <span className={style.dateLabel}>з</span>
-        <DateInput
-          value={dateFrom}
-          onChange={(event) => {
-            const nextKey = event.target.value;
-            if (!nextKey) return;
-            setDateFrom(nextKey);
-            if (dateTo < nextKey) setDateTo(nextKey);
-          }}
-          className={style.dateInput}
-          min={minDate || undefined}
-          max={dateTo || maxDate || undefined}
-        />
-        <span className={style.dateLabel}>по</span>
-        <DateInput
-          value={dateTo}
-          onChange={(event) => {
-            const nextKey = event.target.value;
-            if (!nextKey) return;
-            setDateTo(nextKey);
-            if (dateFrom > nextKey) setDateFrom(nextKey);
-          }}
-          className={style.dateInput}
-          min={dateFrom || minDate || undefined}
-          max={maxDate || undefined}
-        />
-        <button
-          className={`button is-small is-light ${pdfLoading ? "is-loading" : ""}`}
-          onClick={handleOpenPdf}
-          disabled={pdfLoading}
-          title="Відкрити PDF"
-        >
-          PDF
-        </button>
+        <h1 className={style.title}>Звіт з продажів за період</h1>
+        <div className={style.periodControls}>
+          <span className={style.dateLabel}>з</span>
+          <DateInput
+            value={dateFrom}
+            onChange={(event) => {
+              const nextKey = event.target.value;
+              if (!nextKey) return;
+              setDateFrom(nextKey);
+              if (dateTo < nextKey) setDateTo(nextKey);
+            }}
+            className={style.dateInput}
+            min={minDate || undefined}
+            max={dateTo || maxDate || undefined}
+          />
+          <span className={style.dateLabel}>по</span>
+          <DateInput
+            value={dateTo}
+            onChange={(event) => {
+              const nextKey = event.target.value;
+              if (!nextKey) return;
+              setDateTo(nextKey);
+              if (dateFrom > nextKey) setDateFrom(nextKey);
+            }}
+            className={style.dateInput}
+            min={dateFrom || minDate || undefined}
+            max={maxDate || undefined}
+          />
+          <button
+            type="button"
+            className={cn(style.pdfButton, { "is-loading": pdfLoading })}
+            onClick={handleOpenPdf}
+            disabled={pdfLoading}
+            title="Відкрити PDF"
+          >
+            PDF
+          </button>
+        </div>
       </div>
 
       {loading && <DataLoader label="Формування звіту продажів…" />}
@@ -289,9 +296,9 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                 className={style.supervisorHeader}
                 onClick={() => setOpenSV((p) => ({ ...p, [sv.id]: !svOpened }))}
               >
-                <span>{svOpened ? "▾" : "▸"}</span>
-                <strong>{sv.name}</strong>
-                <span>{money(sv.total)}</span>
+                <span className={style.toggleMarker}>{svOpened ? "▾" : "▸"}</span>
+                <strong className={style.groupName}>{sv.name}</strong>
+                <span className={style.groupAmount}>{money(sv.total)}</span>
               </div>
 
               {svOpened &&
@@ -309,19 +316,15 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                           }))
                         }
                       >
-                        <span>{agOpened ? "▾" : "▸"}</span>
-                        <span>{ag.name}</span>
-                        <span>{money(ag.total)}</span>
+                        <span className={style.toggleMarker}>{agOpened ? "▾" : "▸"}</span>
+                        <span className={style.groupName}>{ag.name}</span>
+                        <span className={style.groupAmount}>{money(ag.total)}</span>
                       </div>
 
                       {agOpened && (
-                        <table
-                          className={cn(
-                            "table is-light is-bordered is-striped is-narrow is-fullwidth",
-                            style.salesTable,
-                          )}
-                        >
-                          <thead className={style.tableHeader}>
+                        <div className={style.tableShell}>
+                          <table className={style.salesTable}>
+                          <thead>
                             <tr>
                               <th>№</th>
                               <th>Дата</th>
@@ -334,7 +337,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                               <th>Сума</th>
                             </tr>
                           </thead>
-                          <tbody className={style.salesTableBody}>
+                          <tbody>
                             {ag.rows.map((r, i) => (
                               <Fragment key={r.id}>
                                 <tr
@@ -370,8 +373,8 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                                   <td>
                                     {r.form2 ? (
                                       <i
-                                        className="fa-solid fa-check"
-                                        style={{ color: "#14C700" }}
+                                        className={`fa-solid fa-check ${style.form2Icon}`}
+                                        aria-hidden="true"
                                       ></i>
                                     ) : (
                                       ""
@@ -384,7 +387,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                                     key={`${r.id}-comment`}
                                     className={style.commentRow}
                                   >
-                                    <td colSpan={showBranchColumn ? 8 : 7}>
+                                    <td colSpan={showBranchColumn ? 9 : 8}>
                                       <strong>
                                         Причина зміни статусу:{" "}
                                         {r.change_comment}
@@ -395,7 +398,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                               </Fragment>
                             ))}
                           </tbody>
-                          <tfoot className={style.tableFooter}>
+                          <tfoot>
                             <tr>
                               <td colSpan={showBranchColumn ? 8 : 7}>
                                 Всього:
@@ -403,7 +406,8 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                               <td>{money(ag.total)}</td>
                             </tr>
                           </tfoot>
-                        </table>
+                          </table>
+                        </div>
                       )}
                     </div>
                   );
