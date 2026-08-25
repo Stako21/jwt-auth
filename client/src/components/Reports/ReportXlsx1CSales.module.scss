@@ -1,8 +1,6 @@
-@use "../../variables.scss" as *;
-
 .report {
-  background: $table-page-surface;
-  color: $table-text;
+  background: #111;
+  color: #e1e1e1;
   min-height: calc(100vh - 60px);
   padding: 12px;
 }
@@ -82,8 +80,8 @@
 }
 
 .tableShell {
-  background: $table-shell-surface;
-  border: 1px solid $table-border;
+  background: #131313;
+  border: 1px solid #333;
   border-radius: 4px;
   max-height: calc(100vh - 190px);
   overflow: auto;
@@ -97,15 +95,15 @@
 
   th,
   td {
-    border: 1px solid $table-border;
+    border: 1px solid #333;
     padding: 5px 8px;
     vertical-align: middle;
     white-space: nowrap;
   }
 
   th {
-    background: $table-head-surface;
-    color: $table-text-strong;
+    background: #214927;
+    color: #f1f1f1;
     font-weight: 700;
     position: sticky;
     text-align: right;
@@ -128,7 +126,7 @@
   }
 
   tbody tr:hover td {
-    background: $table-row-hover;
+    background: #263126;
   }
 }
 
@@ -145,7 +143,7 @@
 
 .totalRow {
   td {
-    background: $table-group-accent;
+    background: #1b3a1f;
     color: #e8f5e9;
     font-weight: 800;
   }
@@ -153,7 +151,7 @@
 
 .supervisorRow {
   td {
-    background: $table-group-primary;
+    background: #132917;
     color: #f0f0f0;
     font-weight: 700;
   }
@@ -161,12 +159,12 @@
 
 .agentRow {
   td {
-    background: $table-row-odd;
-    color: $table-text;
+    background: #141414;
+    color: #e1e1e1;
   }
 
   &:nth-child(even) td {
-    background: $table-row-even;
+    background: #191919;
   }
 
   .nameCell {

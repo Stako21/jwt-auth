@@ -4,9 +4,9 @@
   width: 100%;
   max-height: min(65vh, 720px);
   overflow: auto;
-  border: 1px solid $table-border;
+  border: 1px solid $outline-dark;
   border-radius: $radius-lg;
-  background: $table-shell-surface;
+  background: $surface-container;
 }
 
 .documentsTable {
@@ -36,9 +36,9 @@
     top: 0;
     z-index: 5;
     height: 36px;
-    border-bottom: 1px solid $table-border;
-    background: $table-head-surface;
-    color: $table-text-strong;
+    border-bottom: 1px solid $outline-dark;
+    background: rgba(13, 28, 45, 0.96);
+    color: $text-medium;
     font-size: 10px;
     font-weight: 700;
   }
@@ -48,22 +48,13 @@
     cursor: pointer;
 
     &:hover td {
-      background: $table-row-hover;
+      background: rgba(212, 228, 250, 0.025);
     }
   }
 
   tbody td {
-    border-bottom: 1px solid $table-border;
-    background: $table-row-odd;
-    color: $table-text;
-  }
-
-  tbody tr:nth-child(even) td {
-    background: $table-row-even;
-  }
-
-  tbody tr:hover td {
-    background: $table-row-hover;
+    border-bottom: 1px solid $outline-dark;
+    background: $surface-container;
   }
 
   tbody tr:last-child td {
@@ -144,7 +135,7 @@
   max-width: 176px;
   padding-right: 10px !important;
   padding-left: 10px !important;
-  border-left: 1px solid $table-border;
+  border-left: 1px solid $outline-dark;
   text-align: right !important;
 }
 
@@ -155,15 +146,7 @@
 .actionsCell {
   z-index: 4;
   overflow: visible !important;
-  background: $table-row-odd !important;
-}
-
-.documentsTable tbody tr:nth-child(even) .actionsCell {
-  background: $table-row-even !important;
-}
-
-.documentsTable tbody tr:hover .actionsCell {
-  background: $table-row-hover !important;
+  background: $surface-container !important;
 }
 
 .mobileCards {

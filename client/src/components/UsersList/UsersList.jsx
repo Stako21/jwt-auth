@@ -354,7 +354,7 @@ export const UsersList = ({
         <React.Fragment key={`flat-${user.id}`}>
           {renderUserRow(user)}
           {(Number(user.role) === ROLE_IDS.SV || Number(user.role) === ROLE_IDS.NTO) && (
-            <tr className={style.subordinateRow}>
+            <tr style={{ backgroundColor: "#262b33" }}>
               <td colSpan="9">
                 {subordinateNames.length ? (
                   subordinateNames.map((name) => <div key={`${user.id}-${name}`}>• {name}</div>)

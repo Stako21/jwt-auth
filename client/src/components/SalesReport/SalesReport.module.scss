@@ -81,40 +81,35 @@
   // text-align: center;
   font-size: 11px;
   font-weight: 500;
-  background: $table-shell-surface;
-  color: $table-text;
+  color: $dark-text-color;
 }
 
 .tableHeader tr th,
 .tableFooter tr td {
-  color: $table-text-strong;
-  background-color: $table-head-surface;
+  color: $light-text-color;
+  background-color: #3a3b4e;
   font-size: 12px;
   font-weight: 700;
 }
 
 .salesTable th,
 .salesTable td {
-  border-right: 1px solid $table-border;
+  border-right: 1px solid $border-color;
 }
 
 .table.is-striped .salesTable .salesTableBody > tr > td,
 .salesTable .salesTableBody > tr > td {
-  color: $table-text !important;
+  color: $dark-text-color !important;
 }
 
 .table.is-striped .salesTable .salesTableBody > tr:nth-child(odd),
 .salesTable .salesTableBody > tr:nth-child(odd) {
-  background-color: $table-row-odd !important;
+  background-color: $oddRow !important;
 }
 
 .table.is-striped .salesTable .salesTableBody > tr:nth-child(even),
 .salesTable .salesTableBody > tr:nth-child(even) {
-  background-color: $table-row-even !important;
-}
-
-.salesTable .salesTableBody > tr:hover {
-  background-color: $table-row-hover !important;
+  background-color: $evenRow !important;
 }
 
 // .tableFooter {
