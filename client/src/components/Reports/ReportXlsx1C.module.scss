@@ -1,6 +1,8 @@
+@use "../../variables.scss" as *;
+
 .wrapper {
-  background: #111;
-  color: #e1e1e1;
+  background: $table-page-surface;
+  color: $table-text;
   min-height: calc(100vh - 60px);
   padding: 12px;
 }
@@ -19,7 +21,7 @@
   }
 
   p {
-    color: #9e9e9e;
+    color: $table-text-muted;
     font-size: 12px;
     margin: 4px 0 0;
   }
@@ -36,8 +38,8 @@
 }
 
 .tableShell {
-  background: #131313;
-  border: 1px solid #333;
+  background: $table-shell-surface;
+  border: 1px solid $table-border;
   border-radius: 4px;
   max-height: calc(100vh - 150px);
   overflow: auto;
@@ -51,7 +53,7 @@
 
   th,
   td {
-    border: 1px solid #333;
+    border: 1px solid $table-border;
     max-width: 320px;
     padding: 5px 8px;
     text-align: left;
@@ -60,8 +62,8 @@
   }
 
   th {
-    background: #252525;
-    color: #f1f1f1;
+    background: $table-head-surface;
+    color: $table-text-strong;
     font-weight: 700;
     position: sticky;
     top: 0;
@@ -77,16 +79,16 @@
   }
 
   tbody tr {
-    background: #141414;
-    color: #e1e1e1;
+    background: $table-row-odd;
+    color: $table-text;
   }
 
   tbody tr:nth-child(even) {
-    background: #191919;
+    background: $table-row-even;
   }
 
   tbody tr:hover {
-    background: #263126;
+    background: $table-row-hover;
   }
 }
 
@@ -95,26 +97,28 @@
 }
 
 .level0 {
-  background: #222 !important;
-  color: #f0f0f0 !important;
+  background: $table-group-primary !important;
+  color: $table-text !important;
   font-weight: 700;
 }
 
 .level1 {
-  background: #17321b !important;
-  color: #e8f5e9 !important;
+  background: $table-group-accent !important;
+  color: $table-text !important;
   font-weight: 600;
 }
 
 .level2 {
-  background: #151515 !important;
+  background: $table-group-secondary !important;
+  color: $table-text !important;
 }
 
 .level3,
 .level4,
 .level5,
 .level6 {
-  background: #131313 !important;
+  background: $table-shell-surface !important;
+  color: $table-text !important;
 }
 
 .nameCell {
@@ -130,7 +134,7 @@
 }
 
 .state {
-  background: #111;
+  background: $table-page-surface;
   color: #cfcfcf;
   padding: 24px;
   text-align: center;

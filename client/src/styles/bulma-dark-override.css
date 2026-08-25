@@ -51,11 +51,17 @@ html[data-theme="dark"] {
   --bulma-input-disabled-border-color: var(--ui-color-outline);
   --bulma-input-disabled-color: var(--ui-color-text-muted);
 
-  --bulma-table-background-color: var(--ui-color-surface-container);
-  --bulma-table-color: var(--ui-color-text-high);
-  --bulma-table-head-background-color: var(--ui-color-surface-container-high);
-  --bulma-table-row-hover-background-color: var(--ui-color-surface-container-high);
-  --bulma-table-border-color: var(--ui-color-outline);
+  --bulma-table-background-color: var(--ui-table-row-odd);
+  --bulma-table-body-background-color: var(--ui-table-row-odd);
+  --bulma-table-cell-background-color: transparent;
+  --bulma-table-cell-border-color: var(--ui-table-border);
+  --bulma-table-color: var(--ui-table-text);
+  --bulma-table-head-background-color: var(--ui-table-head);
+  --bulma-table-head-cell-color: var(--ui-table-text-strong);
+  --bulma-table-row-hover-background-color: var(--ui-table-row-hover);
+  --bulma-table-striped-row-even-background-color: var(--ui-table-row-even);
+  --bulma-table-striped-row-even-hover-background-color: var(--ui-table-row-hover);
+  --bulma-table-border-color: var(--ui-table-border);
   --bulma-notification-background-color: var(--ui-color-surface-container-high);
   --bulma-notification-color: var(--ui-color-text-high);
   --bulma-card-background-color: var(--ui-color-surface-container);
@@ -67,5 +73,5 @@ html[data-theme="dark"] {
 }
 
 html[data-theme="dark"] .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
-  background-color: transparent;
+  background-color: var(--ui-table-row-even);
 }

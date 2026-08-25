@@ -1,3 +1,5 @@
+@use "../../variables.scss" as *;
+
 .report {
   padding: 12px 16px 24px;
 }
@@ -75,22 +77,23 @@
 
 .tableShell {
   overflow-x: auto;
-  border: 1px solid #24324a;
-  background: #121b2b;
+  border: 1px solid $table-border;
+  background: $table-shell-surface;
 }
 
 .table {
   width: 100%;
   min-width: 1080px;
   border-collapse: collapse;
-  color: #ffffff;
+  background: $table-row-odd;
+  color: $table-text;
   font-size: 12px;
 
   th,
   td {
     padding: 5px 7px;
-    border-bottom: 1px solid #24324a;
-    border-right: 1px solid #24324a;
+    border-bottom: 1px solid $table-border;
+    border-right: 1px solid $table-border;
     text-align: center;
     vertical-align: top;
   }
@@ -102,19 +105,24 @@
 
   th {
     top: 0;
-    background: #172235;
-    color: #dce6f7;
+    background: $table-head-surface;
+    color: $table-text-strong;
     font-size: 12px;
     font-weight: 700;
     line-height: 1.2;
   }
 
   td:first-child {
-    background: #121b2b;
+    background: $table-row-odd;
   }
 
   tbody tr:nth-child(even) td {
-    background: #151f30;
+    background: $table-row-even;
+  }
+
+  tbody tr:hover td,
+  tbody tr:hover td:first-child {
+    background: $table-row-hover;
   }
 }
 
@@ -151,7 +159,7 @@
 
   td,
   td:first-child {
-    background: #1c2940 !important;
+    background: $table-group-accent !important;
   }
 
   .nameCell {
@@ -164,13 +172,13 @@
   font-weight: 800;
 
   td {
-    border-top: 4px solid #4f6f9f;
-    border-bottom-color: #4f6f9f;
-    background: #263953 !important;
+    border-top: 4px solid $table-border;
+    border-bottom-color: $table-border;
+    background: $table-group-primary !important;
   }
 
   td:first-child {
-    background: #263953 !important;
+    background: $table-group-primary !important;
     font-size: 13px;
   }
 }

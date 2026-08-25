@@ -7,9 +7,9 @@
 .tableShell {
   min-height: calc(100vh - #{$topbar-height} - 118px);
   overflow: hidden;
-  border: 1px solid $outline-dark;
+  border: 1px solid $table-border;
   border-radius: $radius-xl;
-  background: $surface-glass;
+  background: $table-shell-surface;
   box-shadow: 0 18px 40px rgba(1, 15, 31, 0.16);
 }
 
@@ -32,9 +32,9 @@
   z-index: 3;
   height: 38px;
   padding: 0 14px;
-  border-bottom: 1px solid $outline-dark;
-  background: rgba(18, 33, 49, 0.78);
-  color: $text-high;
+  border-bottom: 1px solid $table-border;
+  background: $table-head-surface;
+  color: $table-text-strong;
   backdrop-filter: blur($backdrop-blur);
   -webkit-backdrop-filter: blur($backdrop-blur);
   font-size: 12px;
@@ -51,13 +51,13 @@
 
 .quantityHeader {
   width: 132px;
-  border-left: 1px solid $outline-dark;
+  border-left: 1px solid $table-border;
   text-align: right;
 }
 
 .balanceTable td {
   height: 32px;
-  border-bottom: 1px solid $outline-dark;
+  border-bottom: 1px solid $table-border;
   vertical-align: middle;
 }
 
@@ -69,7 +69,7 @@
 .productCell {
   position: relative;
   padding-left: calc(14px + (var(--row-level, 0) * 14px));
-  color: $text-high;
+  color: $table-text;
   word-break: break-word;
 }
 
@@ -132,8 +132,8 @@
 
 .quantityCell {
   width: 132px;
-  border-left: 1px solid $outline-dark;
-  color: $text-high;
+  border-left: 1px solid $table-border;
+  color: $table-text;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
@@ -170,44 +170,44 @@
 }
 
 .level0 {
-  background: rgba(16, 185, 129, 0.13);
+  background: $table-group-primary;
 }
 
 .level0 .productCell,
 .level0 .quantityCell {
-  color: $primary-accent-light;
+  color: $table-text;
   font-weight: 800;
 }
 
 .level1 {
-  background: rgba(39, 54, 71, 0.82);
+  background: $table-group-accent;
 }
 
 .level1 .productCell,
 .level1 .quantityCell {
-  color: $text-high;
+  color: $table-text;
   font-weight: 700;
 }
 
 .level2 {
-  background: rgba(28, 43, 60, 0.76);
+  background: $balance-group-secondary;
 }
 
 .level3 {
-  background: rgba(18, 33, 49, 0.72);
+  background: $balance-group-tertiary;
 }
 
 .level2 .productCell,
 .level2 .quantityCell,
 .level3 .productCell,
 .level3 .quantityCell {
-  color: $text-medium;
+  color: $table-text;
   font-weight: 650;
 }
 
 .leafRow .productCell,
 .leafRow .quantityCell {
-  color: $text-high;
+  color: $table-text;
   font-weight: 400;
 }
 
@@ -224,7 +224,7 @@
 }
 
 .balanceTable tbody tr:hover {
-  background: rgba(212, 228, 250, 0.04);
+  background: $table-row-hover;
 }
 
 .balanceTable tbody .leafRow:hover {

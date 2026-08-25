@@ -1883,3 +1883,16 @@ Frontend:
 - Reverted checkpoint `aff914b` through revert commit `daef10f` after the proposed global `ReportXlsx1C` table palette was rejected.
 - Restored the table styling that existed at checkpoint `def2322`, including the previously approved Balance row striping and modal dropdown colors.
 - User-managed `client/public/Sorce/*` and `documentation/*` files were not included in or changed by the rollback.
+
+## 2026-08-25 - Approved Variant C table palette
+
+- Used Stitch archive 12 only as a visual reference and adopted Variant C (`Subtle Emerald-Tinted Navy`) for site tables.
+- Centralized table header, three hierarchy levels, odd/even rows, hover, selected state, border, shell, and text colors in `client/src/variables.scss`, with matching `--ui-table-*` CSS variables for transitional Bulma tables.
+- Set every table hierarchy level and header to the same muted neutral light-gray `$table-text` (`#c4ccd4`); hierarchy remains visible through background and font-weight differences instead of white or level-specific text colors.
+- Applied the shared palette to the Balance and 1C hierarchy tables, Documents, reports, user hierarchy, and document-item tables while preserving semantic error, warning, status, and metric colors.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - `git diff --check -- client/src` passed
+  - generated `client/dist` source-file changes from build were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not included

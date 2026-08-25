@@ -1,3 +1,5 @@
+@use "../../variables.scss" as *;
+
 .report {
   padding: 12px 16px 24px;
 }
@@ -191,30 +193,40 @@
 
 .tableShell {
   overflow-x: auto;
+  border: 1px solid $table-border;
+  background: $table-shell-surface;
 }
 
 .table {
   width: 100%;
   min-width: 760px;
   border-collapse: collapse;
-  color: #ffffff;
+  color: $table-text;
 
   th,
   td {
     padding: 8px 10px;
-    border-bottom: 1px solid #24324a;
+    border-bottom: 1px solid $table-border;
     vertical-align: top;
   }
 
   th {
-    background: #172235;
-    color: #dce6f7;
+    background: $table-head-surface;
+    color: $table-text-strong;
     font-size: 13px;
     text-align: left;
   }
 
   tbody tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.02);
+    background: $table-row-even;
+  }
+
+  tbody tr:nth-child(odd) {
+    background: $table-row-odd;
+  }
+
+  tbody tr:hover {
+    background: $table-row-hover;
   }
 }
 

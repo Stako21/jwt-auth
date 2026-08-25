@@ -11,9 +11,27 @@ $surface-control: $surface-container;
 $surface-input: $surface-container-low;
 $select-option-hover-surface: rgba(16, 185, 129, 0.1);
 $select-option-selected-surface: rgba(16, 185, 129, 0.16);
-$balance-leaf-row-odd: #071625;
-$balance-leaf-row-even: #102a35;
-$balance-leaf-row-hover: rgba(16, 185, 129, 0.11);
+
+/* Variant C: subtle emerald-tinted navy table palette. */
+$table-page-surface: $surface-main;
+$table-shell-surface: #051424;
+$table-head-surface: #0b1e28;
+$table-group-primary: #1a3336;
+$table-group-accent: #11262d;
+$table-group-secondary: #0b1e28;
+$table-row-even: #061821;
+$table-row-odd: #051424;
+$table-row-hover: rgba(78, 222, 163, 0.06);
+$table-row-selected: rgba(16, 185, 129, 0.15);
+$table-border: #1c3632;
+$table-text: #c4ccd4;
+$table-text-strong: $table-text;
+$table-text-muted: #96a1ab;
+$balance-group-secondary: $table-group-secondary;
+$balance-group-tertiary: $table-head-surface;
+$balance-leaf-row-odd: $table-row-odd;
+$balance-leaf-row-even: $table-row-even;
+$balance-leaf-row-hover: $table-row-hover;
 $surface-glass: rgba(18, 33, 49, 0.72);
 $surface-overlay: rgba(1, 15, 31, 0.72);
 $background-glow-primary: radial-gradient(
