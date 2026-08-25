@@ -26,6 +26,7 @@
   --ui-radius-xl: #{$radius-xl};
   --ui-motion-fast: #{$motion-fast};
   --ui-motion-normal: #{$motion-normal};
+  --ui-sidebar-current-width: #{$sidebar-width};
 }
 
 * {
@@ -113,11 +114,20 @@ body.appShellCollapsed .appMain {
   padding-left: $sidebar-width-collapsed;
 }
 
+body.appShellCollapsed {
+  --ui-sidebar-current-width: #{$sidebar-width-collapsed};
+}
+
 body.appDrawerOpen {
   overflow: hidden;
 }
 
 @media (max-width: $mobile-breakpoint) {
+  :root,
+  body.appShellCollapsed {
+    --ui-sidebar-current-width: 0px;
+  }
+
   .appMain,
   body.appShellCollapsed .appMain {
     padding-left: 0;

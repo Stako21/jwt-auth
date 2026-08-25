@@ -1,0 +1,40 @@
+@use "../../variables.scss" as *;
+
+.input {
+  width: 100%;
+  height: $control-height-md;
+  min-height: $control-height-md;
+  padding: 0 $space-2;
+  border: 1px solid $outline-green;
+  border-radius: $radius-md;
+  outline: 0;
+  background: $surface-container-lowest;
+  color: $text-high;
+  color-scheme: dark;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color $motion-fast $motion-ease,
+    box-shadow $motion-fast $motion-ease;
+
+  &:focus-visible {
+    border-color: $primary-accent;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+  }
+
+  &:disabled {
+    color: $text-muted;
+    cursor: not-allowed;
+    opacity: 0.48;
+  }
+
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.78;
+  }
+}
+
+.error {
+  border-color: $negative-muted !important;
+  background: $negative-surface !important;
+}

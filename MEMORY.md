@@ -1852,3 +1852,17 @@ Frontend:
   - `npm run lint` in `client` passed
   - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
   - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-25 - Stitch modal visual refinements and unified calendars
+
+- Created pre-change recovery checkpoint `8fdf8c7` (`checkpoint: preserve dark documents redesign`) while intentionally excluding user-deleted `client/public/Sorce/*` data and untracked user documentation.
+- Transferred only approved visual ideas from Stitch archive 11; no invented fields, copy, products, prices, roles, or workflow behavior were imported.
+- Modal positioning now reads the live shell width from `--ui-sidebar-current-width`: 280px expanded, 72px collapsed, and 0px on mobile. Return, exchange, and nested item cards center inside the remaining content area and shrink within its viewport-safe padding.
+- Increased desktop form density with two-column primary fields, a narrower item editor, reduced header/body/footer spacing, and side-by-side exchange item panels where available; narrow desktop/tablet and mobile layouts collapse safely.
+- Made contractor autocomplete menus opaque and high-contrast with explicit surface, hover, border, shadow, and stacking behavior.
+- Added shared native `DateInput` and adopted it in Documents filters, document item manufacture/expiry dates, and Sales Report ranges. Removed the now-unused `react-datepicker` and `date-fns` dependencies.
+- Centralized modal maximum widths and viewport gap in `variables.scss`.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file deletions from build were restored

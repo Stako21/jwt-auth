@@ -9,12 +9,8 @@ import {
   fetchSalesReport,
   fetchSalesReportPdf,
 } from "../../services/reports.api";
-import DatePicker, { registerLocale } from "react-datepicker";
-import { uk } from "date-fns/locale/uk";
-import "react-datepicker/dist/react-datepicker.css";
 import { DataLoader } from "../DataLoader/DataLoader";
-
-registerLocale("uk", uk);
+import DateInput from "../DateInput/DateInput";
 
 function toDateKey(value) {
   const date = value instanceof Date ? value : new Date(value);
@@ -22,12 +18,6 @@ function toDateKey(value) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function parseDateKey(value) {
-  if (!value) return null;
-  const [year, month, day] = String(value).split("-").map(Number);
-  return new Date(year, month - 1, day);
 }
 
 function getTomorrowKey() {
@@ -134,8 +124,8 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
     fetchReportDateRange().then((data) => {
       const { minDate, maxDate } = data.data;
 
-      setMinDate(minDate ? new Date(minDate) : null);
-      setMaxDate(maxDate ? new Date(maxDate) : null);
+      setMinDate(minDate ? String(minDate).slice(0, 10) : null);
+      setMaxDate(maxDate ? String(maxDate).slice(0, 10) : null);
     });
   }, []);
 
@@ -245,34 +235,30 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
       <div className={style.header}>
         <h2 className={style.title}>Звіт з продажів за період</h2>
         <span className={style.dateLabel}>з</span>
-        <DatePicker
-          locale="uk"
-          selected={parseDateKey(dateFrom)}
-          onChange={(nextDate) => {
-            if (!nextDate) return;
-            const nextKey = toDateKey(nextDate);
+        <DateInput
+          value={dateFrom}
+          onChange={(event) => {
+            const nextKey = event.target.value;
+            if (!nextKey) return;
             setDateFrom(nextKey);
             if (dateTo < nextKey) setDateTo(nextKey);
           }}
-          dateFormat="dd.MM.yyyy"
           className={style.dateInput}
-          minDate={minDate ? new Date(minDate) : null}
-          maxDate={dateTo ? parseDateKey(dateTo) : maxDate ? new Date(maxDate) : null}
+          min={minDate || undefined}
+          max={dateTo || maxDate || undefined}
         />
         <span className={style.dateLabel}>по</span>
-        <DatePicker
-          locale="uk"
-          selected={parseDateKey(dateTo)}
-          onChange={(nextDate) => {
-            if (!nextDate) return;
-            const nextKey = toDateKey(nextDate);
+        <DateInput
+          value={dateTo}
+          onChange={(event) => {
+            const nextKey = event.target.value;
+            if (!nextKey) return;
             setDateTo(nextKey);
             if (dateFrom > nextKey) setDateFrom(nextKey);
           }}
-          dateFormat="dd.MM.yyyy"
           className={style.dateInput}
-          minDate={dateFrom ? parseDateKey(dateFrom) : minDate ? new Date(minDate) : null}
-          maxDate={maxDate ? new Date(maxDate) : null}
+          min={dateFrom || minDate || undefined}
+          max={maxDate || undefined}
         />
         <button
           className={`button is-small is-light ${pdfLoading ? "is-loading" : ""}`}

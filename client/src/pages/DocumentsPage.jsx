@@ -11,6 +11,7 @@ import {
 } from "../services/directories.api.js";
 import CreateExchangeDocumentModal from "../modals/CreateExchangeDocumentModal.jsx";
 import { DataLoader } from "../components/DataLoader/DataLoader.jsx";
+import DateInput from "../components/DateInput/DateInput.jsx";
 import {
   filterDocuments,
   getDocumentAuthorOptions,
@@ -253,7 +254,7 @@ export default function DocumentsPage() {
               Без обмеження
             </label>
           </div>
-          <input
+          <DateInput
             id="documents-date-from"
             type="date"
             value={period.from}
@@ -281,7 +282,7 @@ export default function DocumentsPage() {
               Без обмеження
             </label>
           </div>
-          <input
+          <DateInput
             id="documents-date-to"
             type="date"
             value={period.to}

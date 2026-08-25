@@ -2,7 +2,9 @@
 
 .documentModal {
   z-index: 1300;
-  padding: $space-4;
+  padding: $space-4 $space-4 $space-4
+    calc(var(--ui-sidebar-current-width, #{$sidebar-width}) + $space-4);
+  transition: padding-left $motion-normal $motion-ease;
 }
 
 .modalBackdrop {
@@ -12,8 +14,8 @@
 }
 
 .modalCard {
-  width: min(100%, 980px) !important;
-  max-height: calc(100dvh - 32px);
+  width: min(100%, $document-modal-max-width) !important;
+  max-height: calc(100dvh - $modal-viewport-gap);
   margin: 0;
   overflow: hidden;
   border: 1px solid $outline-medium;
@@ -23,12 +25,12 @@
 }
 
 .exchangeCard {
-  width: min(100%, 1080px) !important;
+  width: min(100%, $exchange-modal-max-width) !important;
 }
 
 .modalHeader {
-  min-height: 52px;
-  padding: 10px $space-4 !important;
+  min-height: 48px;
+  padding: 8px $space-4 !important;
   border-bottom: 1px solid $outline-dark;
   background: rgba(18, 33, 49, 0.96);
 }
@@ -63,8 +65,9 @@
 
 .modalBody {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $space-3;
-  padding: $space-4 !important;
+  padding: $space-3 $space-4 !important;
   overflow-y: auto;
   background: $surface-container-low !important;
   color: $text-high;
@@ -141,28 +144,45 @@
   overflow-y: auto;
   border: 1px solid $outline-medium;
   border-radius: $radius-md;
-  background: $surface-container;
+  isolation: isolate;
+  background-color: $surface-container-highest !important;
+  opacity: 1;
   box-shadow: $shadow-popover;
 
   .dropdownItem {
+    background-color: $surface-container-highest !important;
     padding: 8px $space-3;
-    color: $text-medium;
+    color: $text-high !important;
     cursor: pointer;
     font-size: 12px;
 
     &:hover {
-      background: $surface-container-high;
-      color: $text-high;
+      background-color: $surface-container-high !important;
+      color: $primary-accent-light !important;
     }
   }
 }
 
 .lowerStack {
   display: grid;
+  grid-column: 1 / -1;
   gap: $space-3;
   margin-top: $space-1;
   padding-top: $space-3;
   border-top: 1px solid $outline-dark;
+}
+
+.exchangeCard .modalBody > :global(.field):nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.exchangeCard .lowerStack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  .executorPanel,
+  .quantityError {
+    grid-column: 1 / -1;
+  }
 }
 
 .executorPanel,
@@ -177,7 +197,7 @@
   align-items: center;
   justify-content: space-between;
   gap: $space-3;
-  padding: 10px $space-3;
+  padding: 8px $space-3;
 
   :global(.label) {
     margin: 0 !important;
@@ -218,7 +238,7 @@
 
 .itemSection {
   min-width: 0;
-  padding: $space-3;
+  padding: 10px $space-3;
 }
 
 .takeSection {
@@ -359,8 +379,8 @@
 .modalFooter {
   justify-content: flex-end !important;
   gap: $space-2 !important;
-  min-height: 58px;
-  padding: 10px $space-4 !important;
+  min-height: 54px;
+  padding: 8px $space-4 !important;
   border-top: 1px solid $outline-medium !important;
   background: $surface-container !important;
 
@@ -371,6 +391,17 @@
     border-radius: $radius-md;
     font-size: 12px;
     font-weight: 700;
+  }
+}
+
+@media (max-width: 1250px) and (min-width: 901px) {
+  .exchangeCard .lowerStack {
+    grid-template-columns: 1fr;
+
+    .executorPanel,
+    .quantityError {
+      grid-column: 1;
+    }
   }
 }
 
@@ -421,8 +452,19 @@
   }
 
   .modalBody {
+    grid-template-columns: 1fr;
     gap: 10px;
     padding: $space-3 !important;
+  }
+
+  .modalBody > :global(.field),
+  .exchangeCard .modalBody > :global(.field):nth-child(3),
+  .lowerStack {
+    grid-column: 1;
+  }
+
+  .exchangeCard .lowerStack {
+    grid-template-columns: 1fr;
   }
 
   .executorPanel {

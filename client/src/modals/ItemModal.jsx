@@ -1,39 +1,7 @@
 import cn from "classnames";
-import DatePicker from "react-datepicker";
-import { forwardRef, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import DateInput from "../components/DateInput/DateInput.jsx";
 import style from "./ItemModal.module.scss";
-
-const CustomInput = forwardRef(function CustomInput(
-  { value, onClick, hasError },
-  ref,
-) {
-  return (
-    <input
-      ref={ref}
-      value={value}
-      onClick={onClick}
-      className={cn("input", {
-        [style.dateInput]: true,
-        [style.dateInputError]: hasError,
-      })}
-      readOnly
-    />
-  );
-});
-
-function toPickerDate(value) {
-  if (!value) {
-    return null;
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [year, month, day] = value.split("-").map(Number);
-    return new Date(year, month - 1, day, 12, 0, 0);
-  }
-
-  const parsedDate = new Date(value);
-  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
-}
 
 export default function ItemModal({
   isOpen,
@@ -248,20 +216,12 @@ export default function ItemModal({
               <label className="label">
                 Дата виготовлення{datesRequired ? " *" : ""}
               </label>
-              <DatePicker
-                popperClassName={style.datepickerPopper}
-                className={cn(style.dateInput, {
-                  [style.dateInputError]: errors.manufactureDate,
-                })}
-                locale="uk"
-                dateFormat="dd.MM.yyyy"
-                customInput={
-                  <CustomInput hasError={Boolean(errors.manufactureDate)} />
-                }
-                isClearable={!datesRequired}
-                selected={toPickerDate(manufactureDate)}
-                onChange={(date) => {
-                  setManufactureDate(date ? date.toISOString().split("T")[0] : "");
+              <DateInput
+                className={style.dateInput}
+                hasError={Boolean(errors.manufactureDate)}
+                value={manufactureDate}
+                onChange={(event) => {
+                  setManufactureDate(event.target.value);
                   setErrors((prev) => ({ ...prev, manufactureDate: false }));
                 }}
               />
@@ -271,18 +231,12 @@ export default function ItemModal({
               <label className="label">
                 Придатний до{datesRequired ? " *" : ""}
               </label>
-              <DatePicker
-                popperClassName={style.datepickerPopper}
-                className={cn(style.dateInput, {
-                  [style.dateInputError]: errors.expiryDate,
-                })}
-                locale="uk"
-                dateFormat="dd.MM.yyyy"
-                customInput={<CustomInput hasError={Boolean(errors.expiryDate)} />}
-                isClearable={!datesRequired}
-                selected={toPickerDate(expiryDate)}
-                onChange={(date) => {
-                  setExpiryDate(date ? date.toISOString().split("T")[0] : "");
+              <DateInput
+                className={style.dateInput}
+                hasError={Boolean(errors.expiryDate)}
+                value={expiryDate}
+                onChange={(event) => {
+                  setExpiryDate(event.target.value);
                   setErrors((prev) => ({ ...prev, expiryDate: false }));
                 }}
               />
