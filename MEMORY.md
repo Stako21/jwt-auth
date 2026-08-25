@@ -1926,3 +1926,16 @@ Frontend:
   - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
   - generated `client/dist` source-file changes from build were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-25 - Debet report full theme alignment
+
+- Restyled the Debet report without changing collector/contractor grouping, search, overdue filtering, totals, document ordering, visibility, or `Ф2`/`Факт` data behavior.
+- Rebuilt the report heading and filters as a compact glass panel using shared form controls; the grouping segmented control now uses token-driven emerald hover/selected/focus states instead of the legacy blue button.
+- Applied Variant C hierarchy surfaces to primary groups and nested contractor/TA groups, with aligned disclosure markers, compact metadata, tabular totals, and touch-friendly headers.
+- Reworked the document table with shared header/zebra/border/hover/text tokens, denser cells, sticky headers inside each horizontal scroll shell, aligned boolean/date/money/overdue columns, and centralized semantic warning/danger/check colors.
+- Added dark themed loading-empty/error and grand-total surfaces plus responsive single-column filters, group summaries, and edge-to-edge mobile tables.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file changes from build were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

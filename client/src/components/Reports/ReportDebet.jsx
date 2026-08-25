@@ -217,8 +217,8 @@ function DocumentRows({ rows, groupId }) {
               <td>
                 {row.form2 ? (
                   <i
-                    className="fa-solid fa-check"
-                    style={{ color: "#14C700" }}
+                    className={`fa-solid fa-check ${style.checkIcon}`}
+                    aria-hidden="true"
                   ></i>
                 ) : (
                   ""
@@ -227,8 +227,8 @@ function DocumentRows({ rows, groupId }) {
               <td>
                 {row.fact ? (
                   <i
-                    className="fa-solid fa-check"
-                    style={{ color: "#14C700" }}
+                    className={`fa-solid fa-check ${style.checkIcon}`}
+                    aria-hidden="true"
                   ></i>
                 ) : (
                   ""
@@ -369,7 +369,7 @@ export function ReportDebet({ setLastUpdateTime }) {
     <section className={style.report}>
       <div className={style.header}>
         <div>
-          <h2 className={style.title}>Дебіторська заборгованість</h2>
+          <h1 className={style.title}>Дебіторська заборгованість</h1>
           <p className={style.subtitle}>
             Позицій: <strong>{filteredRows.length}</strong>
           </p>
@@ -381,6 +381,7 @@ export function ReportDebet({ setLastUpdateTime }) {
             <div className={style.segmentedControl}>
               <button
                 type="button"
+                aria-pressed={groupingMode === GROUPING_MODES.collector}
                 className={
                   groupingMode === GROUPING_MODES.collector ? style.active : ""
                 }
@@ -390,6 +391,7 @@ export function ReportDebet({ setLastUpdateTime }) {
               </button>
               <button
                 type="button"
+                aria-pressed={groupingMode === GROUPING_MODES.contractor}
                 className={
                   groupingMode === GROUPING_MODES.contractor
                     ? style.active
