@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import cn from "classnames";
 import style from "./Table.module.scss";
 import ScrollToTopButton from "../ScrollToTopButton/ScrollToTopButton";
+import { UI_TIMING } from "../../uiTokens";
 
 function buildVisibilityMap(items, parentId = "", result = {}) {
   items.forEach((item, index) => {
@@ -54,7 +55,7 @@ export const Table = ({ data }) => {
 
     const timeoutId = setTimeout(() => {
       setActivePriceRowId(null);
-    }, 10000);
+    }, UI_TIMING.pricePopoverTimeoutMs);
 
     return () => clearTimeout(timeoutId);
   }, [activePriceRowId]);
@@ -109,12 +110,12 @@ export const Table = ({ data }) => {
       <div className={style.tableShell}>
         <div className={style.scrollContainer}>
           <table className={style.balanceTable}>
-            {/* <thead>
+            <thead>
               <tr>
-                <th className={style.productHeader}>Товар</th>
+                <th className={style.productHeader}>Номенклатура</th>
                 <th className={style.quantityHeader}>Залишок</th>
               </tr>
-            </thead> */}
+            </thead>
             <tbody>
               {flatData.map((row) => {
                 const isLeafRow = !row.hasChildren;
@@ -124,20 +125,24 @@ export const Table = ({ data }) => {
                   typeof row.adjustedPriceCell === "number"
                     ? row.adjustedPriceCell
                     : row.priceCell;
+                const hasNegativeQuantity = row.productQuantityCell.some(
+                  (value) => Number(value) < 0,
+                );
 
                 if (!isRowVisible(row)) return null;
 
                 return (
                   <tr
                     key={row.id}
-                    className={cn(style[`level${row.level}`], {
+                    className={cn(style[`level${Math.min(row.level, 3)}`], {
+                      [style.leafRow]: isLeafRow,
                       [style.evenRow]: isLeafRow && leafRowIndex % 2 === 0,
                       [style.oddRow]: isLeafRow && leafRowIndex % 2 !== 0,
                     })}
                   >
                     <td
                       className={style.productCell}
-                      style={{ paddingLeft: `${10 + row.level * 6}px` }}
+                      style={{ "--row-level": row.level }}
                     >
                       {row.hasChildren && (
                         <button
@@ -154,8 +159,8 @@ export const Table = ({ data }) => {
                             className={cn(
                               style.toggleIcon,
                               visibility[row.id]
-                                ? "fa-regular fa-minus-square"
-                                : "fa-regular fa-plus-square",
+                                ? "fa-solid fa-chevron-down"
+                                : "fa-solid fa-chevron-right",
                             )}
                           ></i>
                         </button>
@@ -201,7 +206,7 @@ export const Table = ({ data }) => {
                     <td
                       className={cn(
                         style.quantityCell,
-                        row.productQuantityCell.some((value) => value < 0) && style.negative,
+                        hasNegativeQuantity && style.negative,
                       )}
                     >
                       {row.productQuantityCell.join(", ")}

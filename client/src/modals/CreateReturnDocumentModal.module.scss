@@ -1,18 +1,475 @@
 @use "../variables" as *;
 
+.documentModal {
+  z-index: 1300;
+  padding: $space-4;
+}
+
+.modalBackdrop {
+  background: rgba(1, 15, 31, 0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modalCard {
+  width: min(100%, 980px) !important;
+  max-height: calc(100dvh - 32px);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-xl;
+  background: $surface-container-low;
+  box-shadow: $shadow-card;
+}
+
+.exchangeCard {
+  width: min(100%, 1080px) !important;
+}
+
+.modalHeader {
+  min-height: 52px;
+  padding: 10px $space-4 !important;
+  border-bottom: 1px solid $outline-dark;
+  background: rgba(18, 33, 49, 0.96);
+}
+
+.modalTitle {
+  margin: 0;
+  color: $text-high !important;
+  font-family: Manrope, Inter, Arial, sans-serif;
+  font-size: 17px !important;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.closeButton {
+  flex: 0 0 32px;
+  width: 32px;
+  max-width: 32px;
+  height: 32px;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-md;
+  background: $surface-container-high !important;
+  transition:
+    border-color $motion-fast $motion-ease,
+    background-color $motion-fast $motion-ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: $negative-muted;
+    background: $status-rejected-surface !important;
+  }
+}
+
+.modalBody {
+  display: grid;
+  gap: $space-3;
+  padding: $space-4 !important;
+  overflow-y: auto;
+  background: $surface-container-low !important;
+  color: $text-high;
+
+  :global(.field) {
+    margin: 0 !important;
+  }
+
+  :global(.label) {
+    margin-bottom: $space-1 !important;
+    color: $text-medium;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  :global(.control) {
+    position: relative;
+  }
+
+  :global(.input),
+  :global(.textarea),
+  :global(.select select) {
+    min-height: $control-height-md;
+    border: 1px solid $outline-green;
+    border-radius: $radius-md;
+    background: $surface-container-lowest;
+    color: $text-high;
+    box-shadow: none;
+    font-size: 13px;
+
+    &:focus {
+      border-color: $primary-accent;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+    }
+
+    &:disabled {
+      color: $text-muted;
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+  }
+
+  :global(.input),
+  :global(.select select) {
+    height: $control-height-md;
+    padding: 0 $space-3;
+  }
+
+  :global(.textarea) {
+    min-height: 42px;
+    max-height: 88px;
+    padding: 9px $space-3;
+    resize: vertical;
+  }
+
+  :global(.is-danger) {
+    border-color: $negative-muted !important;
+  }
+
+  :global(.help.is-danger) {
+    margin-top: $space-1;
+    color: $negative;
+    font-size: 11px;
+  }
+}
+
 .dropdownContent {
-  background-color: $dropdown-background;
-  border: solid 1px $dropdown-border;
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
+  position: absolute;
+  top: calc(100% + $space-1);
+  right: 0;
+  left: 0;
+  z-index: 45;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-md;
+  background: $surface-container;
+  box-shadow: $shadow-popover;
 
   .dropdownItem {
-    padding: 8px 12px;
+    padding: 8px $space-3;
+    color: $text-medium;
     cursor: pointer;
-    color: $light-text-color;
+    font-size: 12px;
 
     &:hover {
-      background-color: $border-color-light-blue;
+      background: $surface-container-high;
+      color: $text-high;
     }
+  }
+}
+
+.lowerStack {
+  display: grid;
+  gap: $space-3;
+  margin-top: $space-1;
+  padding-top: $space-3;
+  border-top: 1px solid $outline-dark;
+}
+
+.executorPanel,
+.itemSection {
+  border: 1px solid $outline-dark;
+  border-radius: $radius-lg;
+  background: rgba(18, 33, 49, 0.72);
+}
+
+.executorPanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  padding: 10px $space-3;
+
+  :global(.label) {
+    margin: 0 !important;
+  }
+}
+
+.executorButtons {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0 !important;
+  padding: 2px;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-md;
+  background: $surface-container-lowest;
+}
+
+.segmentButton {
+  min-width: 76px;
+  height: 30px;
+  padding: 0 $space-3;
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: $text-medium !important;
+  font-size: 12px;
+  font-weight: 700;
+
+  &:hover:not(:disabled) {
+    background: $surface-container-high !important;
+    color: $text-high !important;
+  }
+}
+
+.segmentActive {
+  background: rgba(16, 185, 129, 0.16) !important;
+  color: $primary-accent-light !important;
+}
+
+.itemSection {
+  min-width: 0;
+  padding: $space-3;
+}
+
+.takeSection {
+  border-left: 3px solid $status-revision;
+}
+
+.giveSection {
+  border-left: 3px solid $primary-accent;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  margin-bottom: $space-2;
+
+  h4 {
+    margin: 0 !important;
+    color: $text-high !important;
+    font-size: 13px !important;
+    font-weight: 700;
+  }
+}
+
+.sectionMessage {
+  margin: 0;
+  color: $negative;
+  font-size: 11px;
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(78, 222, 163, 0.28) !important;
+  border-radius: $radius-md !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: $primary-accent-light !important;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.emptyItems {
+  margin: 0;
+  padding: $space-3;
+  border: 1px dashed $outline-medium;
+  border-radius: $radius-md;
+  color: $text-muted;
+  font-size: 11px;
+  text-align: center;
+}
+
+.itemsTableScroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-md;
+}
+
+.itemsTable {
+  width: 100%;
+  min-width: 620px;
+  margin: 0 !important;
+  border: 0 !important;
+  border-collapse: collapse;
+  background: transparent !important;
+  color: $text-medium !important;
+  font-size: 11px !important;
+
+  th,
+  td {
+    padding: 6px $space-2 !important;
+    border: 0 !important;
+    border-bottom: 1px solid $outline-dark !important;
+    background: transparent !important;
+    color: inherit !important;
+    line-height: 1.2;
+    vertical-align: middle;
+  }
+
+  th {
+    background: $surface-container-lowest !important;
+    color: $text-muted !important;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0 !important;
+  }
+
+  th:last-child,
+  td:last-child {
+    width: 74px;
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+.itemActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: $radius-sm !important;
+  background: $surface-container-high !important;
+  color: $text-medium !important;
+
+  & + & {
+    margin-left: $space-1;
+  }
+}
+
+.removeItemButton {
+  background: $status-rejected-surface !important;
+  color: $status-rejected !important;
+}
+
+.quantityError {
+  margin: 0;
+  padding: 8px $space-3;
+  border: 1px solid $negative-muted;
+  border-radius: $radius-md;
+  background: $negative-surface;
+  color: $negative;
+  font-size: 11px;
+}
+
+.modalFooter {
+  justify-content: flex-end !important;
+  gap: $space-2 !important;
+  min-height: 58px;
+  padding: 10px $space-4 !important;
+  border-top: 1px solid $outline-medium !important;
+  background: $surface-container !important;
+
+  button {
+    min-width: 112px;
+    height: $control-height-md;
+    border: 0;
+    border-radius: $radius-md;
+    font-size: 12px;
+    font-weight: 700;
+  }
+}
+
+.saveButton {
+  background: $primary-accent !important;
+  color: $text-on-accent !important;
+
+  &:hover:not(:disabled) {
+    background: $primary-accent-hover !important;
+  }
+
+  &:disabled {
+    background: $surface-container-high !important;
+    color: $text-muted !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.cancelButton {
+  background: $status-rejected-surface !important;
+  color: $negative !important;
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .documentModal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modalCard,
+  .exchangeCard {
+    width: 100% !important;
+    max-height: calc(100dvh - $topbar-height);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: $radius-xl $radius-xl 0 0;
+  }
+
+  .modalHeader {
+    min-height: 48px;
+    padding: 8px $space-3 !important;
+  }
+
+  .modalTitle {
+    font-size: 15px !important;
+  }
+
+  .modalBody {
+    gap: 10px;
+    padding: $space-3 !important;
+  }
+
+  .executorPanel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .executorButtons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .segmentButton {
+    width: 100%;
+    min-height: 34px;
+  }
+
+  .sectionHeader {
+    align-items: flex-start;
+  }
+
+  .addButton {
+    flex: 0 0 auto;
+  }
+
+  .modalFooter {
+    position: sticky;
+    bottom: 0;
+    min-height: 60px;
+    padding: 10px $space-3 calc(10px + env(safe-area-inset-bottom)) !important;
+
+    button {
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: $control-height-lg;
+    }
+  }
+}
+
+@media (max-width: 420px) {
+  .sectionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .addButton {
+    width: 100%;
   }
 }

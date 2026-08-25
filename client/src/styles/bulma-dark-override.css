@@ -1,91 +1,71 @@
-/* Активируется при <html data-theme="dark"> */
+/*
+ * Compatibility layer for screens that still use Bulma classes.
+ * Values come from the app-level --ui-* tokens defined in main.scss.
+ */
 html[data-theme="dark"] {
+  --bulma-body-background-color: var(--ui-color-surface-main);
+  --bulma-body-color: var(--ui-color-text-high);
+  --bulma-scheme-main: var(--ui-color-surface-main);
+  --bulma-scheme-main-bis: var(--ui-color-surface-container);
+  --bulma-scheme-main-ter: var(--ui-color-surface-container-high);
+  --bulma-background: var(--ui-color-surface-main);
+  --bulma-border: var(--ui-color-outline);
+  --bulma-text: var(--ui-color-text-high);
+  --bulma-text-strong: var(--ui-color-text-high);
+  --bulma-text-light: var(--ui-color-text-medium);
+  --bulma-primary: var(--ui-color-accent);
+  --bulma-link: var(--ui-color-info);
+  --bulma-info: var(--ui-color-info);
+  --bulma-success: var(--ui-color-accent);
+  --bulma-warning: var(--ui-color-warning);
+  --bulma-danger: var(--ui-color-danger);
 
-   /* ===== BODY ===== */
+  --bulma-modal-background-background-color: rgba(0, 0, 0, 0.62);
+  --bulma-modal-card-background-color: var(--ui-color-surface-container);
+  --bulma-modal-card-head-background-color: var(--ui-color-surface-container);
+  --bulma-modal-card-foot-background-color: var(--ui-color-surface-container);
+  --bulma-modal-card-title-color: var(--ui-color-text-high);
+  --bulma-modal-card-head-border-bottom: 1px solid var(--ui-color-outline);
+  --bulma-modal-card-foot-border-top: 1px solid var(--ui-color-outline);
 
-  --bulma-body-background-color: #1b2434;
-  --bulma-body-color: #c2c2c2;
+  --bulma-button-background-color: var(--ui-color-surface-control);
+  --bulma-button-border-color: var(--ui-color-outline);
+  --bulma-button-color: var(--ui-color-text-high);
+  --bulma-button-hover-background-color: var(--ui-color-surface-container-high);
+  --bulma-button-hover-border-color: var(--ui-color-outline-accent);
+  --bulma-button-focus-border-color: var(--ui-color-accent-light);
+  --bulma-button-disabled-background-color: var(--ui-color-surface-container-high);
+  --bulma-button-disabled-color: var(--ui-color-text-muted);
+  --bulma-button-primary-background-color: var(--ui-color-accent);
+  --bulma-button-primary-border-color: var(--ui-color-accent);
+  --bulma-button-primary-color: var(--ui-color-text-high);
+  --bulma-button-primary-hover-background-color: var(--ui-color-accent-hover);
 
-  /* Базовые цвета Bulma */
-  --bulma-scheme-main: #1b2434;
-  --bulma-scheme-main-bis: #161c27;
-  --bulma-scheme-main-ter: #243146;
+  --bulma-input-background-color: var(--ui-color-surface-input);
+  --bulma-input-border-color: var(--ui-color-outline-accent);
+  --bulma-input-color: var(--ui-color-text-high);
+  --bulma-input-placeholder-color: var(--ui-color-text-muted);
+  --bulma-input-focus-border-color: var(--ui-color-accent-light);
+  --bulma-input-focus-box-shadow-color: rgba(16, 185, 129, 0.24);
+  --bulma-input-disabled-background-color: var(--ui-color-surface-container-high);
+  --bulma-input-disabled-border-color: var(--ui-color-outline);
+  --bulma-input-disabled-color: var(--ui-color-text-muted);
 
-  --bulma-background: #1b2434;
-  --bulma-border: #4d545f;
-  --bulma-text: #c2c2c2;
-  --bulma-text-strong: #ffffff;
-  --bulma-text-light: #949b9f;
+  --bulma-table-background-color: var(--ui-color-surface-container);
+  --bulma-table-color: var(--ui-color-text-high);
+  --bulma-table-head-background-color: var(--ui-color-surface-container-high);
+  --bulma-table-row-hover-background-color: var(--ui-color-surface-container-high);
+  --bulma-table-border-color: var(--ui-color-outline);
+  --bulma-notification-background-color: var(--ui-color-surface-container-high);
+  --bulma-notification-color: var(--ui-color-text-high);
+  --bulma-card-background-color: var(--ui-color-surface-container);
+  --bulma-card-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+  --bulma-radius-small: var(--ui-radius-sm);
+  --bulma-radius: var(--ui-radius-md);
+  --bulma-radius-medium: var(--ui-radius-lg);
+  --bulma-radius-large: var(--ui-radius-xl);
+}
 
-  --bulma-primary: #0097dc;
-  --bulma-link: #0097dc;
-
-  --bulma-info: #77bce4;
-  --bulma-success: #25c478;
-  --bulma-warning: #ffbb57;
-  --bulma-danger: #de3d3d;
-
-  /* ===== MODAL ===== */
-
-  --bulma-modal-background-background-color: rgba(27, 36, 52, 0.75);
-  --bulma-modal-card-background-color: #1b2434;
-  --bulma-modal-card-head-background-color: #1b2434;
-  --bulma-modal-card-foot-background-color: #1b2434;
-
-  --bulma-modal-card-title-color: #c2c2c2;
-  --bulma-modal-card-head-border-bottom: 1px solid #4d545f;
-  --bulma-modal-card-foot-border-top: 1px solid #4d545f;
-
-  /* ===== BUTTONS ===== */
-
-  --bulma-button-background-color: #2e3d57;
-  --bulma-button-border-color: #4d545f;
-  --bulma-button-color: #c2c2c2;
-
-  --bulma-button-hover-background-color: #253249;
-  --bulma-button-hover-border-color: #77bce4;
-
-  --bulma-button-focus-border-color: #1c6c9a;
-
-  --bulma-button-disabled-background-color: #2f3745;
-  --bulma-button-disabled-color: #687378;
-
-  /* Primary button */
-  --bulma-button-primary-background-color: #0097dc;
-  --bulma-button-primary-border-color: #0097dc;
-  --bulma-button-primary-color: #ffffff;
-
-  --bulma-button-primary-hover-background-color: #1c6c9a;
-
-  /* ===== INPUTS ===== */
-
-  --bulma-input-background-color: #1b2434;
-  --bulma-input-border-color: #4d545f;
-  --bulma-input-color: #c2c2c2;
-  --bulma-input-placeholder-color: #6f737b;
-
-  --bulma-input-focus-border-color: #0097dc;
-  --bulma-input-focus-box-shadow-color: rgba(0, 151, 220, 0.4);
-
-  --bulma-input-disabled-background-color: #2f3745;
-  --bulma-input-disabled-border-color: #4d545f;
-  --bulma-input-disabled-color: #6f737b;
-
-  /* ===== TABLE ===== */
-
-  --bulma-table-background-color: #1b2434;
-  --bulma-table-color: #c2c2c2;
-  --bulma-table-head-background-color: #122a52;
-  --bulma-table-row-hover-background-color: #161c27;
-  --bulma-table-border-color: #4d545f;
-
-  /* ===== NOTIFICATION ===== */
-
-  --bulma-notification-background-color: #263041;
-  --bulma-notification-color: #ffffff;
-
-  /* ===== CARD ===== */
-
-  --bulma-card-background-color: #1b2434;
-  --bulma-card-shadow: 0 0 18px 0 #06080b;
+html[data-theme="dark"] .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
+  background-color: transparent;
 }

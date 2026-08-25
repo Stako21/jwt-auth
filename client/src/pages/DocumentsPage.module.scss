@@ -1,0 +1,410 @@
+@use "../variables.scss" as *;
+
+.documentsPage {
+  width: 100%;
+  min-width: 0;
+  padding: $space-5;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  min-height: 48px;
+  margin-bottom: $space-4;
+}
+
+.pageHeading {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  min-width: 0;
+
+  h1 {
+    margin: 0;
+    color: $text-high;
+    font-family: Manrope, Inter, Arial, sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+}
+
+.branchBadge,
+.filterCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  background: $surface-container-high;
+  color: $text-medium;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.branchBadge {
+  max-width: 180px;
+  min-height: 24px;
+  padding: 0 $space-2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.createActions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: $space-2;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-2;
+    height: 38px;
+    padding: 0 $space-4;
+    border: 1px solid $outline-medium;
+    border-radius: $radius-md;
+    background: $surface-container-high;
+    color: $text-high;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition:
+      border-color $motion-fast $motion-ease,
+      background-color $motion-fast $motion-ease,
+      color $motion-fast $motion-ease;
+
+    &:hover,
+    &:focus-visible {
+      border-color: $primary-accent;
+      background: rgba(16, 185, 129, 0.1);
+      color: $primary-accent-light;
+    }
+  }
+}
+
+.mobileFilterToggle {
+  display: none;
+}
+
+.filterPanel {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  grid-template-columns:
+    160px 160px minmax(130px, 0.75fr) minmax(150px, 1fr)
+    minmax(135px, 0.8fr) auto;
+  align-items: end;
+  gap: $space-3;
+  margin-bottom: $space-4;
+  padding: $space-3;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-lg;
+  background: $surface-container-low;
+}
+
+.dateControl,
+.filterControl {
+  display: grid;
+  gap: $space-1;
+  min-width: 0;
+}
+
+.filterLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 16px;
+  padding: 0 2px;
+  color: $text-medium;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.unboundedToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  color: $text-muted;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  input {
+    width: 12px;
+    height: 12px;
+    accent-color: $primary-accent;
+  }
+}
+
+.filterLabel {
+  min-height: 16px;
+  padding: 0 2px;
+  color: $text-medium;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dateControl > input,
+.filterControl > select,
+.statusSelect summary {
+  width: 100%;
+  height: $control-height-md;
+  border: 1px solid $outline-green;
+  border-radius: $radius-md;
+  outline: 0;
+  background: $surface-container-lowest;
+  color: $text-high;
+  font-size: 12px;
+  transition:
+    border-color $motion-fast $motion-ease,
+    box-shadow $motion-fast $motion-ease;
+
+  &:focus-visible {
+    border-color: $primary-accent;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+  }
+}
+
+.dateControl > input,
+.filterControl > select {
+  padding: 0 $space-2;
+}
+
+.dateControl > input:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.statusSelect {
+  position: relative;
+
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 $space-3;
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::after {
+      content: "\f078";
+      color: $text-muted;
+      font-family: "Font Awesome 6 Free";
+      font-size: 11px;
+      font-weight: 900;
+    }
+  }
+
+  &[open] summary {
+    border-color: $primary-accent;
+  }
+}
+
+.statusOptions {
+  position: absolute;
+  top: calc(100% + $space-1);
+  right: 0;
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  min-width: 190px;
+  padding: $space-2;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-md;
+  background: $surface-container;
+  box-shadow: $shadow-popover;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    min-height: 32px;
+    padding: 0 $space-2;
+    border-radius: $radius-sm;
+    color: $text-medium;
+    cursor: pointer;
+    font-size: 12px;
+
+    &:hover {
+      background: $surface-container-high;
+      color: $text-high;
+    }
+  }
+
+  input {
+    width: 14px;
+    height: 14px;
+    accent-color: $primary-accent;
+  }
+}
+
+.filterActions {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.resetButton,
+.applyButton {
+  height: $control-height-md;
+  border: 0;
+  border-radius: $radius-md;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.resetButton {
+  flex: 0 0 $control-height-md;
+  width: $control-height-md;
+  padding: 0;
+  background: $surface-container-high;
+  color: $text-medium;
+
+  &:hover,
+  &:focus-visible {
+    color: $primary-accent-light;
+  }
+}
+
+.applyButton {
+  min-width: 104px;
+  padding: 0 $space-4;
+  background: $primary-accent;
+  color: $text-on-accent;
+
+  &:hover,
+  &:focus-visible {
+    background: $primary-accent-hover;
+  }
+}
+
+.errorBanner {
+  margin-bottom: $space-4;
+  padding: 10px $space-3;
+  border: 1px solid $negative-muted;
+  border-radius: $radius-md;
+  background: $negative-surface;
+  color: #ffc5c1;
+  font-size: 13px;
+}
+
+@media (max-width: 1320px) and (min-width: 901px) {
+  .filterPanel {
+    grid-template-columns: 160px 160px minmax(130px, 1fr) minmax(150px, 1fr);
+  }
+
+  .filterActions {
+    justify-self: end;
+  }
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .documentsPage {
+    padding: $space-3;
+  }
+
+  .pageHeader {
+    align-items: stretch;
+    flex-direction: column-reverse;
+    gap: $space-5;
+    margin-bottom: $space-5;
+  }
+
+  .pageHeading h1 {
+    font-size: 28px;
+  }
+
+  .branchBadge {
+    margin-left: auto;
+  }
+
+  .createActions {
+    width: 100%;
+
+    button {
+      flex: 1 1 0;
+      height: $control-height-lg;
+      padding: 0 $space-2;
+      font-size: 14px;
+    }
+  }
+
+  .mobileFilterToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: $control-height-lg;
+    margin-bottom: $space-3;
+    padding: 0 $space-4;
+    border: 1px solid $outline-green;
+    border-radius: $radius-lg;
+    background: $surface-container-low;
+    color: $text-high;
+    cursor: pointer;
+    font-size: 14px;
+
+    > span {
+      display: inline-flex;
+      align-items: center;
+      gap: $space-2;
+    }
+  }
+
+  .filterCount {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 $space-1;
+    background: rgba(16, 185, 129, 0.16);
+    color: $primary-accent-light;
+  }
+
+  .filterPanel {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-3;
+    margin-top: -$space-1;
+
+    &.mobileFiltersOpen {
+      display: grid;
+    }
+  }
+
+  .filterControl {
+    grid-column: 1 / -1;
+  }
+
+  .filterActions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .applyButton {
+    flex: 1;
+  }
+}
+
+@media (max-width: 420px) {
+  .filterPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .dateControl,
+  .filterControl,
+  .filterActions {
+    grid-column: 1;
+  }
+}

@@ -1,170 +1,154 @@
 @use "../../variables.scss" as *;
 
 .panel {
-  margin: 4px 20px 0;
-  padding: 10px 12px 12px;
-  border: 1px solid rgba(77, 84, 95, 0.2);
-  border-radius: 0;
-  background: linear-gradient(180deg, rgba(29, 37, 52, 0.96), rgba(23, 31, 44, 0.96));
-  box-shadow: 0 6px 16px rgba(9, 14, 22, 0.1);
-}
-
-.panelTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.eyebrow {
-  margin: 0 0 2px;
-  color: #9fb0d1;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.title {
   margin: 0;
-  color: #f5f7fb;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.15;
-}
-
-.stats {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.statChip,
-.statChipMuted {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  padding: 0 7px;
-  border-radius: 0;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.statChip {
-  color: #f4f7ff;
-  background: rgba(78, 105, 221, 0.18);
-  border: 1px solid rgba(119, 139, 228, 0.28);
-}
-
-.statChipMuted {
-  color: #d5dcea;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px $space-4;
+  border-bottom: 1px solid $outline-dark;
+  background: $surface-glass;
+  backdrop-filter: blur($backdrop-blur);
+  -webkit-backdrop-filter: blur($backdrop-blur);
 }
 
 .controlsRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(120px, 0.7fr);
-  gap: 8px;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
 }
 
-.searchField,
-.selectField {
-  display: grid;
-  gap: 4px;
+.searchField {
+  min-width: 0;
 }
 
-.fieldLabel {
-  color: #dce4f3;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.inputShell,
-.selectShell {
+.inputShell {
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 34px;
-  border: 1px solid rgba(194, 194, 194, 0.12);
-  border-radius: 0;
-  background: rgba(8, 13, 22, 0.26);
+  min-height: $control-height-md;
+  border: 1px solid $outline-green;
+  border-radius: $radius-md;
+  background: $surface-input;
+  transition:
+    border-color $motion-normal $motion-ease,
+    box-shadow $motion-normal $motion-ease;
 }
 
-.inputShell:focus-within,
-.selectShell:focus-within {
-  border-color: rgba(78, 105, 221, 0.58);
-  box-shadow: 0 0 0 3px rgba(78, 105, 221, 0.12);
+.inputShell:focus-within {
+  border-color: $primary-accent-light;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .inputIcon {
   position: absolute;
-  left: 10px;
-  color: #97a8cb;
-  font-size: 12px;
-}
-
-.searchInput,
-.selectControl {
-  width: 100%;
-  min-height: 34px;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: #f3f7ff;
+  left: $space-3;
+  color: $text-medium;
   font-size: 13px;
 }
 
 .searchInput {
-  padding: 0 10px 0 30px;
+  width: 100%;
+  min-height: $control-height-md;
+  padding: 0 $space-3 0 34px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: $text-high;
+  font-size: 13px;
 }
 
 .searchInput::placeholder {
-  color: #93a0ba;
+  color: $text-muted;
 }
 
-.selectControl {
-  padding: 0 8px;
-  appearance: none;
+.segmentedControl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(58px, 1fr));
+  overflow: hidden;
+  border: 1px solid $outline-green;
+  border-radius: $radius-md;
+  background: $surface-input;
+}
+
+.segmentButton {
+  height: 34px;
+  padding: 0 $space-3;
+  border: 0;
+  border-right: 1px solid $outline-dark;
+  background: transparent;
+  color: $text-high;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition:
+    background-color $motion-fast $motion-ease,
+    color $motion-fast $motion-ease;
+
+  &:last-child {
+    border-right: 0;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: $surface-container-high;
+  }
 }
 
-.selectControl option {
-  color: #f3f7ff;
-  background: #1d2534;
+.segmentedControl .segmentButton.segmentActive,
+.segmentedControl .segmentButton.segmentActive:hover,
+.segmentedControl .segmentButton.segmentActive:focus-visible {
+  background: $primary-accent;
+  color: $text-on-accent;
 }
 
-.selectControl option:checked {
-  color: #ffffff;
-  background: #2e3d57;
+.stats {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 $space-3;
+  border: 1px solid $outline-green;
+  border-radius: $radius-md;
+  background: $surface-control;
+  color: $text-medium;
+  font-size: 12px;
+  white-space: nowrap;
+
+  strong {
+    margin: 0 3px;
+    color: $text-high;
+  }
 }
 
 @media (max-width: 768px) {
   .panel {
-    margin: 0;
-    padding: 8px 10px 10px;
-    border-radius: 0;
+    padding: 14px 14px $space-3;
   }
 
-  .panelTop {
-    flex-direction: column;
-    align-items: stretch;
-    margin-bottom: 10px;
+  .controlsRow {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+
+  .searchField {
+    grid-column: 1 / -1;
+  }
+
+  .segmentedControl {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .segmentButton {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .controlsRow {
+    grid-template-columns: 1fr;
   }
 
   .stats {
     justify-content: flex-start;
-  }
-
-  .title {
-    font-size: 14px;
-  }
-
-  .controlsRow {
-    grid-template-columns: 1fr;
-    gap: 8px;
   }
 }

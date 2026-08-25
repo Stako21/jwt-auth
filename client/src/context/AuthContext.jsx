@@ -158,19 +158,18 @@ const AuthProvider = ({ children }) => {
   };
 
   const handleSignIn = (payload) => {
-    AuthClient.post("/sign-in", payload)
+    return AuthClient.post("/sign-in", payload)
       .then(async (res) => {
         const { accessToken, accessTokenExpiration } = res.data;
-
-        inMemoryJWT.setToken(accessToken, accessTokenExpiration);
 
         let decoded;
         try {
           decoded = applyTokenUser(accessToken);
         } catch (error) {
-          showErrorMessage(enqueueSnackbar, `Некоректний токен: ${error.message}`);
-          return;
+          throw new Error(`Некоректний токен: ${error.message}`);
         }
+
+        inMemoryJWT.setToken(accessToken, accessTokenExpiration);
 
         setIsUserLogged(true);
         await loadMe();
@@ -181,7 +180,10 @@ const AuthProvider = ({ children }) => {
       })
       .catch((error) => {
         console.log(error);
-        showErrorMessage(enqueueSnackbar, error);
+        if (error?.response?.status !== 401) {
+          showErrorMessage(enqueueSnackbar, error);
+        }
+        throw error;
       });
   };
 

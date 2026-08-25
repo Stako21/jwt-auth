@@ -1,0 +1,99 @@
+@use "../../variables.scss" as *;
+
+.statusIndicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: $document-status-size-desktop;
+  height: $document-status-size-desktop;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: $radius-sm;
+  cursor: help;
+  font-size: 14px;
+
+  &::after {
+    content: attr(data-label);
+    position: absolute;
+    top: 50%;
+    bottom: auto;
+    left: calc(100% + 7px);
+    z-index: 80;
+    width: max-content;
+    max-width: 190px;
+    padding: 6px $space-2;
+    border: 1px solid $outline-medium;
+    border-radius: $radius-sm;
+    background: $surface-container-highest;
+    color: $text-high;
+    box-shadow: $shadow-popover;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(4px, -50%);
+    transition:
+      opacity $motion-fast $motion-ease,
+      transform $motion-fast $motion-ease;
+  }
+
+  &:hover::after,
+  &:focus-visible::after,
+  &[data-open="true"]::after {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+.new {
+  background: $status-new-surface;
+  color: $status-new;
+}
+
+.prepared {
+  background: $status-prepared-surface;
+  color: $status-prepared;
+}
+
+.revision {
+  background: $status-revision-surface;
+  color: $status-revision;
+}
+
+.rejected {
+  background: $status-rejected-surface;
+  color: $status-rejected;
+}
+
+.signed {
+  background: $status-signed-surface;
+  color: $status-signed;
+}
+
+.unknown {
+  background: $surface-container-high;
+  color: $text-muted;
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .statusIndicator {
+    width: $document-status-size-mobile;
+    height: $document-status-size-mobile;
+    font-size: 16px;
+
+    &::after {
+      top: calc(100% + 7px);
+      bottom: auto;
+      left: 0;
+      transform: translateY(-4px);
+    }
+
+    &:hover::after,
+    &:focus-visible::after,
+    &[data-open="true"]::after {
+      transform: translateY(0);
+    }
+  }
+}

@@ -1,20 +1,21 @@
 @use "../../variables.scss" as *;
 
 .wraperTable {
-  margin: 0 20px 10px;
+  margin: $space-5;
 }
 
 .tableShell {
-  overflow: visible;
-  border: 1px solid rgba(77, 84, 95, 0.2);
-  border-radius: 0;
-  background: #f5f7fa;
-  box-shadow: 0 6px 16px rgba(11, 17, 27, 0.08);
+  min-height: calc(100vh - #{$topbar-height} - 118px);
+  overflow: hidden;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-xl;
+  background: $surface-glass;
+  box-shadow: 0 18px 40px rgba(1, 15, 31, 0.16);
 }
 
 .scrollContainer {
-  overflow-x: auto;
-  overflow-y: visible;
+  max-height: calc(100vh - #{$topbar-height} - 118px);
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -22,21 +23,26 @@
   width: 100%;
   min-width: 0;
   border-collapse: collapse;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .balanceTable thead th {
   position: sticky;
   top: 0;
-  z-index: 2;
-  padding: 9px 10px;
-  border-bottom: 1px solid rgba(77, 84, 95, 0.18);
-  background: #2a3548;
-  color: #f7f9fc;
-  font-size: 11px;
+  z-index: 3;
+  height: 38px;
+  padding: 0 14px;
+  border-bottom: 1px solid $outline-dark;
+  background: rgba(18, 33, 49, 0.78);
+  color: $text-high;
+  backdrop-filter: blur($backdrop-blur);
+  -webkit-backdrop-filter: blur($backdrop-blur);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  line-height: 38px;
   text-transform: uppercase;
+  vertical-align: middle;
 }
 
 .productHeader {
@@ -44,86 +50,95 @@
 }
 
 .quantityHeader {
-  width: 92px;
+  width: 132px;
+  border-left: 1px solid $outline-dark;
   text-align: right;
 }
 
 .balanceTable td {
-  border-bottom: 1px solid rgba(77, 84, 95, 0.1);
+  height: 32px;
+  border-bottom: 1px solid $outline-dark;
   vertical-align: middle;
 }
 
 .productCell,
 .quantityCell {
-  padding: 7px 10px;
+  padding: $space-1 14px;
 }
 
 .productCell {
   position: relative;
-  color: $dark-text-color;
+  padding-left: calc(14px + (var(--row-level, 0) * 14px));
+  color: $text-high;
   word-break: break-word;
 }
 
 .productText {
-  display: inline-flex;
-  align-items: center;
-  min-height: 18px;
-  line-height: 1.2;
-  font-weight: 700;
-  font-size: 12px;
+  display: inline;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.25;
 }
 
 .productTextWithPrice {
   cursor: pointer;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  transition:
+    color $motion-fast $motion-ease,
+    text-decoration-color $motion-fast $motion-ease;
 }
 
 .productTextWithPrice:hover,
 .productTextWithPrice:focus-visible {
-  color: #0f5f8f;
+  color: $primary-accent-light;
+  outline: 0;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration-color: currentColor;
 }
 
 .pricePopover {
   position: absolute;
-  left: 10px;
   top: calc(100% - 2px);
-  z-index: 5;
+  left: calc(14px + (var(--row-level, 0) * 14px));
+  z-index: 6;
   min-width: 150px;
-  padding: 8px 10px;
-  border: 1px solid rgba(28, 41, 56, 0.16);
-  background: #ffffff;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
-  color: #1f2937;
+  padding: $space-2 10px;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-md;
+  background: $surface-container-high;
+  box-shadow: $shadow-popover;
+  color: $text-high;
 }
 
 .priceLine {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: $space-4;
   font-size: 12px;
   line-height: 1.35;
   white-space: nowrap;
 }
 
 .priceLine span {
-  color: #64748b;
+  color: $text-medium;
 }
 
 .priceLine strong {
-  color: #111827;
+  color: $primary-accent-light;
   font-variant-numeric: tabular-nums;
 }
 
 .quantityCell {
+  width: 132px;
+  border-left: 1px solid $outline-dark;
+  color: $text-high;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
   text-align: right;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  color: #222a35;
-  font-weight: 600;
-  font-size: 12px;
-  border-left: 1px solid rgba(77, 84, 95, 0.1);
 }
 
 .toggleButton {
@@ -132,20 +147,18 @@
   justify-content: center;
   width: 18px;
   height: 18px;
-  margin-right: 5px;
+  margin-right: 7px;
+  padding: 0;
   border: 0;
-  border-radius: 50%;
-  background: rgba(135, 136, 138, 0.01);
-  color: #46566f;
+  border-radius: $radius-md;
+  background: transparent;
+  color: currentColor;
   cursor: pointer;
-  transition:
-    background-color 0.18s ease,
-    color 0.18s ease;
+  transition: background-color $motion-fast $motion-ease;
 }
 
 .toggleButton:hover {
-  background: rgba(221, 221, 221, 0.14);
-  color: #243146;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .toggleIcon {
@@ -153,94 +166,130 @@
 }
 
 .negative {
-  color: $error-color;
+  color: $negative-muted;
 }
 
 .level0 {
-  background: #eef2f7;
+  background: rgba(16, 185, 129, 0.13);
 }
 
 .level0 .productCell,
 .level0 .quantityCell {
-  font-weight: 700;
-  color: #1f2937;
+  color: $primary-accent-light;
+  font-weight: 800;
 }
 
 .level1 {
-  background: #dfe7f2;
+  background: rgba(39, 54, 71, 0.82);
 }
 
 .level1 .productCell,
 .level1 .quantityCell {
+  color: $text-high;
   font-weight: 700;
-  color: #243146;
 }
 
 .level2 {
-  background: #ebf0f6;
+  background: rgba(28, 43, 60, 0.76);
+}
+
+.level3 {
+  background: rgba(18, 33, 49, 0.72);
 }
 
 .level2 .productCell,
-.level2 .quantityCell {
-  color: #334155;
-  font-weight: 600;
+.level2 .quantityCell,
+.level3 .productCell,
+.level3 .quantityCell {
+  color: $text-medium;
+  font-weight: 650;
+}
+
+.leafRow .productCell,
+.leafRow .quantityCell {
+  color: $text-high;
+  font-weight: 400;
 }
 
 .evenRow {
-  background: #f4f4f4;
+  background: $oddRowDark;
 }
 
 .oddRow {
-  background: #e5e8ec;
+  background: $evenRowDark;
+}
+
+.balanceTable tbody tr {
+  transition: background-color $motion-fast $motion-ease;
 }
 
 .balanceTable tbody tr:hover {
-  background: #eef4ff;
+  background: rgba(212, 228, 250, 0.04);
+}
+
+.balanceTable tbody tr .negative {
+  background: $negative-surface;
 }
 
 @media (max-width: 768px) {
   .wraperTable {
-    // margin: 0 0 10px;
-    margin: 0 0 6px;
+    margin: $space-3 0 0;
   }
 
   .tableShell {
+    min-height: calc(100vh - #{$topbar-height} - 154px);
+    border-right: 0;
+    border-left: 0;
     border-radius: 0;
   }
 
-  .balanceTable {
-    min-width: 0;
+  .scrollContainer {
+    max-height: none;
   }
 
-  .balanceTable thead th,
+  .balanceTable thead th {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 11px;
+    line-height: 36px;
+  }
+
+  .quantityHeader,
+  .quantityCell {
+    width: 96px;
+  }
+
+  .balanceTable td {
+    height: 34px;
+  }
+
   .productCell,
   .quantityCell {
-    // padding: 6px 8px;
-    padding: 4px 6px;
+    padding-top: 5px;
+    padding-bottom: 5px;
   }
 
-  .quantityHeader {
-    width: 82px;
+  .productCell {
+    padding-left: calc(14px + (var(--row-level, 0) * 6px));
   }
 
-  .productText {
-    min-height: 16px;
-    line-height: 1.15;
-    font-size: 11px;
+  .pricePopover {
+    left: calc(14px + (var(--row-level, 0) * 6px));
   }
 
-  .toggleButton {
-    width: 16px;
-    height: 16px;
-    margin-right: 4px;
+  .productText,
+  .quantityCell {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .quantityHeader,
+  .quantityCell {
+    width: 84px;
   }
 
-  .toggleIcon {
-    font-size: 10px;
-  }
-
-  .quantityCell,
-  .balanceTable thead th {
-    font-size: 10px;
+  .productCell {
+    padding-right: $space-2;
   }
 }

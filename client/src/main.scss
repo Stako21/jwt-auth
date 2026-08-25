@@ -1,23 +1,125 @@
 @use "./variables" as *;
 
+:root {
+  color-scheme: dark;
+  --ui-color-surface-main: #{$surface-main};
+  --ui-color-surface-container: #{$surface-container};
+  --ui-color-surface-container-low: #{$surface-container-low};
+  --ui-color-surface-container-high: #{$surface-container-high};
+  --ui-color-surface-control: #{$surface-control};
+  --ui-color-surface-input: #{$surface-input};
+  --ui-color-accent: #{$primary-accent};
+  --ui-color-accent-hover: #{$primary-accent-hover};
+  --ui-color-accent-light: #{$primary-accent-light};
+  --ui-color-text-high: #{$text-high};
+  --ui-color-text-medium: #{$text-medium};
+  --ui-color-text-muted: #{$text-muted};
+  --ui-color-outline: #{$outline-dark};
+  --ui-color-outline-accent: #{$outline-green};
+  --ui-color-danger: #{$negative};
+  --ui-color-danger-muted: #{$negative-muted};
+  --ui-color-warning: #{$warning};
+  --ui-color-info: #{$info};
+  --ui-radius-sm: #{$radius-sm};
+  --ui-radius-md: #{$radius-md};
+  --ui-radius-lg: #{$radius-lg};
+  --ui-radius-xl: #{$radius-xl};
+  --ui-motion-fast: #{$motion-fast};
+  --ui-motion-normal: #{$motion-normal};
+}
+
 * {
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
   text-decoration: none;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  background: $surface-main;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: Inter, Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
 body {
-  // display: flex;
-  // justify-content: center;
-  // align-items: center;
+  position: relative;
+  min-height: 100vh;
   overflow: auto;
-  // min-height: 100vh;
-  // background: $main-background-color;
-  // color: $light-text-color;
+  background: $surface-main;
+  color: $text-high;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: $surface-main;
+  background-image: $app-background-image;
+  background-repeat: no-repeat;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+select {
+  -webkit-tap-highlight-color: transparent;
 }
 
 table {
   margin: 0 auto;
+}
+
+.appMain {
+  min-height: 100vh;
+  padding-top: $topbar-height;
+  padding-left: $sidebar-width;
+  background: transparent;
+  transition: padding-left $motion-normal $motion-ease;
+}
+
+.authMain {
+  min-height: 100vh;
+  background: transparent;
+}
+
+body.appShellCollapsed .appMain {
+  padding-left: $sidebar-width-collapsed;
+}
+
+body.appDrawerOpen {
+  overflow: hidden;
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .appMain,
+  body.appShellCollapsed .appMain {
+    padding-left: 0;
+  }
 }

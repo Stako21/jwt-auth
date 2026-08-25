@@ -1,14 +1,39 @@
 import { useState } from "react";
+import { useSnackbar } from "notistack";
 import {
-  signDocument,
   prepareDocument,
-  revisionDocument,
   rejectDocument,
+  revisionDocument,
+  signDocument,
 } from "../../services/documents.api.js";
 import { ROLE_IDS } from "../../utils/roles.js";
 import { DocumentHistoryModal } from "../../modals/DocumentHistoryModal";
 import styles from "./DocumentRowAction.module.scss";
-import { useSnackbar } from "notistack";
+
+function ActionButton({
+  label,
+  icon,
+  variant = "neutral",
+  disabled = false,
+  loading = false,
+  onClick,
+}) {
+  return (
+    <button
+      className={`${styles.actionButton} ${styles[variant]}`}
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+    >
+      <i
+        className={`fa-solid ${icon} ${loading ? "fa-spin" : ""}`}
+        aria-hidden="true"
+      ></i>
+    </button>
+  );
+}
 
 export default function DocumentRowActions({
   doc,
@@ -22,11 +47,9 @@ export default function DocumentRowActions({
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   const isAuthor = doc.author_user_id === currentUser.id;
-  const isTopRole = [
-    ROLE_IDS.Director,
-    ROLE_IDS.Admin,
-    ROLE_IDS.NTO,
-  ].includes(currentUser.role);
+  const isTopRole = [ROLE_IDS.Director, ROLE_IDS.Admin, ROLE_IDS.NTO].includes(
+    currentUser.role,
+  );
   const isSv = currentUser.role === ROLE_IDS.SV;
   const isSameBranch =
     Number(doc.branch_id || currentUser.branchId) === Number(currentUser.branchId);
@@ -43,6 +66,13 @@ export default function DocumentRowActions({
     isAuthor &&
     ["NEW", "REVISION", "PREPARED"].includes(doc.status) &&
     !canRejectAsReviewer;
+  const isWorkflowBusy = loadingId !== null;
+  const actionCount =
+    Number(canPrepare) +
+    Number(canSign) +
+    Number(canRevision) +
+    Number(canRejectAsReviewer || canRejectAsAuthor) +
+    2;
 
   async function handle(action) {
     const actionsText = {
@@ -53,119 +83,93 @@ export default function DocumentRowActions({
     };
 
     if (!window.confirm(actionsText[action])) return;
-
-    const comment = prompt("Коментар (не обов'язково):") || "";
+    const comment = window.prompt("Коментар (не обов'язково):") || "";
 
     try {
       setLoadingId(doc.id);
-
       if (action === "prepare") await prepareDocument(doc.id, comment);
       if (action === "sign") await signDocument(doc.id, comment);
       if (action === "revision") await revisionDocument(doc.id, comment);
       if (action === "reject") await rejectDocument(doc.id, comment);
-    } catch (e) {
-      console.error(`Error during ${action}:`, e);
-      const message =
-        e.response?.data?.message ||
-        e.message ||
-        "Помилка під час виконання дії";
-      enqueueSnackbar(message, { variant: "error" });
+      onUpdated();
+    } catch (error) {
+      console.error(`Error during ${action}:`, error);
+      enqueueSnackbar(
+        error.response?.data?.message ||
+          error.message ||
+          "Помилка під час виконання дії",
+        { variant: "error" },
+      );
     } finally {
       setLoadingId(null);
     }
-
-    onUpdated();
   }
 
   return (
     <>
-      <div
-        className={`buttons is-mobile are-small is-right ${styles.actionButtons}`}
-      >
-        {(canPrepare || canSign || canRevision || canRejectAsReviewer) && (
-          <>
-            {canPrepare && (
-              <button
-                className="button is-link"
-                onClick={() => handle("prepare")}
-                disabled={loadingId !== null}
-                title="Погодити до підпису"
-              >
-                <i className="fa-solid fa-clipboard-check"></i>
-              </button>
-            )}
+      <div className={styles.actionButtons} data-action-count={actionCount}>
+        {canPrepare ? (
+          <ActionButton
+            label="Погодити до підпису"
+            icon="fa-clipboard-check"
+            variant="prepare"
+            disabled={isWorkflowBusy}
+            onClick={() => handle("prepare")}
+          />
+        ) : null}
 
-            {canSign && (
-              <button
-                className="button is-success"
-                onClick={() => handle("sign")}
-                disabled={loadingId !== null}
-                title="Підписати"
-              >
-                <i className="fa-solid fa-check"></i>
-              </button>
-            )}
+        {canSign ? (
+          <ActionButton
+            label="Підписати"
+            icon="fa-signature"
+            variant="sign"
+            disabled={isWorkflowBusy}
+            onClick={() => handle("sign")}
+          />
+        ) : null}
 
-            {canRevision && (
-              <button
-                className="button is-warning"
-                onClick={() => handle("revision")}
-                disabled={loadingId !== null}
-                title="На доопрацювання"
-              >
-                <i className="fa-solid fa-pen"></i>
-              </button>
-            )}
+        {canRevision ? (
+          <ActionButton
+            label="На доопрацювання"
+            icon="fa-pen"
+            variant="revision"
+            disabled={isWorkflowBusy}
+            onClick={() => handle("revision")}
+          />
+        ) : null}
 
-            {canRejectAsReviewer && (
-              <button
-                className="button is-danger"
-                onClick={() => handle("reject")}
-                disabled={loadingId !== null}
-                title="Відхилити"
-              >
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            )}
-          </>
-        )}
-
-        {canRejectAsAuthor && (
-          <button
-            className="button is-danger"
+        {canRejectAsReviewer || canRejectAsAuthor ? (
+          <ActionButton
+            label="Відхилити"
+            icon="fa-xmark"
+            variant="reject"
+            disabled={isWorkflowBusy}
             onClick={() => handle("reject")}
-            disabled={loadingId !== null}
-            title="Відхилити документ"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        )}
+          />
+        ) : null}
 
-        <button
-          className="button is-small is-light"
+        <ActionButton
+          label="Історія"
+          icon="fa-clock-rotate-left"
           onClick={() => setHistoryModalOpen(true)}
-          title="Історія"
-        >
-          <i className="fa-solid fa-history"></i>
-        </button>
+        />
 
-        <button
-          className={`button is-small is-light ${loadingId === doc.id ? "is-loading" : ""}`}
-          onClick={() => onOpenPdf && onOpenPdf(doc.id)}
+        <ActionButton
+          label="PDF"
+          icon={loadingId === doc.id ? "fa-spinner" : "fa-file-pdf"}
           disabled={loadingId === doc.id}
-          title="PDF"
-        >
-          PDF
-        </button>
+          loading={loadingId === doc.id}
+          onClick={() => onOpenPdf?.(doc.id)}
+        />
       </div>
 
-      {historyModalOpen && (
+      {historyModalOpen ? (
         <DocumentHistoryModal
           isOpen={historyModalOpen}
           onClose={() => setHistoryModalOpen(false)}
           documentId={doc.id}
         />
-      )}
+      ) : null}
     </>
   );
 }

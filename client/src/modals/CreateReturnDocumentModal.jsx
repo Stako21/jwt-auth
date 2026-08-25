@@ -261,23 +261,28 @@ export default function CreateReturnDocumentModal({
   /* ---------------- render ---------------- */
   return (
     <>
-      <div
-        className="modal is-active"
-        style={{ "--bulma-modal-card-head-padding": "10px 32px" }}
-      >
-        <div className="modal-background" onClick={onClose} />
+      <div className={`modal is-active ${styles.documentModal}`}>
+        <div
+          className={`modal-background ${styles.modalBackdrop}`}
+          onClick={onClose}
+        />
 
-        <div className="modal-card" style={{ width: "95%" }}>
-          <header className="modal-card-head">
-            <p className="modal-card-title">
+        <div className={`modal-card ${styles.modalCard}`}>
+          <header className={`modal-card-head ${styles.modalHeader}`}>
+            <p className={`modal-card-title ${styles.modalTitle}`}>
               {editingDocument
                 ? "Редагувати документ — Повернення"
                 : "Новий документ — Повернення"}
             </p>
-            <button className="delete" onClick={onClose} />
+            <button
+              className={`delete ${styles.closeButton}`}
+              type="button"
+              onClick={onClose}
+              aria-label="Закрити"
+            />
           </header>
 
-          <section className="modal-card-body">
+          <section className={`modal-card-body ${styles.modalBody}`}>
             {/* Контрагент */}
             <div className="field">
               <label className="label">Контрагент</label>
@@ -373,47 +378,59 @@ export default function CreateReturnDocumentModal({
               />
             </div>
 
-            <hr />
-
-            <div className="field">
-              <label className="label">Виконавець</label>
-              <div className="buttons has-addons">
-                <button
-                  type="button"
-                  className={`button ${executorType === "TA" ? "is-link" : "is-light"}`}
-                  disabled={isViewOnly}
-                  onClick={() => setExecutorType("TA")}
-                >
-                  ТА
-                </button>
-                <button
-                  type="button"
-                  className={`button ${executorType === "DRIVER" ? "is-link" : "is-light"}`}
-                  disabled={isViewOnly}
-                  onClick={() => setExecutorType("DRIVER")}
-                >
-                  Водій
-                </button>
+            <div className={styles.lowerStack}>
+              <div className={`field ${styles.executorPanel}`}>
+                <label className="label">Виконавець</label>
+                <div className={`buttons has-addons ${styles.executorButtons}`}>
+                  <button
+                    type="button"
+                    className={`button ${styles.segmentButton} ${
+                      executorType === "TA" ? styles.segmentActive : ""
+                    }`}
+                    disabled={isViewOnly}
+                    onClick={() => setExecutorType("TA")}
+                  >
+                    ТА
+                  </button>
+                  <button
+                    type="button"
+                    className={`button ${styles.segmentButton} ${
+                      executorType === "DRIVER" ? styles.segmentActive : ""
+                    }`}
+                    disabled={isViewOnly}
+                    onClick={() => setExecutorType("DRIVER")}
+                  >
+                    Водій
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Items */}
-            <div className="is-flex is-justify-content-space-between mb-2">
-              <h4 className="title is-6">Товари</h4>
-              {errors.items && (
-                <p className="help is-danger mb-2">
-                  Додайте хоча б одну позицію
-                </p>
-              )}
-              {!isViewOnly && <button className="button is-link is-light" onClick={openAddItem}>
-                <i className="fa-solid fa-plus">{'\u00A0'}</i> Додати позицію
-              </button>}
-            </div>
+              {/* Items */}
+              <div className={styles.itemSection}>
+                <div className={styles.sectionHeader}>
+                  <h4 className="title is-6">Товари</h4>
+                  {errors.items && (
+                    <p className={styles.sectionMessage}>
+                      Додайте хоча б одну позицію
+                    </p>
+                  )}
+                  {!isViewOnly && (
+                    <button
+                      className={`button ${styles.addButton}`}
+                      type="button"
+                      onClick={openAddItem}
+                    >
+                      <i className="fa-solid fa-plus" aria-hidden="true"></i>{" "}
+                      Додати позицію
+                    </button>
+                  )}
+                </div>
 
             {items.length === 0 ? (
-              <p className="has-text-grey is-size-7">Позиції ще не додані</p>
+              <p className={styles.emptyItems}>Позиції ще не додані</p>
             ) : (
-              <table className="table is-fullwidth is-bordered is-size-7">
+                <div className={styles.itemsTableScroll}>
+                  <table className={`table ${styles.itemsTable}`}>
                 <thead>
                   <tr>
                     <th>Товар</th>
@@ -440,14 +457,18 @@ export default function CreateReturnDocumentModal({
                       <td>{i.expiryDate}</td>
                       <td>
                         {!isViewOnly && <button
-                          className="button is-small is-light"
+                          className={styles.itemActionButton}
+                          type="button"
                           onClick={() => openEditItem(idx)}
+                          aria-label="Редагувати позицію"
                         >
                           <i className="fa-solid fa-pencil"></i>
                         </button>}
                         {!isViewOnly && <button
-                          className="button is-small is-danger ml-1"
+                          className={`${styles.itemActionButton} ${styles.removeItemButton}`}
+                          type="button"
                           onClick={() => removeItem(idx)}
+                          aria-label="Видалити позицію"
                         >
                           <i className="fa-solid fa-xmark"></i>
                         </button>}
@@ -455,22 +476,29 @@ export default function CreateReturnDocumentModal({
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                  </table>
+                </div>
             )}
+              </div>
+            </div>
           </section>
 
-          <footer
-            className="modal-card-foot"
-            style={{ justifyContent: "center", gap: "20px" }}
-          >
-            {!isViewOnly && <button
-              className="button is-primary"
-              onClick={handleSubmit}
-              disabled={isSaveDisabled}
+          <footer className={`modal-card-foot ${styles.modalFooter}`}>
+            {!isViewOnly && (
+              <button
+                className={`button ${styles.saveButton}`}
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSaveDisabled}
+              >
+                Зберегти
+              </button>
+            )}
+            <button
+              className={`button ${styles.cancelButton}`}
+              type="button"
+              onClick={onClose}
             >
-              Зберегти
-            </button>}
-            <button className="button is-danger" onClick={onClose}>
               Скасувати
             </button>
           </footer>

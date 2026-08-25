@@ -143,20 +143,27 @@ export default function ItemModal({
 
   return (
     <div
-      className="modal is-active"
-      style={{ "--bulma-modal-card-head-padding": "10px 32px" }}
+      className={`modal is-active ${style.itemModal}`}
     >
-      <div className="modal-background" onClick={onClose} />
+      <div
+        className={`modal-background ${style.modalBackdrop}`}
+        onClick={onClose}
+      />
 
-      <div className="modal-card" style={{ maxWidth: 600 }}>
-        <header className="modal-card-head">
-          <p className="modal-card-title">
+      <div className={`modal-card ${style.itemModalCard}`}>
+        <header className={`modal-card-head ${style.modalHeader}`}>
+          <p className={`modal-card-title ${style.modalTitle}`}>
             {initialItem ? "Редагування позиції" : "Нова позиція"}
           </p>
-          <button className="delete" onClick={onClose} />
+          <button
+            className={`delete ${style.closeButton}`}
+            type="button"
+            onClick={onClose}
+            aria-label="Закрити"
+          />
         </header>
 
-        <section className="modal-card-body">
+        <section className={`modal-card-body ${style.itemModalBody}`}>
           <div className="field">
             <label className="label">Група *</label>
             <div
@@ -208,7 +215,7 @@ export default function ItemModal({
             </div>
           </div>
 
-          <div className="columns">
+          <div className={`columns ${style.compactColumns}`}>
             <div className="column is-4">
               <label className="label">Одиниця</label>
               <div className="select is-fullwidth">
@@ -236,7 +243,7 @@ export default function ItemModal({
             </div>
           </div>
 
-          <div className={`columns ${style.dateColumns}`}>
+          <div className={`columns ${style.compactColumns} ${style.dateColumns}`}>
             <div className="column">
               <label className="label">
                 Дата виготовлення{datesRequired ? " *" : ""}
@@ -283,20 +290,25 @@ export default function ItemModal({
           </div>
 
           {errors.mismathDate && (
-            <p className="help is-danger">
+            <p className={style.dateErrorMessage}>
               Дата виготовлення не може бути пізніше дати придатності
             </p>
           )}
         </section>
 
-        <footer
-          className="modal-card-foot"
-          style={{ justifyContent: "center", gap: "20px" }}
-        >
-          <button className="button is-primary" onClick={handleSave}>
+        <footer className={`modal-card-foot ${style.itemModalFooter}`}>
+          <button
+            className={`button ${style.saveButton}`}
+            type="button"
+            onClick={handleSave}
+          >
             Зберегти
           </button>
-          <button className="button is-danger" onClick={onClose}>
+          <button
+            className={`button ${style.cancelButton}`}
+            type="button"
+            onClick={onClose}
+          >
             Скасувати
           </button>
         </footer>

@@ -17,6 +17,9 @@ import {
   canRoleHaveSupervisor,
 } from "./userHierarchy.service.js";
 
+const INVALID_LOGIN_PASSWORD_HASH =
+  "$2a$10$SO2ONX/PhhO2QwTswJ3fUeL2arnq.GjanER6/vZuLV8FS3daCadwq";
+
 async function resolveActiveBranchId(userData, requestedBranchId = null) {
   const fallbackBranchId = Number(userData.branch_id);
   const nextBranchId = Number(requestedBranchId);
@@ -49,21 +52,14 @@ class AuthService {
   static async signIn({ userName, password, fingerprint }) {
     const userData = await UserRepository.getUserData(userName);
 
-    if (userData && (typeof userData.PASSWORD !== "string" || !userData.PASSWORD)) {
-      throw new Unauthorized("Неправильний логін або пароль");
-    }
+    const hasUsablePassword =
+      typeof userData?.PASSWORD === "string" && Boolean(userData.PASSWORD);
+    const passwordHash = hasUsablePassword
+      ? userData.PASSWORD
+      : INVALID_LOGIN_PASSWORD_HASH;
+    const isPasswordValid = bcrypt.compareSync(password, passwordHash);
 
-    if (!userData) {
-      throw new NotFound("Користувача не знайдено");
-    }
-
-    if (typeof userData.PASSWORD !== "string" || !userData.PASSWORD) {
-      throw new Unauthorized("Неправильний логін або пароль");
-    }
-
-    const isPasswordValid = bcrypt.compareSync(password, userData.PASSWORD);
-
-    if (!isPasswordValid) {
+    if (!userData || !hasUsablePassword || !isPasswordValid) {
       throw new Unauthorized("Неправильний логін або пароль");
     }
 

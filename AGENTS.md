@@ -138,6 +138,7 @@ Already visible in code and considered current baseline:
 - DB connection config is environment-driven via `api/db.cjs`.
 - Protected top-level route mounts in `api/server.js` are the current norm for `/api/config`, `/api/balances`, `/api/documents`, `/api/directories`, `/api/reports`, and `/api/region-notifications`.
 - Frontend API clients share the normalized authenticated retry/refresh flow from `client/src/services/createAuthenticatedApi.js`.
+- The current frontend shell uses the Stitch-aligned `Obsidian Emerald Executive` dark operational design: centralized navy/emerald tokens in `client/src/variables.scss`, a collapsible glass desktop sidebar/compact topbar, a mobile drawer, and matching login/balance surfaces with 8px controls and 16px cards. Bulma remains only as a transitional compatibility layer for older admin, document, table, and modal markup; its theme values are mapped to shared `--ui-*` tokens and it is loaded from the installed package rather than a CDN.
 - Balance parser and balance UI were recently refined for better search/filter UX and mobile density.
 - Balance XLSX parsing now supports a separate price column; product rows can show price in a click/tap popover, and `balance_pages.price_multiplier_percent` can optionally adjust displayed price by percent.
 - Debet static report was recently added and refined with a grouping switch:
@@ -153,7 +154,7 @@ Already visible in code and considered current baseline:
 - Imported `warehouseGUID` values automatically maintain the branch-scoped `warehouses` directory. Admin and Director can manage effective-dated row/kg rates under `Налаштування -> Налаштування складу`; retroactive changes require confirmation when stored report rows are affected and are recorded in `warehouse_rate_audit`.
 - `report-picker-earnings` is a config-driven period analytics page. Admin has implicit access, Director is enabled by default, and additional full-report roles are controlled by `report_definitions.allowed_roles`.
 - `report-picker-earnings` includes a warehouse dropdown populated from active warehouses configured for the current branch.
-- The Documents list defaults to the current calendar month, supports independently unbounded start/end dates, and returns every document matching the selected period in a bounded scrolling table.
+- The Documents list defaults to the current calendar month, supports independently unbounded start/end dates, and returns every document matching the selected period. Its document workspace now adds applied filters for status, contractor, and author; desktop uses a dense bounded table with icon-only status tooltips and a fixed action area, while phones use compact cards with tap-accessible status labels and touch-sized workflow/history/PDF actions. Return/exchange creation and editing modals use the same token-driven dark visual system, compact controls, highlighted executor/item/footer blocks, scroll-contained item tables, and mobile bottom-sheet layouts; field order and document workflow remain unchanged.
 - Generic `Звіти XLSX з 1С` are supported through `report_definitions.report_type = 'xlsx-1c'`; each report can configure display title, file name, optional Excel sheet name, header row, data start row, role visibility, route, active state, and sort order.
 - DB-backed 1C sales XLSX reports are supported through `report_definitions.report_type = 'xlsx-1c-sales'`; Montblanc and Lacmi use separate report definitions, parse only XLSX TA rows whose first cell contains `name (1C guid)` into `xlsx_1c_sales_report_values`, aggregate by selected date range, resolve visible users through imported `sales_agents.current_agent_guid`, and take supervisors from `user_hierarchy`. These reports can opt into scheduler imports through `report_definitions.scheduled_import_enabled`.
 
@@ -218,6 +219,9 @@ If work resumes without fresh guidance, assume this branch is past the initial m
 
 Most recent recorded product work in `MEMORY.md` focused on:
 
+- restoring the dark operational UI on the current branch with centralized palette, geometry, spacing, radius, motion, and timing tokens
+- migrating the app shell, login, balance filters, and hierarchical balance table while preserving current report, role, branch-switching, and price behavior
+- beginning a gradual Bulma exit by making the new surfaces independent and mapping remaining Bulma components to shared theme tokens
 - sales report import cancellation behavior cleanup
 - production-safe SQL cleanup helpers
 - UTF-8/mojibake text cleanup

@@ -1,61 +1,122 @@
-// $error-color: rgb(218, 0, 0);
-// $danger-color: rgb(168, 55, 55);
-// $border-color: rgb(189, 189, 189);
-// $border-color-light-blue: #0096db;
-// $button-dark: rgb(43, 43, 43);
-// $button-light: #7cc0e0;
-// $header-background-color: #16212c;
-// $main-background-color: #223243;
-// $light-text-color: #d3d3d3;
-// $dark-text-color: #2e2e2e;
+/* Central design tokens. Keep component styles semantic. */
 
-// $header-height: 60px;
-// $filter-height: 30px;
+/* ===== PALETTE ===== */
+$surface-main: #051424;
+$surface-container-lowest: #010f1f;
+$surface-container-low: #0d1c2d;
+$surface-container: #122131;
+$surface-container-high: #1c2b3c;
+$surface-container-highest: #273647;
+$surface-control: $surface-container;
+$surface-input: $surface-container-low;
+$surface-glass: rgba(18, 33, 49, 0.72);
+$surface-overlay: rgba(1, 15, 31, 0.72);
+$background-glow-primary: radial-gradient(
+  ellipse at 50% 0%,
+  rgba(16, 185, 129, 0.18) 0%,
+  rgba(16, 185, 129, 0.06) 32%,
+  transparent 64%
+);
+$background-glow-depth: radial-gradient(
+  ellipse at 100% 100%,
+  rgba(28, 43, 60, 0.9) 0%,
+  rgba(13, 28, 45, 0.36) 38%,
+  transparent 70%
+);
+$app-background-image: $background-glow-primary, $background-glow-depth;
 
-// $tableLevel1: #1c2733;
-// $tableLevel2: #576879;
-// $oddRow: #cdcfd3;
-// $evenRow: #dde0e4;
-// $rowTextColor: #EAEAEA;
+$primary-accent: #10b981;
+$primary-accent-hover: #20cf91;
+$primary-accent-light: #4edea3;
+$primary-accent-dark: #006c49;
 
-// $oddRowDarc: #2e4055;
-// $evenRowDarc: #404e6b;
+$text-high: #d4e4fa;
+$text-medium: #bbcabf;
+$text-muted: #86948a;
+$text-on-accent: #003824;
 
-/* ===== CORE COLORS ===== */
+$outline-dark: rgba(212, 228, 250, 0.08);
+$outline-medium: rgba(212, 228, 250, 0.14);
+$outline-green: #3c4a42;
+$negative: #ffb4ab;
+$negative-muted: #ffb4ab;
+$negative-surface: rgba(147, 0, 10, 0.3);
+$warning: #d9a441;
+$info: #b9c7e0;
+$status-new: #a8b6c8;
+$status-new-surface: rgba(168, 182, 200, 0.1);
+$status-prepared: #60a5fa;
+$status-prepared-surface: rgba(59, 130, 246, 0.12);
+$status-revision: #eab308;
+$status-revision-surface: rgba(234, 179, 8, 0.12);
+$status-rejected: $negative;
+$status-rejected-surface: rgba(255, 180, 171, 0.1);
+$status-signed: $primary-accent-light;
+$status-signed-surface: rgba(16, 185, 129, 0.12);
 
-$error-color: #de3d3d;
-$danger-color: #ea4c4c;
+/* ===== GEOMETRY ===== */
+$space-1: 4px;
+$space-2: 8px;
+$space-3: 12px;
+$space-4: 16px;
+$space-5: 20px;
+$space-6: 24px;
+$space-7: 32px;
 
-$border-color: #4d545f;
-$border-color-light-blue: #4e69dd;
+$radius-xs: 2px;
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+$radius-round: 999px;
 
-$button-dark: #2e3d57;
-$button-light: #0097dc;
+$control-height-sm: 32px;
+$control-height-md: 36px;
+$control-height-lg: 44px;
+$sidebar-width: 280px;
+$sidebar-width-collapsed: 72px;
+$topbar-height: 52px;
+$mobile-breakpoint: 900px;
+$mobile-menu-swipe-edge-width: 24px;
+$document-status-size-desktop: 28px;
+$document-status-size-mobile: 32px;
+$document-action-size-desktop: 28px;
+$document-action-size-mobile: 40px;
+$document-table-row-height: 40px;
+$document-card-padding: 12px;
 
-$header-background-color: #161c27;
-$main-background-color: #1b2434;
+/* ===== MOTION ===== */
+$motion-fast: 160ms;
+$motion-normal: 200ms;
+$motion-drawer: 200ms;
+$motion-ease: ease;
+$motion-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 
-$light-text-color: #c2c2c2;
+/* ===== SHADOWS ===== */
+$shadow-card: 0 24px 60px rgba(1, 15, 31, 0.34);
+$shadow-popover: 0 10px 20px rgba(0, 0, 0, 0.3);
+$shadow-primary: 0 0 20px rgba(16, 185, 129, 0.2);
+$backdrop-blur: 12px;
+
+/* ===== LEGACY COMPATIBILITY ALIASES ===== */
+$error-color: $negative;
+$danger-color: $negative-muted;
+$border-color: $outline-dark;
+$border-color-light-blue: $primary-accent;
+$button-dark: $surface-control;
+$button-light: $primary-accent;
+$header-background-color: $surface-container;
+$main-background-color: $surface-main;
+$light-text-color: $text-high;
 $dark-text-color: #252729;
-
-/* ===== LAYOUT ===== */
-
-$header-height: 60px;
+$header-height: $topbar-height;
 $filter-height: 30px;
-
-/* ===== TABLE ===== */
-
-$tableLevel1: #1b2434;
-$tableLevel2: #2f3745;
-
+$tableLevel1: $surface-container;
+$tableLevel2: $surface-container-high;
 $oddRow: #cdcfd3;
 $evenRow: #dde0e4;
-
-$rowTextColor: #eaeaea;
-
-/* Dark table rows (если используются отдельно) */
-$oddRowDark: #243146;
-$evenRowDark: #2e3d57;
-
-$dropdown-background: #14161a;
-$dropdown-border: #4d545f;
+$rowTextColor: $text-high;
+$oddRowDark: transparent;
+$evenRowDark: transparent;
+$dropdown-background: $surface-input;
+$dropdown-border: $outline-dark;

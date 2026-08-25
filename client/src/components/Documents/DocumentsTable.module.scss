@@ -1,17 +1,256 @@
-.tableContainer {
+@use "../../variables.scss" as *;
+
+.desktopTableContainer {
+  width: 100%;
   max-height: min(65vh, 720px);
   overflow: auto;
-  font-size: 12px;
-  //border: 1px solid #dbdbdb;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-lg;
+  background: $surface-container;
 }
 
-.tableContainer table {
-  margin-bottom: 0;
+.documentsTable {
+  width: 100%;
+  min-width: 920px;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: $text-medium;
+  font-size: 11px;
+
+  th,
+  td {
+    box-sizing: border-box;
+    padding: 5px $space-2;
+    overflow: hidden;
+    line-height: 1.2;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    height: 36px;
+    border-bottom: 1px solid $outline-dark;
+    background: rgba(13, 28, 45, 0.96);
+    color: $text-medium;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  tbody tr {
+    height: $document-table-row-height;
+    cursor: pointer;
+
+    &:hover td {
+      background: rgba(212, 228, 250, 0.025);
+    }
+  }
+
+  tbody td {
+    border-bottom: 1px solid $outline-dark;
+    background: $surface-container;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
 }
 
-.tableContainer thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  //background: #fff;
+.withBranch {
+  min-width: 980px;
+}
+
+.statusColumn {
+  width: 44px;
+}
+
+.numberColumn {
+  width: 96px;
+}
+
+.branchColumn {
+  width: 72px;
+}
+
+.typeColumn {
+  width: 100px;
+}
+
+.tradePointColumn,
+.contractorColumn {
+  width: 16%;
+}
+
+.authorColumn {
+  width: 108px;
+}
+
+.dateColumn {
+  width: 100px;
+}
+
+.actionsColumn {
+  width: 176px;
+}
+
+.statusCell {
+  position: relative;
+  overflow: visible !important;
+}
+
+.noTruncate,
+.documentType,
+.documentDate {
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.noTruncate {
+  color: $text-high;
+  font-weight: 600;
+}
+
+.documentType {
+  color: $text-high;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.documentDate {
+  font-variant-numeric: tabular-nums;
+}
+
+.actionsHeader,
+.actionsCell {
+  position: sticky !important;
+  right: 0;
+  width: 176px;
+  min-width: 176px;
+  max-width: 176px;
+  padding-right: 10px !important;
+  padding-left: 10px !important;
+  border-left: 1px solid $outline-dark;
+  text-align: right !important;
+}
+
+.actionsHeader {
+  z-index: 12 !important;
+}
+
+.actionsCell {
+  z-index: 4;
+  overflow: visible !important;
+  background: $surface-container !important;
+}
+
+.mobileCards {
+  display: none;
+}
+
+.emptyState {
+  padding: $space-6;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-lg;
+  background: $surface-container-low;
+  color: $text-muted;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .desktopTableContainer {
+    display: none;
+  }
+
+  .mobileCards {
+    display: grid;
+    gap: 10px;
+  }
+
+  .documentCard {
+    padding: $document-card-padding;
+    border: 1px solid $outline-green;
+    border-radius: $radius-lg;
+    background: $surface-container-low;
+    color: $text-high;
+    cursor: pointer;
+
+    &[data-status="SIGNED"] {
+      border-color: rgba(78, 222, 163, 0.34);
+    }
+  }
+
+  .cardHeader,
+  .cardMeta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-3;
+  }
+
+  .cardHeader strong {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cardMeta {
+    margin-top: $space-3;
+    color: $text-medium;
+    font-size: 12px;
+    font-weight: 700;
+
+    span {
+      color: $primary-accent-light;
+    }
+
+    time {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+  }
+
+  .cardDetails {
+    display: grid;
+    gap: 7px;
+    margin-top: $space-3;
+
+    p {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      margin: 0;
+      color: $text-high;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    i {
+      flex: 0 0 18px;
+      width: 18px;
+      color: $primary-accent-light;
+      text-align: center;
+    }
+
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .cardActions {
+    margin-top: $space-3;
+    padding-top: $space-3;
+    border-top: 1px solid $outline-green;
+  }
 }

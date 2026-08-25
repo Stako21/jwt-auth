@@ -96,7 +96,8 @@ const AppContent = () => {
       {isUserLogged && configLoading ? (
         <DataLoader label="Завантаження конфігурації…" fullPage />
       ) : (
-        <Routes>
+        <main className={isUserLogged ? "appMain" : "authMain"}>
+          <Routes>
           {isUserLogged ? (
             isAdmin ? (
               <>
@@ -144,7 +145,8 @@ const AppContent = () => {
               />
             }
           />
-        </Routes>
+          </Routes>
+        </main>
       )}
     </>
   );

@@ -1,9 +1,22 @@
+import { useState } from "react";
 import { openDocumentPdf } from "../../services/documents.api";
+import { ROLE_IDS } from "../../utils/roles.js";
 import DocumentRowActions from "./DocumentRowAction";
 import StatusBadge from "./StatusBadge";
-import { useState } from "react";
-import { ROLE_IDS } from "../../utils/roles.js";
 import style from "./DocumentsTable.module.scss";
+
+function formatDocumentDate(value) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("uk-UA", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function documentTypeLabel(type) {
+  return type === "RETURN" ? "ПОВЕРНЕННЯ" : "ОБМІН";
+}
 
 export default function DocumentTable({
   documents,
@@ -21,87 +34,146 @@ export default function DocumentTable({
     try {
       setLoadingId(id);
       await openDocumentPdf(id);
-    } catch (e) {
-      console.error("Error opening PDF:", e);
+    } catch (error) {
+      console.error("Error opening PDF:", error);
     } finally {
       setLoadingId(null);
     }
   };
 
-  const handleRowClick = (e, doc) => {
-    if (e.target.closest("button")) {
-      return;
-    }
+  const handleDocumentOpen = (event, doc) => {
+    if (event.target.closest("button, a, input, select, summary")) return;
 
     const canEdit =
       ["NEW", "REVISION"].includes(doc.status) &&
-      (doc.author_user_id === currentUser.id ||
-        currentUser.role === ROLE_IDS.SV);
+      (doc.author_user_id === currentUser.id || currentUser.role === ROLE_IDS.SV);
 
     if (canEdit) {
       onEditDocument?.(doc);
       return;
     }
-
     onViewDocument?.(doc);
   };
 
   if (!documents.length) {
-    return <div className="notification is-light">Документів не знайдено</div>;
+    return <div className={style.emptyState}>Документів не знайдено</div>;
   }
 
-  return (
-    <div className={`table-container ${style.tableContainer}`}>
-      <table className="table is-striped is-hoverable is-fullwidth">
-        <thead>
-          <tr>
-            <th>Статус</th>
-            <th>№</th>
-            {showBranchColumn && <th>Філія</th>}
-            <th>Тип</th>
-            <th>Торгова точка</th>
-            <th>Контрагент</th>
-            <th>Автор</th>
-            <th>Дата</th>
-            <th></th>
-          </tr>
-        </thead>
+  const renderActions = (doc) => (
+    <DocumentRowActions
+      doc={doc}
+      currentUser={currentUser}
+      onUpdated={reloadDocuments}
+      onOpenPdf={handleOpenPdf}
+      loadingId={loadingId}
+      setLoadingId={setLoadingId}
+    />
+  );
 
-        <tbody>
-          {documents.map((doc) => (
-            <tr
-              key={doc.id}
-              onClick={(e) => handleRowClick(e, doc)}
-              style={{ cursor: "pointer" }}
-            >
-              <td>
-                <StatusBadge status={doc.status} />
-              </td>
-              <td>{doc.document_number}</td>
-              {showBranchColumn && (
-                <td>{doc.branch_short_name || doc.branch_name || "-"}</td>
-              )}
-              <td>
-                {doc.document_type === "RETURN" ? "ПОВЕРНЕННЯ" : "ОБМІН"}
-              </td>
-              <td>{doc.trade_point}</td>
-              <td>{doc.contractor}</td>
-              <td>{doc.author}</td>
-              <td>{new Date(doc.document_date).toLocaleDateString("uk-UA")}</td>
-              <td className="has-text-right">
-                <DocumentRowActions
-                  doc={doc}
-                  currentUser={currentUser}
-                  onUpdated={reloadDocuments}
-                  onOpenPdf={handleOpenPdf}
-                  loadingId={loadingId}
-                  setLoadingId={setLoadingId}
-                />
-              </td>
+  return (
+    <>
+      <div className={style.desktopTableContainer}>
+        <table
+          className={`${style.documentsTable} ${
+            showBranchColumn ? style.withBranch : ""
+          }`}
+        >
+          <colgroup>
+            <col className={style.statusColumn} />
+            <col className={style.numberColumn} />
+            {showBranchColumn ? <col className={style.branchColumn} /> : null}
+            <col className={style.typeColumn} />
+            <col className={style.tradePointColumn} />
+            <col className={style.contractorColumn} />
+            <col className={style.authorColumn} />
+            <col className={style.dateColumn} />
+            <col className={style.actionsColumn} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th aria-label="Статус">
+                <i className="fa-regular fa-flag" aria-hidden="true"></i>
+              </th>
+              <th>№</th>
+              {showBranchColumn ? <th>Філія</th> : null}
+              <th>Тип</th>
+              <th>Торгова точка</th>
+              <th>Контрагент</th>
+              <th>Автор</th>
+              <th>Дата</th>
+              <th className={style.actionsHeader}>Дії</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+
+          <tbody>
+            {documents.map((doc) => (
+              <tr key={doc.id} onClick={(event) => handleDocumentOpen(event, doc)}>
+                <td className={style.statusCell}>
+                  <StatusBadge status={doc.status} />
+                </td>
+                <td className={style.noTruncate}>{doc.document_number}</td>
+                {showBranchColumn ? (
+                  <td title={doc.branch_short_name || doc.branch_name || ""}>
+                    {doc.branch_short_name || doc.branch_name || "—"}
+                  </td>
+                ) : null}
+                <td className={style.documentType}>{documentTypeLabel(doc.document_type)}</td>
+                <td title={doc.trade_point}>{doc.trade_point}</td>
+                <td title={doc.contractor}>{doc.contractor}</td>
+                <td title={doc.author}>{doc.author}</td>
+                <td className={style.documentDate}>
+                  {formatDocumentDate(doc.document_date)}
+                </td>
+                <td className={style.actionsCell}>{renderActions(doc)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className={style.mobileCards}>
+        {documents.map((doc) => (
+          <article
+            className={style.documentCard}
+            data-status={doc.status}
+            key={doc.id}
+            onClick={(event) => handleDocumentOpen(event, doc)}
+          >
+            <div className={style.cardHeader}>
+              <StatusBadge status={doc.status} />
+              <strong>№ {doc.document_number}</strong>
+            </div>
+
+            <div className={style.cardMeta}>
+              <span>{documentTypeLabel(doc.document_type)}</span>
+              <time>{formatDocumentDate(doc.document_date)}</time>
+            </div>
+
+            <div className={style.cardDetails}>
+              <p title={doc.trade_point}>
+                <i className="fa-solid fa-store" aria-hidden="true"></i>
+                <span>{doc.trade_point}</span>
+              </p>
+              <p title={doc.contractor}>
+                <i className="fa-solid fa-building" aria-hidden="true"></i>
+                <span>{doc.contractor}</span>
+              </p>
+              <p title={doc.author}>
+                <i className="fa-regular fa-user" aria-hidden="true"></i>
+                <span>{doc.author}</span>
+              </p>
+              {showBranchColumn ? (
+                <p>
+                  <i className="fa-regular fa-building" aria-hidden="true"></i>
+                  <span>{doc.branch_short_name || doc.branch_name || "—"}</span>
+                </p>
+              ) : null}
+            </div>
+
+            <div className={style.cardActions}>{renderActions(doc)}</div>
+          </article>
+        ))}
+      </div>
+    </>
   );
 }

@@ -1,40 +1,241 @@
+@use "../variables" as *;
+
+.itemModal {
+  z-index: 1400;
+  padding: $space-4;
+}
+
+.modalBackdrop {
+  background: rgba(1, 15, 31, 0.84);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.itemModalCard {
+  width: min(100%, 620px) !important;
+  max-height: calc(100dvh - 32px);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-xl;
+  background: $surface-container-low;
+  box-shadow: $shadow-popover;
+}
+
+.modalHeader {
+  min-height: 50px;
+  padding: 9px $space-4 !important;
+  border-bottom: 1px solid $outline-dark;
+  background: rgba(18, 33, 49, 0.98);
+}
+
+.modalTitle {
+  margin: 0;
+  color: $text-high !important;
+  font-family: Manrope, Inter, Arial, sans-serif;
+  font-size: 16px !important;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.closeButton {
+  flex: 0 0 32px;
+  width: 32px;
+  max-width: 32px;
+  height: 32px;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-md;
+  background: $surface-container-high !important;
+  transition:
+    border-color $motion-fast $motion-ease,
+    background-color $motion-fast $motion-ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: $negative-muted;
+    background: $status-rejected-surface !important;
+  }
+}
+
+.itemModalBody {
+  display: grid;
+  gap: $space-3;
+  padding: $space-4 !important;
+  overflow-y: auto;
+  background: $surface-container-low !important;
+  color: $text-high;
+
+  :global(.field) {
+    margin: 0 !important;
+  }
+
+  :global(.label) {
+    margin-bottom: $space-1 !important;
+    color: $text-medium;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  :global(.input),
+  :global(.select select) {
+    width: 100%;
+    height: $control-height-md;
+    min-height: $control-height-md;
+    padding: 0 $space-3;
+    border: 1px solid $outline-green;
+    border-radius: $radius-md;
+    background: $surface-container-lowest;
+    color: $text-high;
+    box-shadow: none;
+    font-size: 13px;
+
+    &:focus {
+      border-color: $primary-accent;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+    }
+
+    &:disabled {
+      color: $text-muted;
+      opacity: 0.58;
+    }
+  }
+
+  :global(.is-danger) {
+    border-color: $negative-muted !important;
+  }
+
+  :global(.react-datepicker-wrapper),
+  :global(.react-datepicker__input-container) {
+    display: block;
+    width: 100%;
+  }
+}
+
+.compactColumns {
+  margin: 0 (-$space-1) !important;
+
+  :global(.column) {
+    padding: 0 $space-1 !important;
+  }
+}
+
 .dateInput {
-  background: #14161a; // тёмный фон
-  color: #f9fafb;
-  border: 1px solid #374151;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 14px;
+  width: 100%;
+  height: $control-height-md;
+  min-height: $control-height-md;
+  padding: 0 $space-3;
+  border: 1px solid $outline-green;
+  border-radius: $radius-md;
+  background: $surface-container-lowest;
+  color: $text-high;
+  font-size: 13px;
   cursor: pointer;
 
   &:focus {
+    border-color: $primary-accent;
     outline: none;
-    border-color: #2a75d8;
-    box-shadow: 0 0 0 1px #2a75d8;
-  }
-
-  &::-webkit-calendar-picker-indicator {
-    filter: invert(1); // делает иконку светлой
-    cursor: pointer;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
   }
 }
 
 .dateInputError {
-  
-  background: #2e0009;
-  border-color: #ff6685;
-  // box-shadow: 0 0 0 1px #ff6685;
+  border-color: $negative-muted !important;
+  background: $negative-surface !important;
+}
+
+.dateErrorMessage {
+  margin: 0;
+  padding: 8px $space-3;
+  border: 1px solid $negative-muted;
+  border-radius: $radius-md;
+  background: $negative-surface;
+  color: $negative;
+  font-size: 11px;
 }
 
 .datepickerPopper {
-  z-index: 9999 !important;
-  // left: auto !important;
+  z-index: 1500 !important;
+}
+
+.itemModalFooter {
+  justify-content: flex-end !important;
+  gap: $space-2 !important;
+  min-height: 58px;
+  padding: 10px $space-4 !important;
+  border-top: 1px solid $outline-medium !important;
+  background: $surface-container !important;
+
+  button {
+    min-width: 112px;
+    height: $control-height-md;
+    border: 0;
+    border-radius: $radius-md;
+    font-size: 12px;
+    font-weight: 700;
+  }
+}
+
+.saveButton {
+  background: $primary-accent !important;
+  color: $text-on-accent !important;
+
+  &:hover {
+    background: $primary-accent-hover !important;
+  }
+}
+
+.cancelButton {
+  background: $status-rejected-surface !important;
+  color: $negative !important;
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .itemModal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .itemModalCard {
+    width: 100% !important;
+    max-height: calc(100dvh - $topbar-height);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: $radius-xl $radius-xl 0 0;
+  }
+
+  .modalHeader {
+    min-height: 48px;
+    padding: 8px $space-3 !important;
+  }
+
+  .itemModalBody {
+    gap: 10px;
+    padding: $space-3 !important;
+  }
+
+  .itemModalFooter {
+    position: sticky;
+    bottom: 0;
+    min-height: 60px;
+    padding: 10px $space-3 calc(10px + env(safe-area-inset-bottom)) !important;
+
+    button {
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: $control-height-lg;
+    }
+  }
 }
 
 @media (max-width: 430px) {
   .dateColumns {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    gap: 10px;
+
+    :global(.column) {
+      width: 100%;
+    }
   }
 }

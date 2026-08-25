@@ -1740,3 +1740,115 @@ Frontend:
 - Added `Заробіток разом` columns to the operational collected-bills report (including Picker view) and Picker earnings analytics.
 - Total earnings are calculated as row earnings plus kilogram earnings at document, warehouse, and Picker aggregate levels.
 - Picker operational-report header now shows one green `Заробіток разом` value instead of separate row/kg earnings labels; detailed columns remain unchanged.
+
+## 2026-08-24 - Dark operational UI restored on the current branch
+
+- Created recovery branch `recovery/pre-dark-redesign-2026-08-24` at `93a9f6c` before changing product files; pre-existing local source-snapshot deletions and documentation files were not included or modified.
+- Manually ported the saved `redesign-dark-operational-ui` visual direction onto the current `branches-config` implementation instead of cherry-picking the stale WIP commit.
+- Added centralized SCSS design tokens for semantic colors, spacing, radii, control dimensions, layout dimensions, motion durations, and shadows; exposed matching `--ui-*` CSS variables and added a JS timing token for the balance price popover.
+- Replaced the authenticated header with a compact desktop sidebar/topbar shell and mobile drawer while preserving branch switching, config-driven balances/reports, Picker isolation, Admin navigation, and Admin/Director warehouse settings.
+- Restored the dark operational login, balance search/segmented filter, dense hierarchical balance table, muted negative quantities, and price popover without losing the current price-multiplier behavior.
+- Kept Bulma as a transitional compatibility dependency for existing admin/document/modal surfaces, moved it from CDN loading to the installed package, and mapped its theme variables to the shared app tokens so its colors and radii no longer define the new shell.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file deletions from the build were restored
+  - `git diff --check` passed
+
+## 2026-08-24 - Stitch Obsidian Emerald visual alignment
+
+- Reviewed both supplied `stitch_dark_corporate_inventory_portal` archives, including their screenshots, HTML, and shared `DESIGN.md` tokens.
+- Aligned the restored UI with the Stitch `Obsidian Emerald Executive` direction:
+  - deep navy surface hierarchy (`#051424`, `#0d1c2d`, `#122131`, `#1c2b3c`)
+  - emerald actions and focus states (`#10b981`, `#4edea3`)
+  - subtle translucent outlines, glass panels, 8px standard radii, and 16px cards
+  - data tables use quiet row dividers instead of zebra striping
+- Refined the sign-in screen to match the reference composition while retaining only existing product copy (`Вхід`, field labels, auth error, submit state):
+  - added the existing ST logo as the visual brand mark
+  - added local inline SVG user/lock/password-visibility icons with no network dependency
+  - did not add reference-only version, support, access-request, legal, or marketing text
+- Updated the app shell, balance filters/table, state cards, and Bulma compatibility variables to use the same centralized design tokens.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - desktop and mobile-sized sign-in screenshots were inspected in local headless Edge
+  - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-24 - Fixed obscured app background gradients
+
+- Rechecked every active `radial-gradient` / `background-image` declaration after the Stitch alignment.
+- Root cause: the subtle body gradient was covered by opaque `.authMain` and sign-in `.mainWrapper` backgrounds; the original top glow was also barely visible at `50% -20%` with `0.08` alpha.
+- Centralized the two app background gradients in `client/src/variables.scss` and render them through a fixed, pointer-transparent `body::before` layer.
+- Made `#root`, `.appMain`, `.authMain`, and the sign-in wrapper transparent where required so the shared fixed background remains visible across routes and scroll positions.
+- Increased the top emerald glow visibility and kept the lower-right navy depth layer; local headless Edge screenshot confirmed both layers render.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-24 - Sign-in failure behavior hardening
+
+- Unified unknown-login, missing-password-hash, and wrong-password backend failures to the same `401` / `Неправильний логін або пароль` response.
+- Added a fixed dummy bcrypt hash for missing users/hashes so rejected attempts still perform a password comparison instead of returning through a visibly faster branch.
+- Removed the duplicate expected-auth snackbar: `401` is now represented only by the inline form banner and invalid states on both credential fields.
+- Network, validation, and server failures continue through the snackbar path but no longer mark the login/password as incorrect.
+- Sign-in form now uses React Hook Form `reValidateMode: onChange` instead of blindly clearing field errors; inline validation shows the actual Yup message while credential rejection remains generic.
+- Access tokens are now stored only after JWT payload decoding succeeds; malformed tokens reject the sign-in promise and produce one system error instead of silently resolving.
+- Verification:
+  - isolated backend failure-path check confirmed identical `401` responses for unknown user, missing hash, and wrong password
+  - `node --check api/services/Auth.js` passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-24 - Sign-in edit-state error reset
+
+- Corrected the post-auth-failure edit behavior in `SignIn`.
+- After any login or password edit, both the shared credential alarm and all visible validation alarms are hidden together; neither field remains red while the user is correcting values.
+- Required/min/max validation is still calculated by React Hook Form but is shown only after the next explicit `Увійти` submission through the invalid-submit callback.
+- This prevents the password field from showing `Обов'язкове поле` and reopening the banner merely because the user erased it while preparing a retry.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-24 - Edge-only mobile menu swipe gestures
+
+- Added touch-only mobile drawer gestures without taking over horizontal table scrolling.
+- Opening starts only inside a configurable `24px` invisible zone at the left screen edge and requires a right swipe; ordinary swipes that start elsewhere in a table remain untouched.
+- The open drawer closes with a left swipe across the drawer itself, while vertical and insufficiently horizontal movements continue to scroll or are ignored.
+- Centralized the edge width in `variables.scss` and gesture activation, completion, and axis-ratio thresholds in `uiTokens.js`.
+- Extracted direction recognition to `utils/swipeGesture.js` and covered right, left, short, and vertical/diagonal cases with isolated assertions.
+- Verification:
+  - gesture assertions passed
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-24 - Documents workspace responsive redesign
+
+- Manually transferred the approved Stitch documents-list direction onto the current React workflow without copying its invented shell, sample statuses, or actions.
+- Replaced the Bulma page/table presentation with token-driven document page, filter, table, status, action, and mobile-card styles.
+- Added working applied filters for multiple statuses, contractor, and author alongside the existing independently unbounded date period; author choices are derived from documents visible in the loaded period and filtering preserves existing server role/branch boundaries.
+- Desktop now uses a high-density bounded table with full dates, conditional branch column, truncation tooltips for long values, icon-only accessible status indicators, and a fixed-width action column sized for the real maximum workflow combination.
+- Mobile now replaces the wide table with compact cards, tap-accessible status labels, complete business metadata, and touch-sized actions; History and PDF remain available for every document and workflow actions still come from the existing permission logic.
+- Centralized document status colors, indicator/action dimensions, row/card geometry, and status-tooltip duration in shared UI tokens.
+- Removed this document workspace's direct dependency on Bulma classes while leaving transitional Bulma support for untouched legacy surfaces.
+- Verification:
+  - isolated document-filter assertions passed for combined and empty filters plus unique author options
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - `git diff --check` passed
+  - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-25 - Compact document creation modals
+
+- Restyled the existing return and exchange creation/editing modals without changing field order, payloads, validation rules, permissions, or document workflow behavior.
+- Added a shared token-driven modal shell with compact controls, bounded height, internal scrolling, dark glass surfaces, consistent close/save/cancel actions, and responsive mobile bottom-sheet presentation.
+- Visually separated the lower form area: executor choice is a compact segmented panel, return items are contained in a highlighted block, and exchange TAKE/GIVE lists use distinct accent edges.
+- Kept item tables dense and horizontally scroll-contained, with compact accessible edit/remove icon actions and a highlighted quantity-mismatch message.
+- Restyled the nested item editor to match the same shell, compact geometry, date controls, validation surfaces, and highlighted sticky action footer.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file deletions from build were restored

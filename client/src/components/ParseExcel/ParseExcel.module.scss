@@ -2,38 +2,39 @@
 
 .pageSection {
   display: grid;
-  gap: 18px;
+  gap: 0;
+  min-height: calc(100vh - #{$topbar-height});
+  background: transparent;
 }
 
 .stateCard {
-  margin: 0 20px 10px;
-  padding: 22px 24px;
-  border: 1px solid rgba(194, 194, 194, 0.16);
-  border-radius: 22px;
-  background:
-    linear-gradient(145deg, rgba(47, 55, 69, 0.95), rgba(27, 36, 52, 0.98));
-  box-shadow:
-    0 18px 40px rgba(5, 10, 18, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  margin: $space-5;
+  padding: $space-5 $space-6;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-xl;
+  background: $surface-glass;
+  backdrop-filter: blur($backdrop-blur);
+  -webkit-backdrop-filter: blur($backdrop-blur);
 }
 
 .errorState {
-  border-color: rgba(222, 61, 61, 0.42);
-  background:
-    linear-gradient(145deg, rgba(84, 38, 38, 0.96), rgba(43, 23, 23, 0.98));
+  border-color: $negative-muted;
+  background: $negative-surface;
 }
 
 .stateText {
   margin: 0;
-  color: #f2f5f8;
-  font-size: 16px;
+  color: $text-high;
+  font-size: 14px;
   letter-spacing: 0.01em;
 }
 
 @media (max-width: 768px) {
   .stateCard {
-    margin: 0 0 10px;
+    margin: $space-3 0;
     padding: 18px;
-    border-radius: 18px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
   }
 }

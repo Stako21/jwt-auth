@@ -1,80 +1,91 @@
+@use "../../variables.scss" as *;
+
 .actionButtons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  justify-content: flex-end;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: $space-1;
+  width: 100%;
+  white-space: nowrap;
+}
 
-  button {
-    flex: 1;
-    
-    border-radius: 0;
-    height: 2em;
-    min-width: 2.5em;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 $document-action-size-desktop;
+  width: $document-action-size-desktop;
+  min-width: $document-action-size-desktop;
+  height: $document-action-size-desktop;
+  padding: 0;
+  border: 0;
+  border-radius: $radius-sm;
+  background: $surface-container-high;
+  color: $text-medium;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.78;
+  transition:
+    background-color $motion-fast $motion-ease,
+    color $motion-fast $motion-ease,
+    opacity $motion-fast $motion-ease;
 
-    // &:first-child {
-    //   border-top-left-radius: 4px;
-    //   border-bottom-left-radius: 4px;
-    // }
+  &:hover,
+  &:focus-visible {
+    background: $surface-container-highest;
+    color: $text-high;
+    opacity: 1;
+  }
 
-    // &:last-child {
-    //   border-top-right-radius: 4px;
-    //   border-bottom-right-radius: 4px;
-    // }
-
-    &:not(:last-child) {
-      border-right: 1px solid rgba(255, 255, 255, 0.2);
-    }
+  &:disabled {
+    cursor: wait;
+    opacity: 0.35;
   }
 }
 
-@media (max-width: 1223px) {
+.prepare {
+  background: $status-prepared-surface;
+  color: $status-prepared;
+}
+
+.sign {
+  background: $status-signed-surface;
+  color: $status-signed;
+}
+
+.revision {
+  background: $status-revision-surface;
+  color: $status-revision;
+}
+
+.reject {
+  background: $status-rejected-surface;
+  color: $status-rejected;
+}
+
+@media (max-width: $mobile-breakpoint) {
   .actionButtons {
-    flex-basis: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax($document-action-size-mobile, 1fr));
+    gap: 6px;
+  }
 
-    button {
-      flex: 0 0 calc(50% - 0.5px);
+  .actionButton {
+    width: 100%;
+    min-width: $document-action-size-mobile;
+    height: $document-action-size-mobile;
+    font-size: 18px;
+    opacity: 1;
+  }
 
-      // &:nth-child(odd) {
-      //   border-top-left-radius: 4px;
-      //   border-bottom-left-radius: 4px;
-      //   border-top-right-radius: 0;
-      //   border-bottom-right-radius: 0;
-      // }
+  .actionButtons[data-action-count="2"] {
+    display: flex;
+    justify-content: flex-end;
 
-      // &:nth-child(even) {
-      //   border-top-left-radius: 0;
-      //   border-bottom-left-radius: 0;
-      //   border-top-right-radius: 4px;
-      //   border-bottom-right-radius: 4px;
-      // }
-
-      &:not(:last-child) {
-        border-right: 1px solid rgba(255, 255, 255, 0.2);
-      }
-
-      // &:only-child {
-      //   border-top-right-radius: 4px;
-      //   border-bottom-right-radius: 4px;
-      // }
-
-      // &:last-child {
-      //   margin-top: 4px;
-      // }
+    .actionButton {
+      flex: 0 0 $document-action-size-mobile;
+      width: $document-action-size-mobile;
     }
-
-    // button:nth-child(odd):not(:first-child) {
-    //   margin-top: 4px;
-    // }
   }
 }
-
-// @media (max-width: 830px) {
-//   .actionButtons:not(:first-child) {
-//     margin-top: 4px;
-//   }
-// }

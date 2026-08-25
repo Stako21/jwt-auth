@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import DocumentTable from "../components/Documents/DocumentsTable.jsx";
 import { fetchDocuments, getDocumentById } from "../services/documents.api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
@@ -11,6 +11,19 @@ import {
 } from "../services/directories.api.js";
 import CreateExchangeDocumentModal from "../modals/CreateExchangeDocumentModal.jsx";
 import { DataLoader } from "../components/DataLoader/DataLoader.jsx";
+import {
+  filterDocuments,
+  getDocumentAuthorOptions,
+} from "../utils/documentFilters.js";
+import style from "./DocumentsPage.module.scss";
+
+const DOCUMENT_STATUSES = [
+  { value: "NEW", label: "Новий" },
+  { value: "PREPARED", label: "Погоджено" },
+  { value: "REVISION", label: "На доопрацювання" },
+  { value: "REJECTED", label: "Відхилено" },
+  { value: "SIGNED", label: "Підписано" },
+];
 
 function dateKey(date) {
   const offset = date.getTimezoneOffset() * 60_000;
@@ -27,6 +40,12 @@ function initialPeriod() {
   };
 }
 
+const EMPTY_FILTERS = Object.freeze({
+  statuses: [],
+  contractor: "",
+  authorId: "",
+});
+
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,31 +61,42 @@ export default function DocumentsPage() {
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [period, setPeriod] = useState(initialPeriod);
   const [appliedPeriod, setAppliedPeriod] = useState(initialPeriod);
+  const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS }));
+  const [appliedFilters, setAppliedFilters] = useState(() => ({ ...EMPTY_FILTERS }));
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
   const currentBranchName =
-    userInfo?.currentBranch?.name ||
-    userInfo?.currentBranch?.shortName ||
-    null;
-  const hasMultipleBranches = (userInfo?.availableBranches?.length || 0) > 1;
+    userInfo?.currentBranch?.shortName || userInfo?.currentBranch?.name || null;
 
   useEffect(() => {
-    fetchTradePoints().then((data) => setTradePoints(data));
-    fetchProducts().then((data) => setProducts(data));
-    fetchContractors().then((data) => setContractors(data));
-    fetchProductGroups().then((data) => setProductGroups(data));
+    Promise.all([
+      fetchTradePoints(),
+      fetchProducts(),
+      fetchContractors(),
+      fetchProductGroups(),
+    ])
+      .then(([nextTradePoints, nextProducts, nextContractors, nextProductGroups]) => {
+        setTradePoints(nextTradePoints);
+        setProducts(nextProducts);
+        setContractors(nextContractors);
+        setProductGroups(nextProductGroups);
+      })
+      .catch((directoryError) => {
+        console.error("Помилка завантаження довідників:", directoryError);
+      });
   }, []);
 
   const loadDocuments = useCallback(async ({ silent = false } = {}) => {
     try {
-      if (!silent) {
-        setLoading(true);
-      }
+      if (!silent) setLoading(true);
       setError(null);
       const data = await fetchDocuments({
         ...(appliedPeriod.withoutFrom ? {} : { from: appliedPeriod.from }),
         ...(appliedPeriod.withoutTo ? {} : { to: appliedPeriod.to }),
       });
       setDocuments(data);
-    } catch (e) {
+    } catch (loadError) {
+      console.error("Помилка завантаження документів:", loadError);
       setError("Помилка завантаження документів");
     } finally {
       setLoading(false);
@@ -79,154 +109,139 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!document.hidden) {
-        loadDocuments({ silent: true });
-      }
+      if (!document.hidden) loadDocuments({ silent: true });
     }, 10000);
 
     return () => clearInterval(interval);
   }, [loadDocuments]);
 
-  const applyPeriod = (event) => {
+  const authorOptions = useMemo(
+    () => getDocumentAuthorOptions(documents),
+    [documents],
+  );
+
+  const filteredDocuments = useMemo(
+    () => filterDocuments(documents, appliedFilters),
+    [appliedFilters, documents],
+  );
+
+  const activeFilterCount =
+    Number(filters.statuses.length > 0) +
+    Number(Boolean(filters.contractor)) +
+    Number(Boolean(filters.authorId));
+
+  const statusSummary =
+    filters.statuses.length === 0
+      ? "Усі статуси"
+      : filters.statuses.length === 1
+        ? DOCUMENT_STATUSES.find((status) => status.value === filters.statuses[0])
+            ?.label
+        : `${filters.statuses.length} обрано`;
+
+  const applyFilters = (event) => {
     event.preventDefault();
-    if (
-      !period.withoutFrom &&
-      !period.withoutTo &&
-      period.from > period.to
-    ) {
+    if (!period.withoutFrom && !period.withoutTo && period.from > period.to) {
       setError("Початкова дата не може бути пізніше кінцевої");
       return;
     }
+    setError(null);
     setAppliedPeriod({ ...period });
+    setAppliedFilters({ ...filters, statuses: [...filters.statuses] });
+    setIsMobileFiltersOpen(false);
+  };
+
+  const resetFilters = () => {
+    const defaultPeriod = initialPeriod();
+    setPeriod(defaultPeriod);
+    setAppliedPeriod(defaultPeriod);
+    setFilters({ ...EMPTY_FILTERS });
+    setAppliedFilters({ ...EMPTY_FILTERS });
+  };
+
+  const toggleStatus = (statusValue) => {
+    setFilters((current) => ({
+      ...current,
+      statuses: current.statuses.includes(statusValue)
+        ? current.statuses.filter((status) => status !== statusValue)
+        : [...current.statuses, statusValue],
+    }));
   };
 
   const openDocumentModal = (doc, viewOnly = false) => {
     setIsViewOnly(viewOnly);
-
     getDocumentById(doc.id)
       .then((fullDoc) => {
         setEditingDocument(fullDoc);
-        if (fullDoc.documentType === "RETURN") {
-          setShowCreateReturn(true);
-        } else if (fullDoc.documentType === "EXCHANGE") {
-          setShowCreateExchange(true);
-        }
+        if (fullDoc.documentType === "RETURN") setShowCreateReturn(true);
+        if (fullDoc.documentType === "EXCHANGE") setShowCreateExchange(true);
       })
-      .catch((e) => {
-        console.error("Помилка завантаження документа:", e);
-        alert("Помилка при завантаженні даних документа");
+      .catch((loadError) => {
+        console.error("Помилка завантаження документа:", loadError);
+        setError("Помилка завантаження даних документа");
       });
   };
 
-  const handleEditDocument = (doc) => {
-    openDocumentModal(doc, false);
-  };
-
-  const handleViewDocument = (doc) => {
-    openDocumentModal(doc, true);
+  const closeDocumentModal = (type) => {
+    if (type === "RETURN") setShowCreateReturn(false);
+    if (type === "EXCHANGE") setShowCreateExchange(false);
+    setEditingDocument(null);
+    setIsViewOnly(false);
   };
 
   return (
-    <section className="section">
-      <div className="container">
-        <div className="level mb-4">
-          <div className="level-left">
-            <div>
-              <h1 className="title is-4 mb-2">Документи</h1>
-              {currentBranchName && (
-                <div className="is-flex is-align-items-center" style={{ gap: 8 }}>
-                  <span className="tag is-dark is-light">
-                    Філія: {currentBranchName}
-                  </span>
-                  {hasMultipleBranches && (
-                    <span className="is-size-7 has-text-grey">
-                      Створення та зміна статусів працює у поточному
-                      branch-контексті
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="level-right">
-            <button
-              className="button is-primary"
-              onClick={() => setShowCreateReturn(true)}
-            >
-              <i className="fa-solid fa-plus">{"\u00A0"}</i> Повернення
-            </button>
-            <button
-              className="button is-primary"
-              onClick={() => setShowCreateExchange(true)}
-            >
-              <i className="fa-solid fa-plus">{"\u00A0"}</i> Обмін
-            </button>
-          </div>
+    <section className={style.documentsPage}>
+      <div className={style.pageHeader}>
+        <div className={style.pageHeading}>
+          <h1>Документи</h1>
+          {currentBranchName ? (
+            <span className={style.branchBadge}>{currentBranchName}</span>
+          ) : null}
         </div>
+        <div className={style.createActions}>
+          <button type="button" onClick={() => setShowCreateReturn(true)}>
+            <i className="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
+            Повернення
+          </button>
+          <button type="button" onClick={() => setShowCreateExchange(true)}>
+            <i className="fa-solid fa-right-left" aria-hidden="true"></i>
+            Обмін
+          </button>
+        </div>
+      </div>
 
-        {showCreateReturn && (
-          <CreateReturnDocumentModal
-            isOpen={showCreateReturn}
-            onClose={() => {
-              setShowCreateReturn(false);
-              setEditingDocument(null);
-              setIsViewOnly(false);
-            }}
-            onCreated={loadDocuments}
-            tradePoints={tradePoints}
-            products={products}
-            contractors={contractors}
-            productGroups={productGroups}
-            editingDocument={editingDocument}
-            isViewOnly={isViewOnly}
-          />
-        )}
+      <button
+        className={style.mobileFilterToggle}
+        type="button"
+        onClick={() => setIsMobileFiltersOpen((open) => !open)}
+        aria-expanded={isMobileFiltersOpen}
+        aria-controls="document-filters"
+      >
+        <span>
+          <i className="fa-solid fa-filter" aria-hidden="true"></i>
+          Фільтри
+          {activeFilterCount > 0 ? (
+            <span className={style.filterCount}>{activeFilterCount}</span>
+          ) : null}
+        </span>
+        <i
+          className={`fa-solid fa-chevron-${isMobileFiltersOpen ? "up" : "down"}`}
+          aria-hidden="true"
+        ></i>
+      </button>
 
-        {showCreateExchange && (
-          <CreateExchangeDocumentModal
-            isOpen={showCreateExchange}
-            onClose={() => {
-              setShowCreateExchange(false);
-              setEditingDocument(null);
-              setIsViewOnly(false);
-            }}
-            onCreated={loadDocuments}
-            tradePoints={tradePoints}
-            products={products}
-            contractors={contractors}
-            productGroups={productGroups}
-            editingDocument={editingDocument}
-            isViewOnly={isViewOnly}
-          />
-        )}
-
-        {loading && <DataLoader label="Завантаження документів…" />}
-
-        {error && <div className="notification is-danger">{error}</div>}
-
-        <form
-          className="field is-grouped is-grouped-multiline mb-4"
-          onSubmit={applyPeriod}
-        >
-          <div className="control">
-            <label className="label is-small" htmlFor="documents-date-from">
-              З
-            </label>
-            <input
-              id="documents-date-from"
-              className="input is-small"
-              type="date"
-              value={period.from}
-              disabled={period.withoutFrom}
-              onChange={(event) =>
-                setPeriod((current) => ({ ...current, from: event.target.value }))
-              }
-            />
-            <label className="checkbox is-size-7 mt-1">
+      <form
+        id="document-filters"
+        className={`${style.filterPanel} ${
+          isMobileFiltersOpen ? style.mobileFiltersOpen : ""
+        }`}
+        onSubmit={applyFilters}
+      >
+        <div className={style.dateControl}>
+          <div className={style.filterLabelRow}>
+            <label htmlFor="documents-date-from">З</label>
+            <label className={style.unboundedToggle}>
               <input
                 type="checkbox"
-                className="mr-1"
                 checked={period.withoutFrom}
                 onChange={(event) =>
                   setPeriod((current) => ({
@@ -235,27 +250,26 @@ export default function DocumentsPage() {
                   }))
                 }
               />
-              Без ограничения
+              Без обмеження
             </label>
           </div>
-          <div className="control">
-            <label className="label is-small" htmlFor="documents-date-to">
-              По
-            </label>
-            <input
-              id="documents-date-to"
-              className="input is-small"
-              type="date"
-              value={period.to}
-              disabled={period.withoutTo}
-              onChange={(event) =>
-                setPeriod((current) => ({ ...current, to: event.target.value }))
-              }
-            />
-            <label className="checkbox is-size-7 mt-1">
+          <input
+            id="documents-date-from"
+            type="date"
+            value={period.from}
+            disabled={period.withoutFrom}
+            onChange={(event) =>
+              setPeriod((current) => ({ ...current, from: event.target.value }))
+            }
+          />
+        </div>
+
+        <div className={style.dateControl}>
+          <div className={style.filterLabelRow}>
+            <label htmlFor="documents-date-to">По</label>
+            <label className={style.unboundedToggle}>
               <input
                 type="checkbox"
-                className="mr-1"
                 checked={period.withoutTo}
                 onChange={(event) =>
                   setPeriod((current) => ({
@@ -264,26 +278,137 @@ export default function DocumentsPage() {
                   }))
                 }
               />
-              Без ограничения
+              Без обмеження
             </label>
           </div>
-          <div className="control is-align-self-flex-end">
-            <button className="button is-primary is-small" type="submit">
-              Показати
-            </button>
-          </div>
-        </form>
-
-        {!loading && !error && (
-          <DocumentTable
-            documents={documents}
-            currentUser={userInfo}
-            reloadDocuments={loadDocuments}
-            onEditDocument={handleEditDocument}
-            onViewDocument={handleViewDocument}
+          <input
+            id="documents-date-to"
+            type="date"
+            value={period.to}
+            disabled={period.withoutTo}
+            onChange={(event) =>
+              setPeriod((current) => ({ ...current, to: event.target.value }))
+            }
           />
-        )}
-      </div>
+        </div>
+
+        <div className={style.filterControl}>
+          <span className={style.filterLabel}>Статус</span>
+          <details className={style.statusSelect}>
+            <summary>{statusSummary}</summary>
+            <div className={style.statusOptions}>
+              {DOCUMENT_STATUSES.map((status) => (
+                <label key={status.value}>
+                  <input
+                    type="checkbox"
+                    checked={filters.statuses.includes(status.value)}
+                    onChange={() => toggleStatus(status.value)}
+                  />
+                  {status.label}
+                </label>
+              ))}
+            </div>
+          </details>
+        </div>
+
+        <label className={style.filterControl}>
+          <span className={style.filterLabel}>Контрагент</span>
+          <select
+            value={filters.contractor}
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                contractor: event.target.value,
+              }))
+            }
+          >
+            <option value="">Усі контрагенти</option>
+            {[...contractors]
+              .sort((left, right) => left.name.localeCompare(right.name, "uk"))
+              .map((contractor) => (
+                <option key={contractor.id} value={contractor.name}>
+                  {contractor.name}
+                </option>
+              ))}
+          </select>
+        </label>
+
+        <label className={style.filterControl}>
+          <span className={style.filterLabel}>Автор</span>
+          <select
+            value={filters.authorId}
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                authorId: event.target.value,
+              }))
+            }
+          >
+            <option value="">Усі автори</option>
+            {authorOptions.map((author) => (
+              <option key={author.id} value={author.id}>
+                {author.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className={style.filterActions}>
+          <button
+            className={style.resetButton}
+            type="button"
+            onClick={resetFilters}
+            title="Очистити"
+            aria-label="Очистити фільтри"
+          >
+            <i className="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i>
+          </button>
+          <button className={style.applyButton} type="submit">
+            Показати
+          </button>
+        </div>
+      </form>
+
+      {showCreateReturn ? (
+        <CreateReturnDocumentModal
+          isOpen={showCreateReturn}
+          onClose={() => closeDocumentModal("RETURN")}
+          onCreated={loadDocuments}
+          tradePoints={tradePoints}
+          products={products}
+          contractors={contractors}
+          productGroups={productGroups}
+          editingDocument={editingDocument}
+          isViewOnly={isViewOnly}
+        />
+      ) : null}
+
+      {showCreateExchange ? (
+        <CreateExchangeDocumentModal
+          isOpen={showCreateExchange}
+          onClose={() => closeDocumentModal("EXCHANGE")}
+          onCreated={loadDocuments}
+          tradePoints={tradePoints}
+          products={products}
+          contractors={contractors}
+          productGroups={productGroups}
+          editingDocument={editingDocument}
+          isViewOnly={isViewOnly}
+        />
+      ) : null}
+
+      {loading ? <DataLoader label="Завантаження документів…" /> : null}
+      {error ? <div className={style.errorBanner}>{error}</div> : null}
+
+      {!loading && !error ? (
+        <DocumentTable
+          documents={filteredDocuments}
+          currentUser={userInfo}
+          reloadDocuments={loadDocuments}
+          onEditDocument={(doc) => openDocumentModal(doc, false)}
+          onViewDocument={(doc) => openDocumentModal(doc, true)}
+        />
+      ) : null}
     </section>
   );
 }

@@ -315,67 +315,85 @@ export default function CreateExchangeDocumentModal({
 
   function renderTable(items, type) {
     return items.length === 0 ? (
-      <p className="has-text-grey is-size-7">Позиції ще не додані</p>
+      <p className={styles.emptyItems}>Позиції ще не додані</p>
     ) : (
-      <table className="table is-fullwidth is-bordered is-size-7">
-        <thead>
-          <tr>
-            <th>Товар</th>
-            <th>Од.</th>
-            <th>К-ть</th>
-            <th>Вигот.</th>
-            <th>До</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((i, idx) => (
-            <tr key={idx}>
-              <td>
-                {products.find((p) => String(p.id) === String(i.productId))
-                  ?.name || i.product}
-              </td>
-              <td>{getUnitLabel(i.unit)}</td>
-              <td>{i.quantity}</td>
-              <td>{i.manufactureDate}</td>
-              <td>{i.expiryDate}</td>
-              <td>
-                {!isViewOnly && <button
-                  className="button is-small is-light"
-                  onClick={() => openEditItem(type, idx)}
-                >
-                  <i className="fa-solid fa-pencil"></i>
-                </button>}
-                {!isViewOnly && <button
-                  className="button is-small is-danger ml-1"
-                  onClick={() => removeItem(type, idx)}
-                >
-                  <i className="fa-solid fa-xmark"></i>
-                </button>}
-              </td>
+      <div className={styles.itemsTableScroll}>
+        <table className={`table ${styles.itemsTable}`}>
+          <thead>
+            <tr>
+              <th>Товар</th>
+              <th>Од.</th>
+              <th>К-ть</th>
+              <th>Вигот.</th>
+              <th>До</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {items.map((i, idx) => (
+              <tr key={idx}>
+                <td>
+                  {products.find((p) => String(p.id) === String(i.productId))
+                    ?.name || i.product}
+                </td>
+                <td>{getUnitLabel(i.unit)}</td>
+                <td>{i.quantity}</td>
+                <td>{i.manufactureDate}</td>
+                <td>{i.expiryDate}</td>
+                <td>
+                  {!isViewOnly && (
+                    <button
+                      className={styles.itemActionButton}
+                      type="button"
+                      onClick={() => openEditItem(type, idx)}
+                      aria-label="Редагувати позицію"
+                    >
+                      <i className="fa-solid fa-pencil"></i>
+                    </button>
+                  )}
+                  {!isViewOnly && (
+                    <button
+                      className={`${styles.itemActionButton} ${styles.removeItemButton}`}
+                      type="button"
+                      onClick={() => removeItem(type, idx)}
+                      aria-label="Видалити позицію"
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     );
   }
 
   return (
     <>
-      <div className="modal is-active">
-        <div className="modal-background" onClick={onClose} />
+      <div className={`modal is-active ${styles.documentModal}`}>
+        <div
+          className={`modal-background ${styles.modalBackdrop}`}
+          onClick={onClose}
+        />
 
-        <div className="modal-card" style={{ width: "95%" }}>
-          <header className="modal-card-head">
-            <p className="modal-card-title">
+        <div className={`modal-card ${styles.modalCard} ${styles.exchangeCard}`}>
+          <header className={`modal-card-head ${styles.modalHeader}`}>
+            <p className={`modal-card-title ${styles.modalTitle}`}>
               {editingDocument
                 ? "Редагувати документ — Обмін"
                 : "Новий документ — Обмін"}
             </p>
-            <button className="delete" onClick={onClose} />
+            <button
+              className={`delete ${styles.closeButton}`}
+              type="button"
+              onClick={onClose}
+              aria-label="Закрити"
+            />
           </header>
 
-          <section className="modal-card-body">
+          <section className={`modal-card-body ${styles.modalBody}`}>
             {/* Контрагент */}
             <div className="field">
               <label className="label">Контрагент</label>
@@ -449,75 +467,91 @@ export default function CreateExchangeDocumentModal({
               />
             </div>
 
-            <hr />
-
-            <div className="field">
-              <label className="label">Виконавець</label>
-              <div className="buttons has-addons">
-                <button
-                  type="button"
-                  className={`button ${executorType === "TA" ? "is-link" : "is-light"}`}
-                  disabled={isViewOnly}
-                  onClick={() => setExecutorType("TA")}
-                >
-                  ТА
-                </button>
-                <button
-                  type="button"
-                  className={`button ${executorType === "DRIVER" ? "is-link" : "is-light"}`}
-                  disabled={isViewOnly}
-                  onClick={() => setExecutorType("DRIVER")}
-                >
-                  Водій
-                </button>
+            <div className={styles.lowerStack}>
+              <div className={`field ${styles.executorPanel}`}>
+                <label className="label">Виконавець</label>
+                <div className={`buttons has-addons ${styles.executorButtons}`}>
+                  <button
+                    type="button"
+                    className={`button ${styles.segmentButton} ${
+                      executorType === "TA" ? styles.segmentActive : ""
+                    }`}
+                    disabled={isViewOnly}
+                    onClick={() => setExecutorType("TA")}
+                  >
+                    ТА
+                  </button>
+                  <button
+                    type="button"
+                    className={`button ${styles.segmentButton} ${
+                      executorType === "DRIVER" ? styles.segmentActive : ""
+                    }`}
+                    disabled={isViewOnly}
+                    onClick={() => setExecutorType("DRIVER")}
+                  >
+                    Водій
+                  </button>
+                </div>
               </div>
+
+              {/* TAKE */}
+              <div className={`${styles.itemSection} ${styles.takeSection}`}>
+                <div className={styles.sectionHeader}>
+                  <h4 className="title is-6">Забрати від контрагента</h4>
+                  {!isViewOnly && (
+                    <button
+                      className={`button ${styles.addButton}`}
+                      type="button"
+                      onClick={() => openAddItem("TAKE")}
+                    >
+                      <i className="fa-solid fa-plus">{"\u00A0"}</i> Додати
+                    </button>
+                  )}
+                </div>
+                {renderTable(takeItems, "TAKE")}
+              </div>
+
+              {/* GIVE */}
+              <div className={`${styles.itemSection} ${styles.giveSection}`}>
+                <div className={styles.sectionHeader}>
+                  <h4 className="title is-6">Видати контрагенту</h4>
+                  {!isViewOnly && (
+                    <button
+                      className={`button ${styles.addButton}`}
+                      type="button"
+                      onClick={() => openAddItem("GIVE")}
+                    >
+                      <i className="fa-solid fa-plus">{"\u00A0"}</i> Додати
+                    </button>
+                  )}
+                </div>
+                {renderTable(giveItems, "GIVE")}
+              </div>
+
+              {errors.quantityMismatch && (
+                <p className={styles.quantityError}>
+                  Загальна кількість забраного і виданого не співпадає
+                </p>
+              )}
             </div>
-
-            {/* TAKE */}
-            <div className="is-flex is-justify-content-space-between mb-2">
-              <h4 className="title is-6">Забрати від контрагента</h4>
-              {!isViewOnly && <button
-                className="button is-link is-light"
-                onClick={() => openAddItem("TAKE")}
-              >
-                <i className="fa-solid fa-plus">{"\u00A0"}</i> Додати
-              </button>}
-            </div>
-            {renderTable(takeItems, "TAKE")}
-
-            <hr />
-
-            {/* GIVE */}
-            <div className="is-flex is-justify-content-space-between mb-2">
-              <h4 className="title is-6">Видати контрагенту</h4>
-              {!isViewOnly && <button
-                className="button is-link is-light"
-                onClick={() => openAddItem("GIVE")}
-              >
-                <i className="fa-solid fa-plus">{"\u00A0"}</i> Додати
-              </button>}
-            </div>
-            {renderTable(giveItems, "GIVE")}
-
-            {errors.quantityMismatch && (
-              <p className="help is-danger mt-2">
-                Загальна кількість забраного і виданого не співпадає
-              </p>
-            )}
           </section>
 
-          <footer
-            className="modal-card-foot"
-            style={{ justifyContent: "center", gap: "20px" }}
-          >
-            {!isViewOnly && <button
-              className="button is-primary"
-              onClick={handleSubmit}
-              disabled={isSaveDisabled}
+          <footer className={`modal-card-foot ${styles.modalFooter}`}>
+            {!isViewOnly && (
+              <button
+                className={`button ${styles.saveButton}`}
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSaveDisabled}
+              >
+                Зберегти
+              </button>
+            )}
+            <button
+              className={`button ${styles.cancelButton}`}
+              type="button"
+              onClick={onClose}
             >
-              Зберегти
-            </button>}
-            <button className="button is-danger" onClick={onClose}>
               Скасувати
             </button>
           </footer>
