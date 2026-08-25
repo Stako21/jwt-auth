@@ -1877,3 +1877,9 @@ Frontend:
   - `npm run lint` in `client` passed
   - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
   - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-25 - Reverted site-wide table palette experiment
+
+- Reverted checkpoint `aff914b` through revert commit `daef10f` after the proposed global `ReportXlsx1C` table palette was rejected.
+- Restored the table styling that existed at checkpoint `def2322`, including the previously approved Balance row striping and modal dropdown colors.
+- User-managed `client/public/Sorce/*` and `documentation/*` files were not included in or changed by the rollback.
