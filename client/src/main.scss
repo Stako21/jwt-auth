@@ -16,6 +16,12 @@
   --ui-color-text-muted: #{$text-muted};
   --ui-color-outline: #{$outline-dark};
   --ui-color-outline-accent: #{$outline-green};
+  --ui-form-surface: #{$form-control-surface};
+  --ui-form-surface-disabled: #{$form-control-surface-disabled};
+  --ui-form-border: #{$form-control-border};
+  --ui-form-text: #{$form-control-text};
+  --ui-form-placeholder: #{$form-control-placeholder};
+  --ui-form-focus-ring: #{$form-control-focus-ring};
   --ui-color-danger: #{$negative};
   --ui-color-danger-muted: #{$negative-muted};
   --ui-color-warning: #{$warning};

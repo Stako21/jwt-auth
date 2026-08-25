@@ -1,4 +1,5 @@
 import React from "react";
+import FormInput from "../FormControl/FormInput.jsx";
 import cn from "classnames";
 import style from "./Filter.module.scss";
 
@@ -21,7 +22,8 @@ export const Filter = ({
       <label className={style.searchField} htmlFor="balance-search">
         <span className={style.inputShell}>
           <i className={`fa-solid fa-magnifying-glass ${style.inputIcon}`}></i>
-          <input
+          <FormInput
+            variant="bare"
             id="balance-search"
             type="search"
             value={searchQuery}

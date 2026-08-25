@@ -1,6 +1,7 @@
 import { ROLE_OPTIONS } from "../../utils/roles";
+import FormSelect from "../FormControl/FormSelect.jsx";
 
-<select
+<FormSelect
   name="role"
   value={form.role ?? ROLE_OPTIONS[0].value}
   onChange={(e) => setForm({ ...form, role: Number(e.target.value) })}
@@ -10,6 +11,6 @@ import { ROLE_OPTIONS } from "../../utils/roles";
       {opt.label}
     </option>
   ))}
-</select>
+</FormSelect>
 
 // При отправке: убедитесь, что тело содержит role: Number(form.role)

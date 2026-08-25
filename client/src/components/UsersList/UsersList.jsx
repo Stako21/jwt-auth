@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
+import FormSelect from "../FormControl/FormSelect.jsx";
 import { useSnackbar } from "notistack";
 import style from "./UsersList.module.scss";
 import { ROLE_IDS, ROLE_LABELS } from "../../utils/roles";
@@ -475,16 +477,16 @@ export const UsersList = ({
       <div className="field is-grouped is-grouped-centered" style={{ margin: 10 }}>
         <div className="field is-small">
           <div className="select is-small">
-            <select value={searchField} onChange={(e) => setSearchField(e.target.value)}>
+            <FormSelect value={searchField} onChange={(e) => setSearchField(e.target.value)}>
               <option value="all">Шукати в логіні та імені</option>
               <option value="name">Шукати в логіні</option>
               <option value="fullName">Шукати в імені</option>
-            </select>
+            </FormSelect>
           </div>
         </div>
         <div className="field is-expanded">
           <p className="control has-icons-left is-expanded">
-            <input
+            <FormInput
               className="input is-small"
               type="search"
               placeholder="Пошук користувача..."

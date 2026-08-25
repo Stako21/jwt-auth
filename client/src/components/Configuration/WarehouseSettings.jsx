@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
 import { enqueueSnackbar } from "notistack";
 import {
   fetchWarehouseSettings,
@@ -181,7 +182,7 @@ export function WarehouseSettings() {
               <div className="columns is-variable is-2 is-multiline is-align-items-flex-end">
                 <div className="column is-12-mobile is-4-tablet">
                   <label className="label">Дата початку дії</label>
-                  <input
+                  <FormInput
                     className="input"
                     type="date"
                     value={form.effectiveFrom}
@@ -192,7 +193,7 @@ export function WarehouseSettings() {
                 </div>
                 <div className="column is-6-mobile is-3-tablet">
                   <label className="label">Вартість рядка</label>
-                  <input
+                  <FormInput
                     className="input"
                     type="number"
                     min="0"
@@ -205,7 +206,7 @@ export function WarehouseSettings() {
                 </div>
                 <div className="column is-6-mobile is-3-tablet">
                   <label className="label">Вартість кілограма</label>
-                  <input
+                  <FormInput
                     className="input"
                     type="number"
                     min="0"

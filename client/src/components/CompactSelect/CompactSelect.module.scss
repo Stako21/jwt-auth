@@ -1,4 +1,5 @@
 @use "../../variables.scss" as *;
+@use "../FormControl/control" as form;
 
 .root {
   position: relative;
@@ -6,25 +7,15 @@
 }
 
 .trigger {
+  @include form.base-control;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: $space-2;
-  width: 100%;
-  height: $control-height-md;
-  padding: 0 $space-3;
   overflow: hidden;
-  border: 1px solid $outline-green;
-  border-radius: $radius-md;
-  outline: 0;
-  background: $surface-container-lowest;
-  color: $text-high;
   cursor: pointer;
-  font-size: 13px;
   text-align: left;
-  transition:
-    border-color $motion-fast $motion-ease,
-    box-shadow $motion-fast $motion-ease;
 
   span {
     min-width: 0;
@@ -62,7 +53,7 @@
 }
 
 .error {
-  border-color: $negative-muted !important;
+  @include form.error-control;
 }
 
 .options {

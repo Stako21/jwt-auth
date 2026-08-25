@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
 import { useSnackbar } from "notistack";
 import {
   fetchImportSourcesConfig,
@@ -229,14 +230,14 @@ export function ImportSourcesConfig() {
             <div className="field">
               <label className="label">Ключ</label>
               <div className="control">
-                <input className="input" value={form.sourceKey} disabled />
+                <FormInput className="input" value={form.sourceKey} disabled />
               </div>
             </div>
 
             <div className="field">
               <label className="label">Файл *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.fileName ? "is-danger" : ""}`}
                   value={form.fileName}
                   onChange={(e) =>
@@ -263,7 +264,7 @@ export function ImportSourcesConfig() {
 
             <div className="field">
               <label className="checkbox">
-                <input
+                <FormInput
                   type="checkbox"
                   checked={form.deleteAfterSuccess}
                   onChange={(e) =>
@@ -280,7 +281,7 @@ export function ImportSourcesConfig() {
 
             <div className="field">
               <label className="checkbox">
-                <input
+                <FormInput
                   type="checkbox"
                   checked={form.isActive}
                   onChange={(e) =>

@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import FormInput from "../components/FormControl/FormInput.jsx";
 import { createDocument, updateDocument } from "../services/documents.api";
 import ItemModal from "./ItemModal";
 import { getUnitLabel } from "../utils/unitLabels";
@@ -399,7 +400,7 @@ export default function CreateExchangeDocumentModal({
             <div className="field">
               <label className="label">Контрагент</label>
               <div className="control" style={{ position: "relative" }}>
-                <input
+                <FormInput
                   className={`input ${errors.contractorId ? "is-danger" : ""}`}
                   placeholder="Почніть вводити назву"
                   value={contractorSearch}

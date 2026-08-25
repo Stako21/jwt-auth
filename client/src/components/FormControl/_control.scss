@@ -1,0 +1,47 @@
+@use "../../variables.scss" as *;
+
+@mixin base-control {
+  width: 100%;
+  height: $control-height-md;
+  min-height: $control-height-md;
+  padding: 0 $space-3;
+  border: 1px solid $form-control-border;
+  border-radius: $radius-md;
+  outline: 0;
+  background-color: $form-control-surface;
+  color: $form-control-text;
+  font-size: 13px;
+  line-height: 1.2;
+  transition:
+    border-color $motion-fast $motion-ease,
+    background-color $motion-fast $motion-ease,
+    box-shadow $motion-fast $motion-ease;
+
+  &::placeholder {
+    color: $form-control-placeholder;
+    opacity: 1;
+  }
+
+  &:hover:not(:disabled):not(:focus-visible) {
+    border-color: $form-control-border-hover;
+  }
+
+  &:focus-visible {
+    border-color: $primary-accent;
+    box-shadow: 0 0 0 2px $form-control-focus-ring;
+  }
+
+  &:disabled,
+  &[readonly] {
+    border-color: $outline-dark;
+    background-color: $form-control-surface-disabled;
+    color: $text-muted;
+    cursor: not-allowed;
+    opacity: 0.62;
+  }
+}
+
+@mixin error-control {
+  border-color: $negative-muted !important;
+  background-color: $form-control-error-surface !important;
+}

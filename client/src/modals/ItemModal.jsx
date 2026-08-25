@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import FormInput from "../components/FormControl/FormInput.jsx";
 import DateInput from "../components/DateInput/DateInput.jsx";
 import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
 import style from "./ItemModal.module.scss";
@@ -188,7 +189,7 @@ export default function ItemModal({
 
             <div className="column">
               <label className="label">Кількість *</label>
-              <input
+              <FormInput
                 className={`input ${errors.quantity ? "is-danger" : ""}`}
                 type="number"
                 min="0"

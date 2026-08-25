@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
 import { fetchStaticReport } from "../../services/reports.api";
 import style from "./ReportXlsx1CSales.module.scss";
 import { DataLoader } from "../DataLoader/DataLoader";
@@ -160,7 +161,8 @@ export function ReportXlsx1CSales({ report, setLastUpdateTime }) {
         <div className={style.filters}>
           <label className={style.field}>
             <span>З</span>
-            <input
+            <FormInput
+              compact
               type="date"
               value={dateFrom}
               onChange={(event) => setDateFrom(event.target.value)}
@@ -169,7 +171,8 @@ export function ReportXlsx1CSales({ report, setLastUpdateTime }) {
 
           <label className={style.field}>
             <span>По</span>
-            <input
+            <FormInput
+              compact
               type="date"
               value={dateTo}
               onChange={(event) => setDateTo(event.target.value)}

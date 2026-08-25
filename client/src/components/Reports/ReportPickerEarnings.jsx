@@ -1,4 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
+import FormSelect from "../FormControl/FormSelect.jsx";
 import { fetchStaticReport } from "../../services/reports.api";
 import style from "./ReportPickerEarnings.module.scss";
 import { DataLoader } from "../DataLoader/DataLoader";
@@ -152,17 +154,18 @@ export function ReportPickerEarnings({ setLastUpdateTime }) {
             <span className={style.dateLabel}>
               З <small>{formatReportBoundary(range.dateFrom)}</small>
             </span>
-            <input type="date" value={range.dateFrom} onChange={(e) => setRange((current) => ({ ...current, dateFrom: e.target.value }))} />
+            <FormInput compact type="date" value={range.dateFrom} onChange={(e) => setRange((current) => ({ ...current, dateFrom: e.target.value }))} />
           </label>
           <label>
             <span className={style.dateLabel}>
               По <small>{formatReportBoundary(range.dateTo, 1)}</small>
             </span>
-            <input type="date" value={range.dateTo} onChange={(e) => setRange((current) => ({ ...current, dateTo: e.target.value }))} />
+            <FormInput compact type="date" value={range.dateTo} onChange={(e) => setRange((current) => ({ ...current, dateTo: e.target.value }))} />
           </label>
           <label className={style.searchField}>
             Пошук
-            <input
+            <FormInput
+              compact
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -171,7 +174,8 @@ export function ReportPickerEarnings({ setLastUpdateTime }) {
           </label>
           <label className={style.warehouseField}>
             Склад
-            <select
+            <FormSelect
+              compact
               value={warehouseGuid}
               onChange={(event) => setWarehouseGuid(event.target.value)}
             >
@@ -184,7 +188,7 @@ export function ReportPickerEarnings({ setLastUpdateTime }) {
                   {warehouse.warehouseName}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
           <button className="button is-primary is-small" type="submit">Показати</button>
         </form>

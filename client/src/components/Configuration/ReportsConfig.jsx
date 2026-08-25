@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
+import FormSelect from "../FormControl/FormSelect.jsx";
 import { useSnackbar } from "notistack";
 import {
   createReportConfig,
@@ -451,7 +453,7 @@ export function ReportsConfig() {
             <div className={formFieldClassName}>
               <label className={labelClassName}>Ключ</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input is-small ${errors.reportKey ? "is-danger" : ""}`}
                   value={form.reportKey}
                   onChange={(e) =>
@@ -471,7 +473,7 @@ export function ReportsConfig() {
             <div className={formFieldClassName}>
               <label className={labelClassName}>Маршрут *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input is-small ${errors.route ? "is-danger" : ""}`}
                   value={form.route}
                   onChange={(e) =>
@@ -486,7 +488,7 @@ export function ReportsConfig() {
             <div className={formFieldClassName}>
               <label className={labelClassName}>Назва в меню *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input is-small ${errors.menuTitle ? "is-danger" : ""}`}
                   value={form.menuTitle}
                   onChange={(e) =>
@@ -506,7 +508,7 @@ export function ReportsConfig() {
             <div className={formFieldClassName}>
               <label className={labelClassName}>Файл *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input is-small ${errors.fileName ? "is-danger" : ""}`}
                   value={form.fileName}
                   onChange={(e) =>
@@ -527,7 +529,7 @@ export function ReportsConfig() {
               <label className={labelClassName}>Тип звіту *</label>
               <div className="control">
                 <div className="select is-small is-fullwidth">
-                  <select
+                  <FormSelect
                     value={form.reportType}
                     onChange={(e) =>
                       setForm((current) => ({
@@ -539,7 +541,7 @@ export function ReportsConfig() {
                     <option value="xlsx-1c">Звіти XLSX з 1С</option>
                     <option value="xlsx-1c-sales">XLSX 1C sales DB</option>
                     <option value="static-json">Static JSON</option>
-                  </select>
+                  </FormSelect>
                 </div>
               </div>
             </div>
@@ -550,7 +552,7 @@ export function ReportsConfig() {
                 <div className={formFieldClassName}>
                   <label className={labelClassName}>Лист Excel</label>
                   <div className="control">
-                    <input
+                    <FormInput
                       className="input is-small"
                       value={form.sheetName}
                       onChange={(e) =>
@@ -567,7 +569,7 @@ export function ReportsConfig() {
                 <div className="columns is-variable is-2 mb-1">
                   <div className="column">
                     <label className={labelClassName}>Рядок заголовків *</label>
-                    <input
+                    <FormInput
                       className={`input is-small ${
                         errors.headerRow ? "is-danger" : ""
                       }`}
@@ -587,7 +589,7 @@ export function ReportsConfig() {
                   </div>
                   <div className="column">
                     <label className={labelClassName}>Дані з рядка *</label>
-                    <input
+                    <FormInput
                       className={`input is-small ${
                         errors.dataStartRow ? "is-danger" : ""
                       }`}
@@ -609,7 +611,7 @@ export function ReportsConfig() {
 
                 <div className={formFieldClassName}>
                   <label className={labelClassName}>Зберігати, днів</label>
-                  <input
+                  <FormInput
                     className={`input is-small ${
                       errors.retentionDays ? "is-danger" : ""
                     }`}
@@ -631,7 +633,7 @@ export function ReportsConfig() {
                 {form.reportType === "xlsx-1c-sales" && (
                   <div className={formFieldClassName}>
                     <label className="checkbox" style={{ fontSize: 12 }}>
-                      <input
+                      <FormInput
                         type="checkbox"
                         checked={form.scheduledImportEnabled}
                         onChange={(e) =>
@@ -657,7 +659,7 @@ export function ReportsConfig() {
                 <label className={labelClassName}>
                   Зберігати дані, днів (мінімум 180)
                 </label>
-                <input
+                <FormInput
                   className={`input is-small ${
                     errors.retentionDays ? "is-danger" : ""
                   }`}
@@ -701,7 +703,7 @@ export function ReportsConfig() {
                       key={roleId}
                       style={{ fontSize: 12, whiteSpace: "nowrap" }}
                     >
-                      <input
+                      <FormInput
                         type="checkbox"
                         checked={isChecked}
                         disabled={isAdminRole || isPickerRole}
@@ -724,7 +726,7 @@ export function ReportsConfig() {
             <div className={formFieldClassName}>
               <label className={labelClassName}>Порядок *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input is-small ${errors.sortOrder ? "is-danger" : ""}`}
                   type="number"
                   value={form.sortOrder}
@@ -743,7 +745,7 @@ export function ReportsConfig() {
 
             <div className={formFieldClassName}>
               <label className="checkbox">
-                <input
+                <FormInput
                   type="checkbox"
                   checked={form.isActive}
                   onChange={(e) =>

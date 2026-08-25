@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
 import { useSnackbar } from "notistack";
 import {
   fetchSchedulerTasks,
@@ -340,7 +341,7 @@ export function SchedulerConfig({ title = "Планувальник" }) {
               <tr key={task.key}>
                 <td>
                   <label className="checkbox">
-                    <input
+                    <FormInput
                       type="checkbox"
                       checked={Boolean(task.active)}
                       disabled={Boolean(savingTaskKey) || Boolean(runningTaskKey)}
@@ -357,7 +358,7 @@ export function SchedulerConfig({ title = "Планувальник" }) {
                   )}
                 </td>
                 <td style={{ maxWidth: 180 }}>
-                  <input
+                  <FormInput
                     type="number"
                     min="1"
                     className="input"

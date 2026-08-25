@@ -1,0 +1,79 @@
+@use "../../variables.scss" as *;
+@use "./control" as form;
+
+.control {
+  @include form.base-control;
+}
+
+.compact {
+  height: $control-height-sm;
+  min-height: $control-height-sm;
+  padding-right: $space-2;
+  padding-left: $space-2;
+  font-size: 12px;
+}
+
+.input {
+  &[type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &[type="date"] {
+    color-scheme: dark;
+    cursor: pointer;
+  }
+
+  &[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: brightness(0) saturate(100%) invert(88%) sepia(8%) saturate(310%);
+    opacity: 0.82;
+  }
+
+  &[type="search"]::-webkit-search-cancel-button {
+    cursor: pointer;
+    filter: invert(0.82);
+  }
+}
+
+.select {
+  padding-right: 34px;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, $text-muted 50%),
+    linear-gradient(135deg, $text-muted 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+  cursor: pointer;
+
+  option {
+    background: $surface-container-highest;
+    color: $form-control-text;
+  }
+}
+
+.choice {
+  width: 16px;
+  height: 16px;
+  margin-right: $space-2;
+  accent-color: $primary-accent;
+  cursor: pointer;
+  vertical-align: -3px;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+  }
+}
+
+.file {
+  max-width: 100%;
+  color: $form-control-text;
+  font-size: 12px;
+}
+
+.error {
+  @include form.error-control;
+}

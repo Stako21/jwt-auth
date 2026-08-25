@@ -1,4 +1,6 @@
 import { Fragment, useContext, useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
+import FormSelect from "../FormControl/FormSelect.jsx";
 import { fetchStaticReport } from "../../services/reports.api";
 import { AuthContext } from "../../context/AuthContext";
 import { ROLE_IDS } from "../../utils/roles";
@@ -331,7 +333,7 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
               З
               <small>{formatReportBoundary(range.dateFrom)}</small>
             </span>
-            <input
+            <FormInput
               type="date"
               value={range.dateFrom}
               onChange={(event) =>
@@ -348,7 +350,7 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
               По
               <small>{formatReportBoundary(range.dateTo, 1)}</small>
             </span>
-            <input
+            <FormInput
               type="date"
               value={range.dateTo}
               onChange={(event) =>
@@ -362,7 +364,7 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
 
           <label className={style.field}>
             <span>Склад</span>
-            <select
+            <FormSelect
               value={selectedWarehouse}
               onChange={(event) => setSelectedWarehouse(event.target.value)}
             >
@@ -372,12 +374,12 @@ export function ReportBillOfLading({ setLastUpdateTime }) {
                   {warehouse}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
 
           <label className={style.searchField}>
             <span>Пошук</span>
-            <input
+            <FormInput
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}

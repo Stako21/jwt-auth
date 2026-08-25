@@ -1,4 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import FormInput from "../components/FormControl/FormInput.jsx";
+import FormSelect from "../components/FormControl/FormSelect.jsx";
 import DocumentTable from "../components/Documents/DocumentsTable.jsx";
 import { fetchDocuments, getDocumentById } from "../services/documents.api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
@@ -241,7 +243,7 @@ export default function DocumentsPage() {
           <div className={style.filterLabelRow}>
             <label htmlFor="documents-date-from">З</label>
             <label className={style.unboundedToggle}>
-              <input
+              <FormInput
                 type="checkbox"
                 checked={period.withoutFrom}
                 onChange={(event) =>
@@ -269,7 +271,7 @@ export default function DocumentsPage() {
           <div className={style.filterLabelRow}>
             <label htmlFor="documents-date-to">По</label>
             <label className={style.unboundedToggle}>
-              <input
+              <FormInput
                 type="checkbox"
                 checked={period.withoutTo}
                 onChange={(event) =>
@@ -300,7 +302,7 @@ export default function DocumentsPage() {
             <div className={style.statusOptions}>
               {DOCUMENT_STATUSES.map((status) => (
                 <label key={status.value}>
-                  <input
+                  <FormInput
                     type="checkbox"
                     checked={filters.statuses.includes(status.value)}
                     onChange={() => toggleStatus(status.value)}
@@ -314,7 +316,7 @@ export default function DocumentsPage() {
 
         <label className={style.filterControl}>
           <span className={style.filterLabel}>Контрагент</span>
-          <select
+          <FormSelect
             value={filters.contractor}
             onChange={(event) =>
               setFilters((current) => ({
@@ -331,12 +333,12 @@ export default function DocumentsPage() {
                   {contractor.name}
                 </option>
               ))}
-          </select>
+          </FormSelect>
         </label>
 
         <label className={style.filterControl}>
           <span className={style.filterLabel}>Автор</span>
-          <select
+          <FormSelect
             value={filters.authorId}
             onChange={(event) =>
               setFilters((current) => ({
@@ -351,7 +353,7 @@ export default function DocumentsPage() {
                 {author.name}
               </option>
             ))}
-          </select>
+          </FormSelect>
         </label>
 
         <div className={style.filterActions}>

@@ -1,14 +1,12 @@
 import { memo } from "react";
-import style from "./select.module.scss";
+import FormSelect from "../FormControl/FormSelect.jsx";
 
 export default memo(({ options = [], ...rest }) => (
-  <div className={style.inputBox}>
-  <select {...rest}>
+  <FormSelect {...rest}>
       {options.map(({ id, title }) => (
         <option key={id} value={id}>
           {title}
         </option>
       ))}
-    </select>
-  </div>
+  </FormSelect>
 ));

@@ -55,6 +55,7 @@ export default function CompactSelect({
         disabled={disabled}
         role="combobox"
         aria-label={ariaLabel}
+        aria-invalid={hasError || undefined}
         aria-expanded={isOpen}
         aria-controls={listboxId}
         aria-haspopup="listbox"

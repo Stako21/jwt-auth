@@ -1896,3 +1896,20 @@ Frontend:
   - `git diff --check -- client/src` passed
   - generated `client/dist` source-file changes from build were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not included
+
+## 2026-08-25 - Unified form controls
+
+- Added reusable `FormInput` and `FormSelect` components with shared standard, compact, bare/composite, error, disabled, placeholder, checkbox/radio, number, search, date, and native-option styling.
+- Extracted the common form-control surface, border, text, focus ring, geometry, transition, and error behavior into centralized SCSS tokens and a reusable `_control.scss` mixin.
+- Made every standard date field use the existing `DateInput` implementation: `FormInput type="date"` delegates to it, and `DateInput` now supports the same compact and error states.
+- Updated `CompactSelect` to consume the same base-control mixin while preserving its opaque emerald-hover option menu and keyboard/outside-click behavior.
+- Migrated native fields across document filters/modals, configuration screens, reports, users, notifications, header/sidebar selection, sign-in, and legacy signup wrappers without changing values, handlers, validation, field order, or business logic.
+- Kept login/search-shell and navigation selects as explicit `bare` composition variants so their icons and containing surfaces remain intact while still reusing the shared components.
+- Mapped transitional Bulma input variables to the same form tokens and removed conflicting hardcoded report control colors.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - `git diff --check -- client/src` passed
+  - headless desktop check confirmed the sign-in composition remains visually intact
+  - generated `client/dist` source-file changes from build were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

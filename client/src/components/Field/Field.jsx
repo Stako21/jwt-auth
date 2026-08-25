@@ -1,5 +1,6 @@
 import { memo, useState } from "react";
 import cn from "classnames";
+import FormInput from "../FormControl/FormInput.jsx";
 import style from "./field.module.scss";
 
 const Field = ({ register, name, error = false, helperText = "", ...rest }) => {
@@ -16,7 +17,8 @@ const Field = ({ register, name, error = false, helperText = "", ...rest }) => {
   return (
 
     <div className={style.inputBox}>
-      <input
+      <FormInput
+        variant="bare"
         className={cn(style.input, { [style.error]: error })}
         {...register(name)}
         {...rest}

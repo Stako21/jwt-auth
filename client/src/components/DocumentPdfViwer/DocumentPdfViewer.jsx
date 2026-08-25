@@ -1,4 +1,5 @@
 import { useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
 
 export default function DocumentPdfViewer() {
   const [docId, setDocId] = useState("");
@@ -57,7 +58,7 @@ export default function DocumentPdfViewer() {
     <div style={{ maxWidth: 400 }}>
       <h3>Завантаження документа (PDF)</h3>
 
-      <input
+      <FormInput
         type="number"
         placeholder="ID документа"
         value={docId}

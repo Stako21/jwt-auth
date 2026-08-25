@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
 import { useSnackbar } from "notistack";
 import {
   createCityConfig,
@@ -253,7 +254,7 @@ export function CitiesConfig() {
             <div className="field">
               <label className="label">Слаг *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.slug ? "is-danger" : ""}`}
                   value={form.slug}
                   onChange={(e) =>
@@ -268,7 +269,7 @@ export function CitiesConfig() {
             <div className="field">
               <label className="label">Повна назва *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.name ? "is-danger" : ""}`}
                   value={form.name}
                   onChange={(e) =>
@@ -283,7 +284,7 @@ export function CitiesConfig() {
             <div className="field">
               <label className="label">Коротка назва *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.shortName ? "is-danger" : ""}`}
                   value={form.shortName}
                   onChange={(e) =>
@@ -303,7 +304,7 @@ export function CitiesConfig() {
             <div className="field">
               <label className="label">Префікс документів *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${
                     errors.documentPrefix ? "is-danger" : ""
                   }`}
@@ -325,7 +326,7 @@ export function CitiesConfig() {
             <div className="field">
               <label className="label">Порядок *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.sortOrder ? "is-danger" : ""}`}
                   type="number"
                   value={form.sortOrder}
@@ -344,7 +345,7 @@ export function CitiesConfig() {
 
             <div className="field">
               <label className="checkbox">
-                <input
+                <FormInput
                   type="checkbox"
                   checked={form.isActive}
                   onChange={(e) =>

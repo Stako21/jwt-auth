@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import FormInput from "../components/FormControl/FormInput.jsx";
 import { AuthClient } from "../context/AuthContext";
 import { useSnackbar } from "notistack";
 import { UsersList } from "../components/UsersList/UsersList";
@@ -163,7 +164,7 @@ export default function AdminPage() {
                 </header>
                 <div className="modal-card-body">
                   <div className="field">
-                    <input
+                    <FormInput
                       className="input"
                       type="text"
                       placeholder="Введіть новий пароль"

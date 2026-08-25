@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
 import style from "./ReportDebet.module.scss";
 import { fetchStaticReport } from "../../services/reports.api";
 import { DataLoader } from "../DataLoader/DataLoader";
@@ -403,7 +404,7 @@ export function ReportDebet({ setLastUpdateTime }) {
 
           <label className={style.searchField}>
             <span>Пошук</span>
-            <input
+            <FormInput
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -412,7 +413,7 @@ export function ReportDebet({ setLastUpdateTime }) {
           </label>
 
           <label className={style.checkboxField}>
-            <input
+            <FormInput
               type="checkbox"
               checked={onlyOverdue}
               onChange={(event) => setOnlyOverdue(event.target.checked)}

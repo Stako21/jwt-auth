@@ -1,4 +1,5 @@
 import React, { useContext, useState } from "react";
+import FormInput from "../components/FormControl/FormInput.jsx";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { AuthContext } from "../context/AuthContext";
@@ -86,7 +87,8 @@ export default function SignIn() {
                 <circle cx="12" cy="8" r="3.25" />
                 <path d="M5.5 19c.7-3.1 3.1-5 6.5-5s5.8 1.9 6.5 5" />
               </svg>
-              <input
+              <FormInput
+                variant="bare"
                 {...userNameField}
                 type="text"
                 autoComplete="username"
@@ -105,7 +107,8 @@ export default function SignIn() {
                 <rect x="5.5" y="10" width="13" height="10" rx="2" />
                 <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10" />
               </svg>
-              <input
+              <FormInput
+                variant="bare"
                 {...passwordField}
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"

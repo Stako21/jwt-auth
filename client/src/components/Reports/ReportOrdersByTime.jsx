@@ -1,4 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
+import FormSelect from "../FormControl/FormSelect.jsx";
 import style from "./ReportOrdersByTime.module.scss";
 import { fetchStaticReport } from "../../services/reports.api";
 import { DataLoader } from "../DataLoader/DataLoader";
@@ -361,7 +363,7 @@ export function ReportOrdersByTime({ setLastUpdateTime }) {
         <div className={style.filters}>
           <label className={style.field}>
             <span>Дата</span>
-            <select
+            <FormSelect
               value={selectedDate}
               onChange={(event) => setSelectedDate(event.target.value)}
             >
@@ -370,12 +372,12 @@ export function ReportOrdersByTime({ setLastUpdateTime }) {
                   {formatDateLabel(dateKey)}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
 
           <label className={style.field}>
             <span>Місто</span>
-            <select
+            <FormSelect
               value={selectedCity}
               onChange={(event) => setSelectedCity(event.target.value)}
             >
@@ -385,12 +387,12 @@ export function ReportOrdersByTime({ setLastUpdateTime }) {
                   {city}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
 
           <label className={style.searchField}>
             <span>Пошук</span>
-            <input
+            <FormInput
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}

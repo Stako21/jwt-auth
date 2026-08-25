@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
+import FormSelect from "../FormControl/FormSelect.jsx";
 import { enqueueSnackbar } from "notistack";
 import { AuthClient } from "../../context/AuthContext";
 import {
@@ -341,7 +343,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
           <div className="field">
             <label className="label">Логін користувача:</label>
             <div className="control">
-              <input
+              <FormInput
                 className="input"
                 type="text"
                 name="userName"
@@ -356,7 +358,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
               Відображуване ім'я (user_name), необов'язково:
             </label>
             <div className="control">
-              <input
+              <FormInput
                 className="input"
                 type="text"
                 name="user_name"
@@ -369,7 +371,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
           <div className="field">
             <label className="label">UserGUID (необов'язково):</label>
             <div className="control">
-              <input
+              <FormInput
                 className="input"
                 type="text"
                 name="userGuid"
@@ -389,7 +391,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
             <div className="field">
               <label className="label">Пароль:</label>
               <div className="control">
-                <input
+                <FormInput
                   className="input"
                   type="text"
                   name="password"
@@ -404,7 +406,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
             <label className="label">Роль:</label>
             <div className="control">
               <div className="select is-fullwidth">
-                <select
+                <FormSelect
                   name="role"
                   value={formValues.role}
                   onChange={handleChange}
@@ -414,7 +416,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
                       {role.title}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
             </div>
           </div>
@@ -425,7 +427,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
               <label className="label">Керівник:</label>
               <div className="control">
                 <div className="select is-fullwidth">
-                  <select
+                  <FormSelect
                     value={formValues.supervisorId || ""}
                     onChange={(e) =>
                       setFormValues((current) => ({
@@ -442,7 +444,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
                         {u.user_name}
                       </option>
                     ))}
-                  </select>
+                  </FormSelect>
                 </div>
                 {cityWarningParent && (
                   <p className="help is-warning">
@@ -457,7 +459,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
             <label className="label">Місто:</label>
             <div className="control is-expanded">
               <div className="select is-fullwidth">
-                <select
+                <FormSelect
                   name="city"
                   value={formValues.city}
                   onChange={handleChange}
@@ -467,7 +469,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
                       {city.name}
                     </option>
                   ))}
-                </select>
+                </FormSelect>
               </div>
             </div>
           </div>
@@ -486,7 +488,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
               ) : branchOptions.length ? (
                 branchOptions.map((branch) => (
                   <label key={branch.id} className="checkbox is-block mb-2">
-                    <input
+                    <FormInput
                       type="checkbox"
                       checked={formValues.branchAccessIds.includes(branch.id)}
                       onChange={() => toggleAccessId("branchAccessIds", branch.id)}
@@ -518,7 +520,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
               ) : cityAccessOptions.length ? (
                 cityAccessOptions.map((city) => (
                   <label key={city.id} className="checkbox is-block mb-2">
-                    <input
+                    <FormInput
                       type="checkbox"
                       checked={formValues.cityAccessIds.includes(city.id)}
                       onChange={() => toggleAccessId("cityAccessIds", city.id)}

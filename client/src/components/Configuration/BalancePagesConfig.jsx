@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
+import FormSelect from "../FormControl/FormSelect.jsx";
 import { useSnackbar } from "notistack";
 import {
   createBalancePageConfig,
@@ -277,7 +279,7 @@ export function BalancePagesConfig() {
             <div className="field">
               <label className="label">Слаг *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.slug ? "is-danger" : ""}`}
                   value={form.slug}
                   onChange={(e) =>
@@ -292,7 +294,7 @@ export function BalancePagesConfig() {
             <div className="field">
               <label className="label">Назва в меню *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.menuTitle ? "is-danger" : ""}`}
                   value={form.menuTitle}
                   onChange={(e) =>
@@ -312,7 +314,7 @@ export function BalancePagesConfig() {
             <div className="field">
               <label className="label">Заголовок сторінки *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.headerTitle ? "is-danger" : ""}`}
                   value={form.headerTitle}
                   onChange={(e) =>
@@ -332,7 +334,7 @@ export function BalancePagesConfig() {
             <div className="field">
               <label className="label">Файл *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.fileName ? "is-danger" : ""}`}
                   value={form.fileName}
                   onChange={(e) =>
@@ -352,7 +354,7 @@ export function BalancePagesConfig() {
             <div className="field">
               <label className="label">Множитель цены, %</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${
                     errors.priceMultiplierPercent ? "is-danger" : ""
                   }`}
@@ -382,7 +384,7 @@ export function BalancePagesConfig() {
               <label className="label">Місто</label>
               <div className="control">
                 <div className="select is-fullwidth">
-                  <select
+                  <FormSelect
                     value={form.cityId}
                     onChange={(e) =>
                       setForm((current) => ({
@@ -397,7 +399,7 @@ export function BalancePagesConfig() {
                         {city.name} ({city.shortName})
                       </option>
                     ))}
-                  </select>
+                  </FormSelect>
                 </div>
               </div>
             </div>
@@ -405,7 +407,7 @@ export function BalancePagesConfig() {
             <div className="field">
               <label className="label">Порядок *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.sortOrder ? "is-danger" : ""}`}
                   type="number"
                   value={form.sortOrder}
@@ -424,7 +426,7 @@ export function BalancePagesConfig() {
 
             <div className="field">
               <label className="checkbox">
-                <input
+                <FormInput
                   type="checkbox"
                   checked={form.isActive}
                   onChange={(e) =>

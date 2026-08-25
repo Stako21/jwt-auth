@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
+import FormSelect from "../FormControl/FormSelect.jsx";
 import { useSnackbar } from "notistack";
 import {
   fetchRegionNotifications,
@@ -182,7 +184,7 @@ export function RegionNotifications() {
               <label className="label">Місто *</label>
               <div className="control">
                 <div className="select is-fullwidth">
-                  <select
+                  <FormSelect
                     value={formData.city}
                     onChange={(e) =>
                       setFormData({ ...formData, city: Number(e.target.value) })
@@ -193,7 +195,7 @@ export function RegionNotifications() {
                         {city.name}
                       </option>
                     ))}
-                  </select>
+                  </FormSelect>
                 </div>
               </div>
             </div>
@@ -201,7 +203,7 @@ export function RegionNotifications() {
             <div className="field">
               <label className="label">Email</label>
               <div className="control">
-                <input
+                <FormInput
                   className="input"
                   type="email"
                   placeholder="example@mail.com"
@@ -216,7 +218,7 @@ export function RegionNotifications() {
             <div className="field">
               <label className="label">Rocket.Chat канал</label>
               <div className="control">
-                <input
+                <FormInput
                   className="input"
                   type="text"
                   placeholder="#channel-name"
@@ -231,7 +233,7 @@ export function RegionNotifications() {
             <div className="field">
               <div className="control">
                 <label className="checkbox">
-                  <input
+                  <FormInput
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) =>

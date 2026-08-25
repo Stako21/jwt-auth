@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
+import FormSelect from "../FormControl/FormSelect.jsx";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import cn from "classnames";
 import { AuthContext } from "../../context/AuthContext";
@@ -112,7 +113,8 @@ function SidebarContent({
             })}
           >
             <i className={NAV_ITEMS.reports.icon}></i>
-            <select
+            <FormSelect
+              variant="bare"
               value={currentStaticReport?.route || ""}
               onChange={handleNavigationSelect}
               aria-label="Звіти"
@@ -123,7 +125,7 @@ function SidebarContent({
                   {report.menuTitle}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
         ) : null}
 
@@ -160,7 +162,8 @@ function SidebarContent({
             })}
           >
             <i className={NAV_ITEMS.settings.icon}></i>
-            <select
+            <FormSelect
+              variant="bare"
               value={
                 location.pathname === "/settings/warehouses"
                   ? "/settings/warehouses"
@@ -171,7 +174,7 @@ function SidebarContent({
             >
               <option value="">{NAV_ITEMS.settings.label}</option>
               <option value="/settings/warehouses">Налаштування складу</option>
-            </select>
+            </FormSelect>
           </label>
         ) : null}
       </nav>
@@ -180,7 +183,8 @@ function SidebarContent({
         {canSwitchBranches ? (
           <label className={style.drawerBranchSelect}>
             <i className="fa-regular fa-building"></i>
-            <select
+            <FormSelect
+              variant="bare"
               value={currentBranchId}
               onChange={(event) => handleSwitchBranch(Number(event.target.value))}
               disabled={isSwitchingBranch}
@@ -191,7 +195,7 @@ function SidebarContent({
                   {branch.shortName || branch.name}
                 </option>
               ))}
-            </select>
+            </FormSelect>
           </label>
         ) : null}
 
@@ -395,7 +399,8 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
           {canSwitchBranches ? (
             <label className={style.branchSelect}>
               <i className="fa-solid fa-location-dot"></i>
-              <select
+              <FormSelect
+                variant="bare"
                 value={currentBranchId}
                 onChange={(event) => handleSwitchBranch(Number(event.target.value))}
                 disabled={isSwitchingBranch}
@@ -406,7 +411,7 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
                     {branch.shortName || branch.name}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
             </label>
           ) : (
             <span className={style.metaItem}>

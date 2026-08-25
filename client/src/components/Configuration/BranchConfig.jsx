@@ -1,4 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from "react";
+import FormInput from "../FormControl/FormInput.jsx";
 import { useSnackbar } from "notistack";
 import { AuthContext } from "../../context/AuthContext";
 import {
@@ -319,7 +320,7 @@ export function BranchConfig() {
             <div className="field">
               <label className="label">Слаг *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.slug ? "is-danger" : ""}`}
                   value={form.slug}
                   onChange={(e) =>
@@ -334,7 +335,7 @@ export function BranchConfig() {
             <div className="field">
               <label className="label">Повна назва *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.name ? "is-danger" : ""}`}
                   value={form.name}
                   onChange={(e) =>
@@ -349,7 +350,7 @@ export function BranchConfig() {
             <div className="field">
               <label className="label">Коротка назва *</label>
               <div className="control">
-                <input
+                <FormInput
                   className={`input ${errors.shortName ? "is-danger" : ""}`}
                   value={form.shortName}
                   onChange={(e) =>
@@ -369,7 +370,7 @@ export function BranchConfig() {
             {!editingBranchId && (
               <div className="field">
                 <label className="checkbox">
-                  <input
+                  <FormInput
                     type="checkbox"
                     checked={form.cloneFromCurrentBranch}
                     onChange={(e) =>

@@ -3,7 +3,7 @@ import { forwardRef } from "react";
 import style from "./DateInput.module.scss";
 
 const DateInput = forwardRef(function DateInput(
-  { className, hasError = false, ...props },
+  { className, hasError = false, compact = false, ...props },
   ref,
 ) {
   return (
@@ -11,7 +11,9 @@ const DateInput = forwardRef(function DateInput(
       {...props}
       ref={ref}
       type="date"
+      aria-invalid={hasError || props["aria-invalid"] || undefined}
       className={cn(style.input, className, {
+        [style.compact]: compact,
         [style.error]: hasError,
       })}
     />

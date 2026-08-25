@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import FormInput from "../components/FormControl/FormInput.jsx";
 import {
   createDocument,
   updateDocument,
@@ -288,7 +289,7 @@ export default function CreateReturnDocumentModal({
             <div className="field">
               <label className="label">Контрагент</label>
               <div className="control" style={{ position: "relative" }}>
-                <input
+                <FormInput
                   className={`input ${errors.contractorId ? "is-danger" : ""}`}
                   placeholder="Почніть вводити назву"
                   value={contractorSearch}

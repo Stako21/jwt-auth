@@ -41,13 +41,13 @@ html[data-theme="dark"] {
   --bulma-button-primary-color: var(--ui-color-text-high);
   --bulma-button-primary-hover-background-color: var(--ui-color-accent-hover);
 
-  --bulma-input-background-color: var(--ui-color-surface-input);
-  --bulma-input-border-color: var(--ui-color-outline-accent);
-  --bulma-input-color: var(--ui-color-text-high);
-  --bulma-input-placeholder-color: var(--ui-color-text-muted);
+  --bulma-input-background-color: var(--ui-form-surface);
+  --bulma-input-border-color: var(--ui-form-border);
+  --bulma-input-color: var(--ui-form-text);
+  --bulma-input-placeholder-color: var(--ui-form-placeholder);
   --bulma-input-focus-border-color: var(--ui-color-accent-light);
-  --bulma-input-focus-box-shadow-color: rgba(16, 185, 129, 0.24);
-  --bulma-input-disabled-background-color: var(--ui-color-surface-container-high);
+  --bulma-input-focus-box-shadow-color: var(--ui-form-focus-ring);
+  --bulma-input-disabled-background-color: var(--ui-form-surface-disabled);
   --bulma-input-disabled-border-color: var(--ui-color-outline);
   --bulma-input-disabled-color: var(--ui-color-text-muted);
 
@@ -74,4 +74,9 @@ html[data-theme="dark"] {
 
 html[data-theme="dark"] .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
   background-color: var(--ui-table-row-even);
+}
+
+/* FormSelect draws its own arrow inside legacy Bulma select wrappers. */
+.select:has(> select[data-ui-control="select"])::after {
+  display: none;
 }

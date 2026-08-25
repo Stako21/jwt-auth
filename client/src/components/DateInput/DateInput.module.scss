@@ -1,40 +1,27 @@
 @use "../../variables.scss" as *;
+@use "../FormControl/control" as form;
 
 .input {
-  width: 100%;
-  height: $control-height-md;
-  min-height: $control-height-md;
-  padding: 0 $space-2;
-  border: 1px solid $outline-green;
-  border-radius: $radius-md;
-  outline: 0;
-  background: $surface-container-lowest;
-  color: $text-high;
+  @include form.base-control;
+
   color-scheme: dark;
-  font-size: 12px;
   cursor: pointer;
-  transition:
-    border-color $motion-fast $motion-ease,
-    box-shadow $motion-fast $motion-ease;
-
-  &:focus-visible {
-    border-color: $primary-accent;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
-  }
-
-  &:disabled {
-    color: $text-muted;
-    cursor: not-allowed;
-    opacity: 0.48;
-  }
 
   &::-webkit-calendar-picker-indicator {
     cursor: pointer;
-    opacity: 0.78;
+    filter: brightness(0) saturate(100%) invert(88%) sepia(8%) saturate(310%);
+    opacity: 0.82;
   }
 }
 
+.compact {
+  height: $control-height-sm;
+  min-height: $control-height-sm;
+  padding-right: $space-2;
+  padding-left: $space-2;
+  font-size: 12px;
+}
+
 .error {
-  border-color: $negative-muted !important;
-  background: $negative-surface !important;
+  @include form.error-control;
 }
