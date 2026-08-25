@@ -1877,3 +1877,15 @@ Frontend:
   - `npm run lint` in `client` passed
   - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
   - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-25 - Unified site-wide table palette
+
+- Used checkpoint `def2322` as the recovery point before this table-color unification.
+- Promoted the approved `ReportXlsx1C` table colors into shared semantic tokens: charcoal shell/header, `#141414` / `#191919` alternating rows, `#263126` hover, `#333333` borders, light table text, and dark/emerald group surfaces.
+- Applied the shared palette to Documents, Balance, document-item modal tables, Sales Report, Users, all custom report tables, and the Bulma compatibility layer used by configuration, notification, history, and other legacy tables.
+- Preserved semantic overrides for totals, hierarchy groups, share thresholds, cancelled/moved/comment rows, warnings, errors, and other business states.
+- Kept hierarchical Balance group levels visually separate from ordinary alternating product rows.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file deletions from build were restored

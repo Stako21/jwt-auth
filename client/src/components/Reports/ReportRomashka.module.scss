@@ -76,19 +76,19 @@
   border-collapse: collapse;
   text-align: center;
   font-size: 14px;
-  color: $dark-text-color;
+  color: $table-text;
 
   th,
   td {
-    border-right: 1px solid $border-color;
+    border-right: 1px solid $table-border;
     padding: 8px 4px;
   }
 
   th {
     /* no sticky headers — let thead scroll with the page */
     border-top: 0;
-    background-color: $header-background-color;
-    color: $light-text-color;
+    background-color: $table-head-surface;
+    color: $table-text-strong;
     white-space: pre-wrap; /* Позволяет переносити текст */
   }
 
@@ -97,21 +97,26 @@
   }
 
   .tableBody tr:nth-child(odd) {
-    background-color: $oddRow;
+    background-color: $table-row-odd;
   }
 
   .tableBody tr:nth-child(even) {
-    background-color: $evenRow;
+    background-color: $table-row-even;
+  }
+
+  .tableBody tr:hover {
+    background-color: $table-row-hover;
   }
 
   .groupRow td {
-    background: #b7b8c0;
+    background: $table-group-accent;
+    color: $table-text-strong;
   }
 
   .tableFooter {
     /* footer scrolls with the page */
-    background-color: $header-background-color;
-    color: $light-text-color;
+    background-color: $table-head-surface;
+    color: $table-text-strong;
   }
 }
 
