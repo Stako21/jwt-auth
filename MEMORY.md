@@ -1946,3 +1946,10 @@ Frontend:
 - The two modes now use an equal-column grid, fixed shared control height, full button reset, centered labels, emerald hover/focus/selected states, and a clear active underline; the control remains full-width and evenly split on mobile.
 - Preserved grouping values and click behavior; added no report logic changes.
 - Verification: client lint and build passed, and generated `client/dist` XLSX changes were restored.
+
+## 2026-08-25 - Responsive two-row Debet filters
+
+- Fixed the intermediate-width collision where the Debet search field could overlap the grouping switch inside the viewport remaining beside the sidebar.
+- Made the report heading its own row; the controls now use a deterministic grid with grouping plus overdue toggle on the first control row and a full-width search field on the second. Phones stack grouping, search, and overdue toggle vertically.
+- Added shared `styles/_filterPanel.scss` mixins for report filter-panel shell, title, and label styling and adopted them in both Debet and Sales report panels.
+- Verification: client lint and build passed, generated `client/dist` XLSX changes were restored, and user-managed source/data files were not changed or staged.
