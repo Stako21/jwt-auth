@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import cn from "classnames";
 import FormInput from "../FormControl/FormInput.jsx";
 import style from "./ReportDebet.module.scss";
 import { fetchStaticReport } from "../../services/reports.api";
@@ -382,9 +383,10 @@ export function ReportDebet({ setLastUpdateTime }) {
               <button
                 type="button"
                 aria-pressed={groupingMode === GROUPING_MODES.collector}
-                className={
-                  groupingMode === GROUPING_MODES.collector ? style.active : ""
-                }
+                className={cn(style.segmentButton, {
+                  [style.segmentActive]:
+                    groupingMode === GROUPING_MODES.collector,
+                })}
                 onClick={() => setGroupingMode(GROUPING_MODES.collector)}
               >
                 Колектор
@@ -392,11 +394,10 @@ export function ReportDebet({ setLastUpdateTime }) {
               <button
                 type="button"
                 aria-pressed={groupingMode === GROUPING_MODES.contractor}
-                className={
-                  groupingMode === GROUPING_MODES.contractor
-                    ? style.active
-                    : ""
-                }
+                className={cn(style.segmentButton, {
+                  [style.segmentActive]:
+                    groupingMode === GROUPING_MODES.contractor,
+                })}
                 onClick={() => setGroupingMode(GROUPING_MODES.contractor)}
               >
                 Контрагент

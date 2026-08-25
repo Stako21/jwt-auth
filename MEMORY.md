@@ -1939,3 +1939,10 @@ Frontend:
   - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
   - generated `client/dist` source-file changes from build were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-25 - Debet grouping switch correction
+
+- Replaced the Debet grouping switch's generic nested button/active styling with explicit `segmentButton` and `segmentActive` classes so Bulma/browser button rules cannot distort either half.
+- The two modes now use an equal-column grid, fixed shared control height, full button reset, centered labels, emerald hover/focus/selected states, and a clear active underline; the control remains full-width and evenly split on mobile.
+- Preserved grouping values and click behavior; added no report logic changes.
+- Verification: client lint and build passed, and generated `client/dist` XLSX changes were restored.

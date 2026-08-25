@@ -62,46 +62,62 @@
 }
 
 .segmentedControl {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 220px;
   height: $control-height-md;
   overflow: hidden;
   border: 1px solid $form-control-border;
   border-radius: $radius-md;
   background: $form-control-surface;
+}
 
-  button {
-    min-width: 104px;
-    padding: 0 $space-3;
-    border: 0;
-    border-right: 1px solid $outline-dark;
-    outline: 0;
-    background: transparent;
-    color: $form-control-text;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-    transition:
-      background-color $motion-fast $motion-ease,
-      color $motion-fast $motion-ease;
+.segmentButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0 $space-3;
+  appearance: none;
+  border: 0;
+  border-right: 1px solid $outline-dark;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: $form-control-text;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  transition:
+    background-color $motion-fast $motion-ease,
+    color $motion-fast $motion-ease,
+    box-shadow $motion-fast $motion-ease;
 
-    &:last-child {
-      border-right: 0;
-    }
+  &:last-child {
+    border-right: 0;
+  }
 
-    &:hover,
-    &:focus-visible {
-      background: $select-option-hover-surface;
-      color: $primary-accent-light;
-    }
+  &:hover,
+  &:focus-visible {
+    background: $select-option-hover-surface;
+    color: $primary-accent-light;
+  }
 
-    &:focus-visible {
-      box-shadow: inset 0 0 0 1px $primary-accent;
-    }
+  &:focus-visible {
+    box-shadow: inset 0 0 0 1px $primary-accent;
   }
 }
 
-.active {
+.segmentActive,
+.segmentActive:hover,
+.segmentActive:focus-visible {
   background: $select-option-selected-surface !important;
+  box-shadow: inset 0 -2px 0 $primary-accent;
   color: $primary-accent-light !important;
 }
 
@@ -411,11 +427,7 @@
 
   .segmentedControl {
     width: 100%;
-
-    button {
-      flex: 1;
-      min-width: 0;
-    }
+    min-width: 0;
   }
 
   .checkboxField {
