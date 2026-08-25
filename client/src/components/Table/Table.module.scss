@@ -212,11 +212,11 @@
 }
 
 .evenRow {
-  background: $oddRowDark;
+  background: $balance-leaf-row-even;
 }
 
 .oddRow {
-  background: $evenRowDark;
+  background: $balance-leaf-row-odd;
 }
 
 .balanceTable tbody tr {
@@ -225,6 +225,10 @@
 
 .balanceTable tbody tr:hover {
   background: rgba(212, 228, 250, 0.04);
+}
+
+.balanceTable tbody .leafRow:hover {
+  background: $balance-leaf-row-hover;
 }
 
 .balanceTable tbody tr .negative {

@@ -3,6 +3,7 @@ import { createDocument, updateDocument } from "../services/documents.api";
 import ItemModal from "./ItemModal";
 import { getUnitLabel } from "../utils/unitLabels";
 import { useSnackbar } from "notistack";
+import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
 import styles from "./CreateReturnDocumentModal.module.scss";
 
 
@@ -439,20 +440,19 @@ export default function CreateExchangeDocumentModal({
             {/* ТТ */}
             <div className="field">
               <label className="label">Торгова точка *</label>
-              <div className="select is-fullwidth">
-                <select
-                  value={tradePointId}
-                  disabled={isViewOnly || !contractorId}
-                  onChange={(e) => setTradePointId(e.target.value)}
-                >
-                  <option value="">— Оберіть —</option>
-                  {filteredTradePoints.map((tp) => (
-                    <option key={tp.id} value={tp.id}>
-                      {tp.name} {tp.address ? `(${tp.address})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CompactSelect
+                value={tradePointId}
+                options={filteredTradePoints.map((tradePoint) => ({
+                  value: tradePoint.id,
+                  label: `${tradePoint.name}${
+                    tradePoint.address ? ` (${tradePoint.address})` : ""
+                  }`,
+                }))}
+                disabled={isViewOnly || !contractorId}
+                hasError={Boolean(errors.tradePointId)}
+                ariaLabel="Торгова точка"
+                onChange={setTradePointId}
+              />
             </div>
 
             {/* Причина */}

@@ -1866,3 +1866,14 @@ Frontend:
   - `npm run lint` in `client` passed
   - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
   - generated `client/dist` source-file deletions from build were restored
+
+## 2026-08-25 - Controlled modal dropdowns and balance row striping
+
+- Used checkpoint `12c216f` as the recovery point before this refinement.
+- Replaced native document-modal trade-point and item group/product/unit selects with a shared compact controlled dropdown so Windows/browser blue option hover no longer leaks into the Obsidian Emerald theme.
+- Added opaque popover surfaces, emerald-tinted hover and selected states, outside-click/Escape closing, disabled/error states, and compact scrollable option lists without changing stored values or form field order.
+- Enabled alternating colors only for leaf/product rows in the hierarchical Balance table; group and subgroup rows retain their existing level surfaces. Leaf odd/even/hover colors are centralized in `variables.scss` and remain distinct from group backgrounds.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` source-file deletions from build were restored

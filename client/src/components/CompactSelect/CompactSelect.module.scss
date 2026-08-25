@@ -1,0 +1,117 @@
+@use "../../variables.scss" as *;
+
+.root {
+  position: relative;
+  min-width: 0;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+  width: 100%;
+  height: $control-height-md;
+  padding: 0 $space-3;
+  overflow: hidden;
+  border: 1px solid $outline-green;
+  border-radius: $radius-md;
+  outline: 0;
+  background: $surface-container-lowest;
+  color: $text-high;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  transition:
+    border-color $motion-fast $motion-ease,
+    box-shadow $motion-fast $motion-ease;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  i {
+    flex: 0 0 auto;
+    color: $text-muted;
+    font-size: 10px;
+    transition: transform $motion-fast $motion-ease;
+  }
+
+  &:focus-visible,
+  &.open {
+    border-color: $primary-accent;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+  }
+
+  &.open i {
+    transform: rotate(180deg);
+  }
+
+  &:disabled {
+    color: $text-muted;
+    cursor: not-allowed;
+    opacity: 0.58;
+  }
+}
+
+.placeholder {
+  color: $text-muted;
+}
+
+.error {
+  border-color: $negative-muted !important;
+}
+
+.options {
+  position: absolute;
+  top: calc(100% + $space-1);
+  right: 0;
+  left: 0;
+  z-index: 80;
+  display: grid;
+  max-height: 220px;
+  padding: $space-1;
+  overflow-y: auto;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-md;
+  background: $surface-container-highest;
+  box-shadow: $shadow-popover;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px $space-2;
+  border: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $text-high;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: left;
+
+  &:hover,
+  &:focus-visible {
+    outline: 0;
+    background: $select-option-hover-surface;
+    color: $primary-accent-light;
+  }
+
+  &.selected {
+    background: $select-option-selected-surface;
+    color: $primary-accent-light;
+  }
+
+  i {
+    flex: 0 0 auto;
+    font-size: 10px;
+  }
+}

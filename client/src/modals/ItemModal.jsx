@@ -1,6 +1,6 @@
-import cn from "classnames";
 import { useEffect, useMemo, useState } from "react";
 import DateInput from "../components/DateInput/DateInput.jsx";
+import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
 import style from "./ItemModal.module.scss";
 
 export default function ItemModal({
@@ -134,66 +134,56 @@ export default function ItemModal({
         <section className={`modal-card-body ${style.itemModalBody}`}>
           <div className="field">
             <label className="label">Група *</label>
-            <div
-              className={cn("select is-fullwidth", {
-                "is-danger": errors.groupId,
-              })}
-            >
-              <select
-                className={errors.groupId ? "is-danger" : ""}
-                value={groupId}
-                onChange={(e) => {
-                  setGroupId(e.target.value);
-                  setProductId("");
-                  setErrors((prev) => ({ ...prev, groupId: false }));
-                }}
-              >
-                <option value="">— Оберіть —</option>
-                {productGroups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CompactSelect
+              value={groupId}
+              options={productGroups.map((group) => ({
+                value: group.id,
+                label: group.name,
+              }))}
+              hasError={Boolean(errors.groupId)}
+              ariaLabel="Група"
+              onChange={(nextGroupId) => {
+                setGroupId(nextGroupId);
+                setProductId("");
+                setErrors((prev) => ({ ...prev, groupId: false }));
+              }}
+            />
           </div>
 
           <div className="field">
             <label className="label">Товар *</label>
-            <div
-              className={cn("select is-fullwidth", {
-                "is-danger": errors.productId,
-              })}
-            >
-              <select
-                value={productId}
-                disabled={!groupId}
-                onChange={(e) => {
-                  setProductId(e.target.value);
-                  setErrors((prev) => ({ ...prev, productId: false }));
-                }}
-              >
-                <option value="">— Оберіть —</option>
-                {(productsByGroup[String(groupId)] || []).map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CompactSelect
+              value={productId}
+              options={(productsByGroup[String(groupId)] || []).map(
+                (product) => ({
+                  value: product.id,
+                  label: product.name,
+                }),
+              )}
+              disabled={!groupId}
+              hasError={Boolean(errors.productId)}
+              ariaLabel="Товар"
+              onChange={(nextProductId) => {
+                setProductId(nextProductId);
+                setErrors((prev) => ({ ...prev, productId: false }));
+              }}
+            />
           </div>
 
           <div className={`columns ${style.compactColumns}`}>
             <div className="column is-4">
               <label className="label">Одиниця</label>
-              <div className="select is-fullwidth">
-                <select value={unit} onChange={(e) => setUnit(e.target.value)}>
-                  <option value="PCS">шт</option>
-                  <option value="KG">кг</option>
-                  <option value="BOX">ящ</option>
-                  <option value="BLOCK">блок</option>
-                </select>
-              </div>
+              <CompactSelect
+                value={unit}
+                options={[
+                  { value: "PCS", label: "шт" },
+                  { value: "KG", label: "кг" },
+                  { value: "BOX", label: "ящ" },
+                  { value: "BLOCK", label: "блок" },
+                ]}
+                ariaLabel="Одиниця"
+                onChange={setUnit}
+              />
             </div>
 
             <div className="column">
