@@ -11,7 +11,7 @@ import { DataLoader } from "../DataLoader/DataLoader";
 const HIERARCHY_ROLES = new Set([ROLE_IDS.NTO, ROLE_IDS.SV, ROLE_IDS.TA]);
 
 export const UsersList = ({
-  onUserSelect,
+  onPasswordChange,
   onEditUser,
   reloadKey = 0,
   onCreateUser,
@@ -31,6 +31,12 @@ export const UsersList = ({
     key: "fullName",
     direction: "asc",
   });
+
+  const selectedUser = useMemo(
+    () =>
+      users.find((user) => Number(user.id) === Number(selectedUserId)) || null,
+    [selectedUserId, users],
+  );
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -209,6 +215,9 @@ export const UsersList = ({
       setUsers((current) =>
         current.filter((user) => Number(user.id) !== Number(userToDelete.id)),
       );
+      if (Number(selectedUserId) === Number(userToDelete.id)) {
+        setSelectedUserId(null);
+      }
       enqueueSnackbar("Користувача деактивовано", { variant: "success" });
     } catch (error) {
       console.error(`Error deleting user ${userToDelete.name}:`, error);
@@ -255,40 +264,43 @@ export const UsersList = ({
     }
   };
 
-  const handleSelectUser = (userId) => {
-    setSelectedUserId(userId);
-    onUserSelect(userId);
-  };
+  const handleSelectUser = (userId) => setSelectedUserId(Number(userId));
 
   const getRowClassName = (user) => {
-    if (user.role === ROLE_IDS.TA && user.parent_user_id) {
-      return style.agentRow;
+    const classes = [style.userRow];
+
+    if (viewMode === "hierarchy" && Number(user.role) === ROLE_IDS.NTO) {
+      classes.push(style.ntoRow);
     }
 
-    if (user.role === ROLE_IDS.SV && user.parent_user_id) {
-      return style.supervisorRow;
+    if (viewMode === "hierarchy" && Number(user.role) === ROLE_IDS.SV) {
+      classes.push(style.supervisorRow);
     }
 
-    return "";
+    if (Number(selectedUserId) === Number(user.id)) {
+      classes.push(style.selectedRow);
+    }
+
+    return classes.join(" ");
   };
 
   const renderUserRow = (user, { indentLevel = 0 } = {}) => {
-    const canDetachFromSupervisor =
-      Number(user.role) === ROLE_IDS.TA && Boolean(user.parent_user_id);
-
     return (
-      <tr key={user.id} className={getRowClassName(user)}>
-        <td>
-          <button
-            className="button is-warning is-dark is-small"
-            type="button"
+      <tr
+        key={user.id}
+        className={getRowClassName(user)}
+        aria-selected={Number(selectedUserId) === Number(user.id)}
+        onClick={() => handleSelectUser(user.id)}
+      >
+        <td className={style.selectionCell}>
+          <FormInput
+            type="radio"
             name="selectedUser"
-            aria-pressed={selectedUserId === user.id}
-            onClick={() => handleSelectUser(user.id)}
-            title="Змінити пароль"
-          >
-            <i className="fa-solid fa-wrench"></i>
-          </button>
+            checked={Number(selectedUserId) === Number(user.id)}
+            onChange={() => handleSelectUser(user.id)}
+            onClick={(event) => event.stopPropagation()}
+            aria-label={`Вибрати користувача ${displayName(user)}`}
+          />
         </td>
         <td>{user.id}</td>
         <td>{user.name}</td>
@@ -302,46 +314,6 @@ export const UsersList = ({
         </td>
         <td>{cityLabel[user.city]}</td>
         <td>{ROLE_LABELS[user.role] || user.role}</td>
-        <td>
-          <button
-            type="button"
-            className="button is-info is-dark is-small"
-            onClick={() => onEditUser && onEditUser(user)}
-            title="Редагувати"
-            aria-label={`edit-${user.id}`}
-          >
-            <i className="fa-solid fa-pen"></i>
-          </button>
-        </td>
-        <td>
-          {canDetachFromSupervisor ? (
-            <button
-              type="button"
-              className={`button is-link is-dark is-small ${
-                detachingUserId === Number(user.id) ? "is-loading" : ""
-              }`}
-              onClick={() => handleDetachSupervisor(user)}
-              title="Відв'язати від керівника"
-              aria-label={`detach-${user.id}`}
-              disabled={detachingUserId === Number(user.id)}
-            >
-              <i className="fa-solid fa-link-slash"></i>
-            </button>
-          ) : (
-            <span className="has-text-grey">—</span>
-          )}
-        </td>
-        <td>
-          <button
-            type="button"
-            className="button is-danger is-dark is-small"
-            onClick={() => confirmDelete(user)}
-            title="Видалити"
-            aria-label={`delete-${user.id}`}
-          >
-            <i className="fa-solid fa-trash"></i>
-          </button>
-        </td>
       </tr>
     );
   };
@@ -357,7 +329,7 @@ export const UsersList = ({
           {renderUserRow(user)}
           {(Number(user.role) === ROLE_IDS.SV || Number(user.role) === ROLE_IDS.NTO) && (
             <tr className={style.subordinateRow}>
-              <td colSpan="9">
+              <td colSpan="6">
                 {subordinateNames.length ? (
                   subordinateNames.map((name) => <div key={`${user.id}-${name}`}>• {name}</div>)
                 ) : (
@@ -407,7 +379,7 @@ export const UsersList = ({
         <table className={`${style.userTable} table is-fullwidth`}>
           <thead>
             <tr>
-              <th className="has-text-centered">Пароль</th>
+              <th className="has-text-centered">Вибір</th>
               <th
                 className="has-text-centered"
                 style={{ cursor: "pointer" }}
@@ -431,9 +403,6 @@ export const UsersList = ({
               </th>
               <th className="has-text-centered">Місто</th>
               <th className="has-text-centered">Роль</th>
-              <th className="has-text-centered">Редагувати</th>
-              <th className="has-text-centered">Відв'язати</th>
-              <th className="has-text-centered">Видалити</th>
             </tr>
           </thead>
           <tbody>{visibleRows.map((user) => renderHierarchyNode(user))}</tbody>
@@ -498,13 +467,77 @@ export const UsersList = ({
         </div>
       </div>
 
+      <div className={style.actionBar} aria-live="polite">
+        <div className={style.selectedUserSummary}>
+          {selectedUser ? (
+            <>
+              <strong>{displayName(selectedUser)}</strong>
+              <span>{selectedUser.name}</span>
+              <span>{ROLE_LABELS[selectedUser.role] || selectedUser.role}</span>
+            </>
+          ) : (
+            <span>Користувача не вибрано</span>
+          )}
+        </div>
+
+        <div className={style.contextActions}>
+          <button
+            type="button"
+            className="button is-dark"
+            disabled={!selectedUser}
+            onClick={() => selectedUser && onPasswordChange?.(selectedUser.id)}
+            title="Змінити пароль"
+          >
+            <i className="fa-solid fa-key" aria-hidden="true" />
+            <span>Пароль</span>
+          </button>
+          <button
+            type="button"
+            className="button is-dark"
+            disabled={!selectedUser}
+            onClick={() => selectedUser && onEditUser?.(selectedUser)}
+            title="Редагувати користувача"
+          >
+            <i className="fa-solid fa-pen" aria-hidden="true" />
+            <span>Редагувати</span>
+          </button>
+          <button
+            type="button"
+            className={`button is-dark ${
+              detachingUserId === Number(selectedUser?.id) ? "is-loading" : ""
+            }`}
+            disabled={
+              !selectedUser ||
+              Number(selectedUser.role) !== ROLE_IDS.TA ||
+              !selectedUser.parent_user_id ||
+              Boolean(detachingUserId)
+            }
+            onClick={() => selectedUser && handleDetachSupervisor(selectedUser)}
+            title="Відв'язати TA від керівника"
+          >
+            <i className="fa-solid fa-link-slash" aria-hidden="true" />
+            <span>Відв'язати</span>
+          </button>
+          <button
+            type="button"
+            className="button is-danger is-dark"
+            disabled={!selectedUser}
+            onClick={() => selectedUser && confirmDelete(selectedUser)}
+            title="Видалити користувача"
+          >
+            <i className="fa-solid fa-trash" aria-hidden="true" />
+            <span>Видалити</span>
+          </button>
+        </div>
+      </div>
+
       <div className={style.wraperTable}>
         <div className={style.scrollContainer}>
           {viewMode === "list" ? (
             <table className={`${style.userTable} table is-fullwidth`}>
               <thead>
                 <tr>
-                  <th className="has-text-centered">Пароль</th>
+                  <th className="has-text-centered">Вибір</th>
                   <th
                     className="has-text-centered"
                     style={{ cursor: "pointer" }}
@@ -528,9 +561,6 @@ export const UsersList = ({
                   </th>
                   <th className="has-text-centered">Місто</th>
                   <th className="has-text-centered">Роль</th>
-                  <th className="has-text-centered">Редагувати</th>
-                  <th className="has-text-centered">Відв'язати</th>
-                  <th className="has-text-centered">Видалити</th>
                 </tr>
               </thead>
               <tbody>{renderFlatRows()}</tbody>

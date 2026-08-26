@@ -34,7 +34,7 @@ function getStoredAdminTab() {
 }
 
 export default function AdminPage() {
-  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [passwordUserId, setPasswordUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [editUser, setEditUser] = useState(null);
   const [newUserModalOpen, setNewUserModalOpen] = useState(false);
@@ -44,7 +44,7 @@ export default function AdminPage() {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab !== "users") {
-      setSelectedUserId(null);
+      setPasswordUserId(null);
       setEditUser(null);
       setNewUserModalOpen(false);
     }
@@ -61,17 +61,17 @@ export default function AdminPage() {
   const { enqueueSnackbar } = useSnackbar();
 
   const handlePasswordChange = async () => {
-    if (!selectedUserId || !newPassword) {
+    if (!passwordUserId || !newPassword) {
       enqueueSnackbar("Поле нового пароля порожнє", { variant: "error" });
       return;
     }
 
     try {
-      await AuthClient.put(`/users/${selectedUserId}/password`, { newPassword });
+      await AuthClient.put(`/users/${passwordUserId}/password`, { newPassword });
       enqueueSnackbar("Пароль успішно змінено", { variant: "success" });
 
       setNewPassword("");
-      setSelectedUserId(null);
+      setPasswordUserId(null);
     } catch (error) {
       enqueueSnackbar("Помилка під час зміни пароля", { variant: "error" });
       console.error("Error updating password:", error);
@@ -79,7 +79,7 @@ export default function AdminPage() {
   };
 
   const onCancel = () => {
-    setSelectedUserId(null);
+    setPasswordUserId(null);
     setEditUser(null);
     setNewPassword("");
   };
@@ -127,13 +127,13 @@ export default function AdminPage() {
             />
           )}
 
-          {selectedUserId && (
+          {passwordUserId && (
             <div className="modal is-active admin-modal">
               <div className="modal-background"></div>
               <div className="modal-card">
                 <header className="modal-card-head">
                   <p className="modal-card-title has-text-weight-medium">
-                    Змінити пароль користувача ID: {selectedUserId}
+                    Змінити пароль користувача ID: {passwordUserId}
                   </p>
                 </header>
                 <div className="modal-card-body">
@@ -169,7 +169,7 @@ export default function AdminPage() {
           )}
 
           <UsersList
-            onUserSelect={setSelectedUserId}
+            onPasswordChange={setPasswordUserId}
             onEditUser={(u) => setEditUser(u)}
             onCreateUser={() => setNewUserModalOpen(true)}
             key={usersReloadKey}

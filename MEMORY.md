@@ -1967,3 +1967,17 @@ Frontend:
   - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
   - generated `client/dist` XLSX changes were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-26 - Contextual user administration actions
+
+- Replaced the four per-row user action columns with one single-selection column and a compact contextual action bar, freeing table width for login, display name, city, and role data.
+- Selecting a row or its radio control no longer opens a modal; it selects any real user, including NTO and SV, and exposes password, edit, applicable detach, and delete actions in one predictable location.
+- Kept synthetic hierarchy section headings non-selectable and preserved the existing rule that detach is available only for a TA currently linked to a supervisor.
+- Changed hierarchy styling so NTO and SV use the approved first/second-level table surfaces while TA and other user rows return to the standard zebra palette; the selected row receives a restrained emerald marker.
+- Made the action bar wrap at intermediate widths and switch to four touch-sized icon actions on phones while retaining accessible action labels.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - `git diff --check` passed for the changed frontend files
+  - generated `client/dist` XLSX changes were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
