@@ -1,188 +1,188 @@
-/* Central design tokens. Keep component styles semantic. */
+/* Emerald Light theme. Keep the token contract aligned with variables.scss. */
 
 /* ===== PALETTE ===== */
-$native-color-scheme: dark;
+$native-color-scheme: light;
 $color-transparent: transparent;
-$calendar-indicator-filter: brightness(0) saturate(100%) invert(88%) sepia(8%) saturate(310%);
-$calendar-indicator-opacity: 0.82;
-$search-cancel-filter: invert(0.82);
+$calendar-indicator-filter: brightness(0) saturate(100%) invert(24%) sepia(13%) saturate(741%);
+$calendar-indicator-opacity: 0.78;
+$search-cancel-filter: invert(0.3);
 
-/* Deep Clean Ocean Surfaces */
-$surface-main: #09121a;
-$surface-container-lowest: #04090e;
-$surface-container-low: #0f1924;
-$surface-container: #152230;
-$surface-container-high: #1c2c3d;
-$surface-container-highest: #26384c;
-$surface-control: $surface-container;
-$surface-input: $surface-container-low;
-$select-option-hover-surface: rgba(16, 185, 129, 0.12);
-$select-option-selected-surface: rgba(16, 185, 129, 0.22);
-$surface-page-wash: rgba(15, 25, 36, 0.62);
-$surface-modal-overlay: rgba(4, 9, 14, 0.82);
-$surface-modal-overlay-strong: rgba(4, 9, 14, 0.88);
-$surface-modal: rgba(21, 34, 48, 0.96);
-$surface-modal-strong: rgba(21, 34, 48, 0.98);
-$surface-modal-section: rgba(21, 34, 48, 0.75);
-$surface-subtle-highlight: rgba(240, 245, 250, 0.05);
-$surface-soft-highlight: rgba(255, 255, 255, 0.08);
+/* Cool gray-green surfaces */
+$surface-main: #f8faf9;
+$surface-container-lowest: #ffffff;
+$surface-container-low: #f4f7f5;
+$surface-container: #f1f5f3;
+$surface-container-high: #e9efec;
+$surface-container-highest: #e1e8e4;
+$surface-control: $surface-container-lowest;
+$surface-input: $surface-container-lowest;
+$select-option-hover-surface: rgba(4, 120, 87, 0.08);
+$select-option-selected-surface: rgba(4, 120, 87, 0.14);
+$surface-page-wash: rgba(241, 245, 243, 0.78);
+$surface-modal-overlay: rgba(15, 23, 42, 0.48);
+$surface-modal-overlay-strong: rgba(15, 23, 42, 0.58);
+$surface-modal: rgba(255, 255, 255, 0.98);
+$surface-modal-strong: #ffffff;
+$surface-modal-section: rgba(241, 245, 243, 0.98);
+$surface-subtle-highlight: rgba(15, 23, 42, 0.035);
+$surface-soft-highlight: rgba(15, 23, 42, 0.06);
 
-/* Emerald-tinted Slate Table Palette */
+/* Emerald-tinted light table palette */
 $table-page-surface: $surface-main;
-$table-shell-surface: #09121a;
-$table-head-surface: #10202b;
-$table-group-primary: #123330;          /* Чистый темно-изумрудный */
-$table-group-accent: #0d2626;
-$table-group-secondary: #10202b;
-$table-row-even: #0c1722;
-$table-row-odd: #09121a;
-$table-row-hover: rgba(52, 211, 153, 0.08);
-$table-row-selected: rgba(16, 185, 129, 0.18);
-$table-border: #1a323a;
-$table-text: #d1dbe5;
-$table-text-strong: #f0f5fa;
-$table-text-muted: #8496a8;
+$table-shell-surface: #ffffff;
+$table-head-surface: #e7efeb;
+$table-group-primary: #d8ebe2;
+$table-group-accent: #e3f1ea;
+$table-group-secondary: #edf4f0;
+$table-row-even: #f6f9f7;
+$table-row-odd: #ffffff;
+$table-row-hover: rgba(4, 120, 87, 0.06);
+$table-row-selected: rgba(4, 120, 87, 0.13);
+$table-border: #d8e2dd;
+$table-text: #1f2937;
+$table-text-strong: #0f172a;
+$table-text-muted: #64748b;
 $balance-group-secondary: $table-group-secondary;
 $balance-group-tertiary: $table-head-surface;
 $balance-leaf-row-odd: $table-row-odd;
 $balance-leaf-row-even: $table-row-even;
 $balance-leaf-row-hover: $table-row-hover;
-$surface-glass: rgba(21, 34, 48, 0.75);
-$surface-glass-subtle: rgba(4, 9, 14, 0.44);
-$surface-glass-strong: rgba(4, 9, 14, 0.9);
-$surface-overlay: rgba(4, 9, 14, 0.75);
+$surface-glass: rgba(255, 255, 255, 0.82);
+$surface-glass-subtle: rgba(248, 250, 249, 0.7);
+$surface-glass-strong: rgba(255, 255, 255, 0.94);
+$surface-overlay: rgba(15, 23, 42, 0.48);
 
-/* Background Glows */
+/* Subtle ambient background glows */
 $background-glow-primary: radial-gradient(
   ellipse at 50% 0%,
-  rgba(16, 185, 129, 0.22) 0%,
-  rgba(16, 185, 129, 0.05) 35%,
-  transparent 65%
+  rgba(4, 120, 87, 0.1) 0%,
+  rgba(4, 120, 87, 0.025) 36%,
+  transparent 66%
 );
 $background-glow-depth: radial-gradient(
   ellipse at 100% 100%,
-  rgba(28, 44, 61, 0.85) 0%,
-  rgba(15, 25, 36, 0.3) 40%,
-  transparent 70%
+  rgba(203, 213, 225, 0.22) 0%,
+  rgba(226, 232, 240, 0.08) 40%,
+  transparent 72%
 );
 $app-background-image: $background-glow-primary, $background-glow-depth;
 
-/* Primary Emerald Accent System */
-$primary-accent: #10b981;             /* Свежий Emerald */
-$primary-accent-hover: #34d399;       /* Мягкий изумрудно-мятный */
-$primary-accent-light: #6ee7b7;       /* Светло-мятный */
-$primary-accent-dark: #047857;
-$primary-accent-surface-subtle: rgba(52, 211, 153, 0.06);
-$primary-accent-surface-soft: rgba(16, 185, 129, 0.1);
-$primary-accent-surface: rgba(16, 185, 129, 0.12);
-$primary-accent-surface-admin: rgba(16, 185, 129, 0.14);
-$primary-accent-surface-medium: rgba(16, 185, 129, 0.16);
-$primary-accent-surface-selected: rgba(16, 185, 129, 0.18);
-$primary-accent-surface-strong: rgba(16, 185, 129, 0.22);
-$primary-accent-border-soft: rgba(52, 211, 153, 0.25);
-$primary-accent-border: rgba(52, 211, 153, 0.38);
-$primary-accent-focus-ring: rgba(16, 185, 129, 0.22);
-$primary-accent-focus-ring-strong: rgba(16, 185, 129, 0.28);
-$primary-accent-focus-ring-emphasized: rgba(16, 185, 129, 0.35);
+/* Mature emerald accent system */
+$primary-accent: #047857;
+$primary-accent-hover: #065f46;
+$primary-accent-light: #047857;
+$primary-accent-dark: #064e3b;
+$primary-accent-surface-subtle: rgba(4, 120, 87, 0.04);
+$primary-accent-surface-soft: rgba(4, 120, 87, 0.07);
+$primary-accent-surface: rgba(4, 120, 87, 0.09);
+$primary-accent-surface-admin: rgba(4, 120, 87, 0.1);
+$primary-accent-surface-medium: rgba(4, 120, 87, 0.12);
+$primary-accent-surface-selected: rgba(4, 120, 87, 0.13);
+$primary-accent-surface-strong: rgba(4, 120, 87, 0.16);
+$primary-accent-border-soft: rgba(4, 120, 87, 0.24);
+$primary-accent-border: rgba(4, 120, 87, 0.38);
+$primary-accent-focus-ring: rgba(4, 120, 87, 0.18);
+$primary-accent-focus-ring-strong: rgba(4, 120, 87, 0.24);
+$primary-accent-focus-ring-emphasized: rgba(4, 120, 87, 0.3);
 
-/* Neutral Typography (No Camouflage/Olive Colors) */
-$text-high: #f0f5fa;
-$text-medium: #b0c0d0;
-$text-muted: #788a9c;
-$text-on-accent: #022c22;
+/* Neutral typography */
+$text-high: #0f172a;
+$text-medium: #334155;
+$text-muted: #64748b;
+$text-on-accent: #ffffff;
 
-/* Form Controls & Borders */
-$outline-dark: rgba(240, 245, 250, 0.08);
-$outline-medium: rgba(240, 245, 250, 0.15);
-$outline-green: #1e3835;               /* Заменен грязно-зеленый #3c4a42 на изумрудно-графитовый */
+/* Form controls and borders */
+$outline-dark: rgba(15, 23, 42, 0.12);
+$outline-medium: rgba(15, 23, 42, 0.2);
+$outline-green: #b8cbc2;
 $form-control-surface: $surface-container-lowest;
-$form-control-surface-disabled: $surface-container-low;
-$form-control-border: #1e3835;
-$form-control-border-hover: rgba(52, 211, 153, 0.6);
-$form-control-text: #d1dbe5;
+$form-control-surface-disabled: $surface-container-high;
+$form-control-border: #c7d4ce;
+$form-control-border-hover: rgba(4, 120, 87, 0.68);
+$form-control-text: #1f2937;
 $form-control-placeholder: $text-muted;
-$form-control-focus-ring: rgba(16, 185, 129, 0.25);
-$form-control-error-surface: rgba(239, 68, 68, 0.15);
+$form-control-focus-ring: rgba(4, 120, 87, 0.18);
+$form-control-error-surface: rgba(185, 28, 28, 0.08);
 
-/* System Statuses */
-$negative: #f87171;
-$negative-muted: #fca5a5;
-$negative-strong: #fca5a5;
-$negative-action: #f87171;
-$negative-surface: rgba(239, 68, 68, 0.18);
-$negative-surface-soft: rgba(239, 68, 68, 0.1);
-$negative-border-soft: rgba(248, 113, 113, 0.28);
-$warning: #f59e0b;
-$info: #38bdf8;
-$status-new: #94a3b8;
-$status-new-surface: rgba(148, 163, 184, 0.1);
-$status-prepared: #60a5fa;
-$status-prepared-surface: rgba(96, 165, 250, 0.12);
-$status-revision: #f59e0b;
-$status-revision-surface: rgba(245, 158, 11, 0.12);
+/* System statuses */
+$negative: #b91c1c;
+$negative-muted: #dc2626;
+$negative-strong: #991b1b;
+$negative-action: #b91c1c;
+$negative-surface: rgba(185, 28, 28, 0.12);
+$negative-surface-soft: rgba(185, 28, 28, 0.07);
+$negative-border-soft: rgba(185, 28, 28, 0.24);
+$warning: #b45309;
+$info: #0369a1;
+$status-new: #475569;
+$status-new-surface: rgba(71, 85, 105, 0.08);
+$status-prepared: #1d4ed8;
+$status-prepared-surface: rgba(29, 78, 216, 0.09);
+$status-revision: #b45309;
+$status-revision-surface: rgba(180, 83, 9, 0.1);
 $status-rejected: $negative;
 $status-rejected-surface: $negative-surface-soft;
-$status-signed: $primary-accent-light;
-$status-signed-surface: rgba(16, 185, 129, 0.14);
+$status-signed: $primary-accent;
+$status-signed-surface: rgba(4, 120, 87, 0.1);
 
 /* Report-specific semantic colors */
-$report-text-high: #ffffff;
-$report-text: #e2eaf4;
-$report-text-medium: #cbd8e8;
-$report-text-muted: #94a7c1;
-$report-text-subtle: #798ea8;
-$report-negative: #f87171;
-$report-warning: #fbbf24;
-$report-success: #34d399;
-$report-success-base: #10b981;
-$report-info-base: #38bdf8;
-$report-success-surface: rgba(16, 185, 129, 0.16);
-$report-success-border: rgba(52, 211, 153, 0.45);
-$report-info-surface: rgba(56, 189, 248, 0.08);
-$report-warning-surface: rgba(245, 158, 11, 0.1);
-$report-outline-strong: rgba(226, 234, 244, 0.3);
-$report-summary-surface: #f8fafc;
+$report-text-high: #0f172a;
+$report-text: #1f2937;
+$report-text-medium: #334155;
+$report-text-muted: #64748b;
+$report-text-subtle: #64748b;
+$report-negative: #b91c1c;
+$report-warning: #b45309;
+$report-success: #047857;
+$report-success-base: #059669;
+$report-info-base: #0369a1;
+$report-success-surface: rgba(4, 120, 87, 0.1);
+$report-success-border: rgba(4, 120, 87, 0.32);
+$report-info-surface: rgba(3, 105, 161, 0.07);
+$report-warning-surface: rgba(180, 83, 9, 0.08);
+$report-outline-strong: rgba(15, 23, 42, 0.24);
+$report-summary-surface: #f1f5f3;
 $report-summary-text: #0f172a;
-$report-summary-label: #1e293b;
-$report-scale-danger: #f87171;
-$report-scale-warning: #fbbf24;
-$report-scale-success: #34d399;
-$report-scale-accent: #1e293b;
-$report-dialog-overlay: rgba(4, 9, 14, 0.72);
-$report-dialog-surface: #152230;
-$report-dialog-header: #1c2c3d;
-$report-dialog-control: #26384c;
-$report-dialog-border: #2a3e54;
-$report-dialog-divider: #1f2d3e;
-$report-dialog-control-border: #324962;
-$report-xlsx-surface: #121820;
-$report-xlsx-border: #2a3848;
-$report-xlsx-text: #d1dbe5;
-$report-xlsx-negative: #ef4444;
-$report-xlsx-sales-text: #f8fafc;
-$report-xlsx-sales-muted: #94a3b8;
-$report-xlsx-sales-warning-surface: #2e2010;
-$report-xlsx-sales-warning-border: #92400e;
-$report-xlsx-sales-warning-text: #fef08a;
-$report-xlsx-sales-negative: #fca5a5;
-$report-romashka-info-surface: rgba(56, 189, 248, 0.08);
-$report-romashka-neutral-surface: rgba(148, 163, 184, 0.12);
-$report-romashka-negative-surface: rgba(239, 68, 68, 0.12);
-$report-romashka-negative-hover-surface: rgba(239, 68, 68, 0.2);
+$report-summary-label: #334155;
+$report-scale-danger: #ef4444;
+$report-scale-warning: #f59e0b;
+$report-scale-success: #10b981;
+$report-scale-accent: #334155;
+$report-dialog-overlay: rgba(15, 23, 42, 0.52);
+$report-dialog-surface: #ffffff;
+$report-dialog-header: #f1f5f3;
+$report-dialog-control: #f8faf9;
+$report-dialog-border: #cbd8d1;
+$report-dialog-divider: #dbe4df;
+$report-dialog-control-border: #b8c8c0;
+$report-xlsx-surface: #ffffff;
+$report-xlsx-border: #d8e2dd;
+$report-xlsx-text: #1f2937;
+$report-xlsx-negative: #b91c1c;
+$report-xlsx-sales-text: #0f172a;
+$report-xlsx-sales-muted: #64748b;
+$report-xlsx-sales-warning-surface: #fff7ed;
+$report-xlsx-sales-warning-border: #c2410c;
+$report-xlsx-sales-warning-text: #9a3412;
+$report-xlsx-sales-negative: #b91c1c;
+$report-romashka-info-surface: rgba(3, 105, 161, 0.07);
+$report-romashka-neutral-surface: rgba(71, 85, 105, 0.08);
+$report-romashka-negative-surface: rgba(185, 28, 28, 0.07);
+$report-romashka-negative-hover-surface: rgba(185, 28, 28, 0.12);
 
-/* Legacy control and loader colors */
-$legacy-control-text: #fff;
-$legacy-control-border: rgba(255, 255, 255, 0.12);
-$legacy-control-highlight: rgba(255, 255, 255, 0.1);
-$legacy-control-shadow: rgba(0, 0, 0, 0.4);
-$legacy-control-placeholder: rgba(255, 255, 255, 0.5);
-$loader-success-fade: rgba(52, 211, 153, 0.08);
-$loader-info-fade: rgba(56, 189, 248, 0.08);
-$loader-success-glow: rgba(16, 185, 129, 0.25);
-$loader-success-glow-strong: rgba(52, 211, 153, 0.75);
-$loader-info-glow: rgba(56, 189, 248, 0.18);
-$scroll-control-surface: rgba(15, 25, 36, 0.82);
-$scroll-control-border: #2a3e54;
+/* Legacy controls and loader colors */
+$legacy-control-text: #1f2937;
+$legacy-control-border: rgba(15, 23, 42, 0.14);
+$legacy-control-highlight: rgba(255, 255, 255, 0.9);
+$legacy-control-shadow: rgba(15, 23, 42, 0.1);
+$legacy-control-placeholder: rgba(71, 85, 105, 0.72);
+$loader-success-fade: rgba(4, 120, 87, 0.06);
+$loader-info-fade: rgba(3, 105, 161, 0.06);
+$loader-success-glow: rgba(4, 120, 87, 0.16);
+$loader-success-glow-strong: rgba(4, 120, 87, 0.46);
+$loader-info-glow: rgba(3, 105, 161, 0.13);
+$scroll-control-surface: rgba(255, 255, 255, 0.9);
+$scroll-control-border: #b8c8c0;
 
 /* ===== GEOMETRY ===== */
 $space-1: 4px;
@@ -192,14 +192,12 @@ $space-4: 16px;
 $space-5: 20px;
 $space-6: 24px;
 $space-7: 32px;
-
 $radius-xs: 2px;
 $radius-sm: 4px;
 $radius-md: 8px;
 $radius-lg: 12px;
 $radius-xl: 16px;
 $radius-round: 999px;
-
 $control-height-sm: 32px;
 $control-height-md: 36px;
 $control-height-lg: 44px;
@@ -229,13 +227,13 @@ $motion-ease: ease;
 $motion-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 
 /* ===== SHADOWS ===== */
-$shadow-card: 0 24px 60px rgba(4, 9, 14, 0.45);
-$shadow-panel: 0 18px 40px rgba(4, 9, 14, 0.25);
-$shadow-popover: 0 10px 20px rgba(0, 0, 0, 0.4);
-$shadow-scroll-control: 0 2px 5px rgba(0, 0, 0, 0.35);
-$shadow-modal: 0 18px 50px rgba(0, 0, 0, 0.45);
-$shadow-bulma-card: 0 12px 28px rgba(4, 9, 14, 0.4);
-$shadow-primary: 0 0 24px rgba(16, 185, 129, 0.25);
+$shadow-card: 0 16px 38px rgba(15, 23, 42, 0.08);
+$shadow-panel: 0 10px 26px rgba(15, 23, 42, 0.06);
+$shadow-popover: 0 10px 22px rgba(15, 23, 42, 0.12);
+$shadow-scroll-control: 0 2px 6px rgba(15, 23, 42, 0.12);
+$shadow-modal: 0 20px 54px rgba(15, 23, 42, 0.16);
+$shadow-bulma-card: 0 10px 28px rgba(15, 23, 42, 0.08);
+$shadow-primary: 0 0 20px rgba(4, 120, 87, 0.16);
 $backdrop-blur: 12px;
 
 /* ===== LEGACY COMPATIBILITY ALIASES ===== */
@@ -248,7 +246,7 @@ $button-light: $primary-accent;
 $header-background-color: $surface-container;
 $main-background-color: $surface-main;
 $light-text-color: $text-high;
-$dark-text-color: #04090e;
+$dark-text-color: #0f172a;
 $header-height: $topbar-height;
 $filter-height: 30px;
 $tableLevel1: $surface-container;
@@ -259,9 +257,6 @@ $rowTextColor: $text-high;
 $dropdown-background: $surface-input;
 $dropdown-border: $outline-dark;
 
-/*
- * Runtime CSS tokens for plain CSS, Bulma compatibility and inline browser APIs.
- */
 @mixin export-theme-custom-properties {
   color-scheme: $native-color-scheme;
   --ui-color-transparent: #{$color-transparent};
@@ -380,30 +375,10 @@ $dropdown-border: $outline-dark;
 }
 
 @mixin export-bulma-theme-utilities {
-  .has-text-white {
-    color: var(--ui-color-text-high) !important;
-  }
-
-  .has-text-primary,
-  .has-text-success {
-    color: var(--ui-color-accent-light) !important;
-  }
-
-  .has-text-grey,
-  .has-text-grey-light {
-    color: var(--ui-color-text-muted) !important;
-  }
-
-  .has-text-danger {
-    color: var(--ui-color-danger) !important;
-  }
-
-  .has-text-warning {
-    color: var(--ui-color-warning) !important;
-  }
-
-  .has-text-info,
-  .has-text-link {
-    color: var(--ui-color-info) !important;
-  }
+  .has-text-white { color: var(--ui-color-text-high) !important; }
+  .has-text-primary, .has-text-success { color: var(--ui-color-accent-light) !important; }
+  .has-text-grey, .has-text-grey-light { color: var(--ui-color-text-muted) !important; }
+  .has-text-danger { color: var(--ui-color-danger) !important; }
+  .has-text-warning { color: var(--ui-color-warning) !important; }
+  .has-text-info, .has-text-link { color: var(--ui-color-info) !important; }
 }

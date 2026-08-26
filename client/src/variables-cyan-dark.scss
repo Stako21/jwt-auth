@@ -7,101 +7,101 @@ $calendar-indicator-filter: brightness(0) saturate(100%) invert(88%) sepia(8%) s
 $calendar-indicator-opacity: 0.82;
 $search-cancel-filter: invert(0.82);
 
-/* Deep Clean Ocean Surfaces */
-$surface-main: #09121a;
-$surface-container-lowest: #04090e;
-$surface-container-low: #0f1924;
-$surface-container: #152230;
-$surface-container-high: #1c2c3d;
-$surface-container-highest: #26384c;
+/* Deep Cyan Surfaces */
+$surface-main: #080e14;
+$surface-container-lowest: #04080c;
+$surface-container-low: #0e1620;
+$surface-container: #141e2b;
+$surface-container-high: #1d2a3a;
+$surface-container-highest: #26364a;
 $surface-control: $surface-container;
 $surface-input: $surface-container-low;
-$select-option-hover-surface: rgba(16, 185, 129, 0.12);
-$select-option-selected-surface: rgba(16, 185, 129, 0.22);
-$surface-page-wash: rgba(15, 25, 36, 0.62);
-$surface-modal-overlay: rgba(4, 9, 14, 0.82);
-$surface-modal-overlay-strong: rgba(4, 9, 14, 0.88);
-$surface-modal: rgba(21, 34, 48, 0.96);
-$surface-modal-strong: rgba(21, 34, 48, 0.98);
-$surface-modal-section: rgba(21, 34, 48, 0.75);
-$surface-subtle-highlight: rgba(240, 245, 250, 0.05);
+$select-option-hover-surface: rgba(6, 182, 212, 0.12);
+$select-option-selected-surface: rgba(6, 182, 212, 0.22);
+$surface-page-wash: rgba(8, 14, 20, 0.65);
+$surface-modal-overlay: rgba(4, 8, 12, 0.82);
+$surface-modal-overlay-strong: rgba(4, 8, 12, 0.88);
+$surface-modal: rgba(20, 30, 43, 0.96);
+$surface-modal-strong: rgba(20, 30, 43, 0.98);
+$surface-modal-section: rgba(20, 30, 43, 0.75);
+$surface-subtle-highlight: rgba(240, 247, 249, 0.05);
 $surface-soft-highlight: rgba(255, 255, 255, 0.08);
 
-/* Emerald-tinted Slate Table Palette */
+/* Vivid Cyan Table Palette */
 $table-page-surface: $surface-main;
-$table-shell-surface: #09121a;
-$table-head-surface: #10202b;
-$table-group-primary: #123330;          /* Чистый темно-изумрудный */
-$table-group-accent: #0d2626;
-$table-group-secondary: #10202b;
-$table-row-even: #0c1722;
-$table-row-odd: #09121a;
-$table-row-hover: rgba(52, 211, 153, 0.08);
-$table-row-selected: rgba(16, 185, 129, 0.18);
-$table-border: #1a323a;
-$table-text: #d1dbe5;
-$table-text-strong: #f0f5fa;
-$table-text-muted: #8496a8;
+$table-shell-surface: #080e14;
+$table-head-surface: #101a26;
+$table-group-primary: #132b38;
+$table-group-accent: #0f222e;
+$table-group-secondary: #101a26;
+$table-row-even: #0b131c;
+$table-row-odd: #080e14;
+$table-row-hover: rgba(6, 182, 212, 0.08);
+$table-row-selected: rgba(6, 182, 212, 0.18);
+$table-border: #1f3144;
+$table-text: #cedadf;
+$table-text-strong: #f0f7f9;
+$table-text-muted: #8295a1;
 $balance-group-secondary: $table-group-secondary;
 $balance-group-tertiary: $table-head-surface;
 $balance-leaf-row-odd: $table-row-odd;
 $balance-leaf-row-even: $table-row-even;
 $balance-leaf-row-hover: $table-row-hover;
-$surface-glass: rgba(21, 34, 48, 0.75);
-$surface-glass-subtle: rgba(4, 9, 14, 0.44);
-$surface-glass-strong: rgba(4, 9, 14, 0.9);
-$surface-overlay: rgba(4, 9, 14, 0.75);
+$surface-glass: rgba(20, 30, 43, 0.75);
+$surface-glass-subtle: rgba(4, 8, 12, 0.44);
+$surface-glass-strong: rgba(4, 8, 12, 0.9);
+$surface-overlay: rgba(4, 8, 12, 0.75);
 
 /* Background Glows */
 $background-glow-primary: radial-gradient(
   ellipse at 50% 0%,
-  rgba(16, 185, 129, 0.22) 0%,
-  rgba(16, 185, 129, 0.05) 35%,
+  rgba(6, 182, 212, 0.2) 0%,
+  rgba(6, 182, 212, 0.05) 35%,
   transparent 65%
 );
 $background-glow-depth: radial-gradient(
   ellipse at 100% 100%,
-  rgba(28, 44, 61, 0.85) 0%,
-  rgba(15, 25, 36, 0.3) 40%,
+  rgba(29, 42, 58, 0.85) 0%,
+  rgba(14, 22, 32, 0.3) 40%,
   transparent 70%
 );
 $app-background-image: $background-glow-primary, $background-glow-depth;
 
-/* Primary Emerald Accent System */
-$primary-accent: #10b981;             /* Свежий Emerald */
-$primary-accent-hover: #34d399;       /* Мягкий изумрудно-мятный */
-$primary-accent-light: #6ee7b7;       /* Светло-мятный */
-$primary-accent-dark: #047857;
-$primary-accent-surface-subtle: rgba(52, 211, 153, 0.06);
-$primary-accent-surface-soft: rgba(16, 185, 129, 0.1);
-$primary-accent-surface: rgba(16, 185, 129, 0.12);
-$primary-accent-surface-admin: rgba(16, 185, 129, 0.14);
-$primary-accent-surface-medium: rgba(16, 185, 129, 0.16);
-$primary-accent-surface-selected: rgba(16, 185, 129, 0.18);
-$primary-accent-surface-strong: rgba(16, 185, 129, 0.22);
-$primary-accent-border-soft: rgba(52, 211, 153, 0.25);
-$primary-accent-border: rgba(52, 211, 153, 0.38);
-$primary-accent-focus-ring: rgba(16, 185, 129, 0.22);
-$primary-accent-focus-ring-strong: rgba(16, 185, 129, 0.28);
-$primary-accent-focus-ring-emphasized: rgba(16, 185, 129, 0.35);
+/* Primary Cyan Accent System */
+$primary-accent: #06b6d4;
+$primary-accent-hover: #22d3ee;
+$primary-accent-light: #67e8f9;
+$primary-accent-dark: #0e7490;
+$primary-accent-surface-subtle: rgba(34, 211, 238, 0.06);
+$primary-accent-surface-soft: rgba(6, 182, 212, 0.1);
+$primary-accent-surface: rgba(6, 182, 212, 0.12);
+$primary-accent-surface-admin: rgba(6, 182, 212, 0.14);
+$primary-accent-surface-medium: rgba(6, 182, 212, 0.16);
+$primary-accent-surface-selected: rgba(6, 182, 212, 0.18);
+$primary-accent-surface-strong: rgba(6, 182, 212, 0.22);
+$primary-accent-border-soft: rgba(34, 211, 238, 0.25);
+$primary-accent-border: rgba(34, 211, 238, 0.38);
+$primary-accent-focus-ring: rgba(6, 182, 212, 0.22);
+$primary-accent-focus-ring-strong: rgba(6, 182, 212, 0.28);
+$primary-accent-focus-ring-emphasized: rgba(6, 182, 212, 0.35);
 
-/* Neutral Typography (No Camouflage/Olive Colors) */
-$text-high: #f0f5fa;
-$text-medium: #b0c0d0;
-$text-muted: #788a9c;
-$text-on-accent: #022c22;
+/* Typography */
+$text-high: #f0f7f9;
+$text-medium: #b2c4cd;
+$text-muted: #6b818e;
+$text-on-accent: #00252e;
 
 /* Form Controls & Borders */
-$outline-dark: rgba(240, 245, 250, 0.08);
-$outline-medium: rgba(240, 245, 250, 0.15);
-$outline-green: #1e3835;               /* Заменен грязно-зеленый #3c4a42 на изумрудно-графитовый */
+$outline-dark: rgba(240, 247, 249, 0.08);
+$outline-medium: rgba(240, 247, 249, 0.15);
+$outline-green: #213448;
 $form-control-surface: $surface-container-lowest;
 $form-control-surface-disabled: $surface-container-low;
-$form-control-border: #1e3835;
-$form-control-border-hover: rgba(52, 211, 153, 0.6);
-$form-control-text: #d1dbe5;
+$form-control-border: #213448;
+$form-control-border-hover: rgba(34, 211, 238, 0.6);
+$form-control-text: #cedadf;
 $form-control-placeholder: $text-muted;
-$form-control-focus-ring: rgba(16, 185, 129, 0.25);
+$form-control-focus-ring: rgba(6, 182, 212, 0.25);
 $form-control-error-surface: rgba(239, 68, 68, 0.15);
 
 /* System Statuses */
@@ -123,24 +123,24 @@ $status-revision-surface: rgba(245, 158, 11, 0.12);
 $status-rejected: $negative;
 $status-rejected-surface: $negative-surface-soft;
 $status-signed: $primary-accent-light;
-$status-signed-surface: rgba(16, 185, 129, 0.14);
+$status-signed-surface: rgba(6, 182, 212, 0.14);
 
 /* Report-specific semantic colors */
 $report-text-high: #ffffff;
-$report-text: #e2eaf4;
-$report-text-medium: #cbd8e8;
-$report-text-muted: #94a7c1;
-$report-text-subtle: #798ea8;
+$report-text: #e0f2fe;
+$report-text-medium: #bae6fd;
+$report-text-muted: #7dd3fc;
+$report-text-subtle: #0284c7;
 $report-negative: #f87171;
 $report-warning: #fbbf24;
 $report-success: #34d399;
 $report-success-base: #10b981;
-$report-info-base: #38bdf8;
-$report-success-surface: rgba(16, 185, 129, 0.16);
+$report-info-base: #06b6d4;
+$report-success-surface: rgba(52, 211, 153, 0.16);
 $report-success-border: rgba(52, 211, 153, 0.45);
-$report-info-surface: rgba(56, 189, 248, 0.08);
+$report-info-surface: rgba(6, 182, 212, 0.08);
 $report-warning-surface: rgba(245, 158, 11, 0.1);
-$report-outline-strong: rgba(226, 234, 244, 0.3);
+$report-outline-strong: rgba(240, 247, 249, 0.3);
 $report-summary-surface: #f8fafc;
 $report-summary-text: #0f172a;
 $report-summary-label: #1e293b;
@@ -148,16 +148,16 @@ $report-scale-danger: #f87171;
 $report-scale-warning: #fbbf24;
 $report-scale-success: #34d399;
 $report-scale-accent: #1e293b;
-$report-dialog-overlay: rgba(4, 9, 14, 0.72);
-$report-dialog-surface: #152230;
-$report-dialog-header: #1c2c3d;
-$report-dialog-control: #26384c;
-$report-dialog-border: #2a3e54;
-$report-dialog-divider: #1f2d3e;
-$report-dialog-control-border: #324962;
-$report-xlsx-surface: #121820;
-$report-xlsx-border: #2a3848;
-$report-xlsx-text: #d1dbe5;
+$report-dialog-overlay: rgba(4, 8, 12, 0.72);
+$report-dialog-surface: #141e2b;
+$report-dialog-header: #1d2a3a;
+$report-dialog-control: #26364a;
+$report-dialog-border: #31445b;
+$report-dialog-divider: #202e3f;
+$report-dialog-control-border: #394f69;
+$report-xlsx-surface: #0e1620;
+$report-xlsx-border: #213448;
+$report-xlsx-text: #cedadf;
 $report-xlsx-negative: #ef4444;
 $report-xlsx-sales-text: #f8fafc;
 $report-xlsx-sales-muted: #94a3b8;
@@ -165,7 +165,7 @@ $report-xlsx-sales-warning-surface: #2e2010;
 $report-xlsx-sales-warning-border: #92400e;
 $report-xlsx-sales-warning-text: #fef08a;
 $report-xlsx-sales-negative: #fca5a5;
-$report-romashka-info-surface: rgba(56, 189, 248, 0.08);
+$report-romashka-info-surface: rgba(6, 182, 212, 0.08);
 $report-romashka-neutral-surface: rgba(148, 163, 184, 0.12);
 $report-romashka-negative-surface: rgba(239, 68, 68, 0.12);
 $report-romashka-negative-hover-surface: rgba(239, 68, 68, 0.2);
@@ -176,13 +176,13 @@ $legacy-control-border: rgba(255, 255, 255, 0.12);
 $legacy-control-highlight: rgba(255, 255, 255, 0.1);
 $legacy-control-shadow: rgba(0, 0, 0, 0.4);
 $legacy-control-placeholder: rgba(255, 255, 255, 0.5);
-$loader-success-fade: rgba(52, 211, 153, 0.08);
+$loader-success-fade: rgba(6, 182, 212, 0.08);
 $loader-info-fade: rgba(56, 189, 248, 0.08);
-$loader-success-glow: rgba(16, 185, 129, 0.25);
-$loader-success-glow-strong: rgba(52, 211, 153, 0.75);
+$loader-success-glow: rgba(6, 182, 212, 0.25);
+$loader-success-glow-strong: rgba(34, 211, 238, 0.75);
 $loader-info-glow: rgba(56, 189, 248, 0.18);
-$scroll-control-surface: rgba(15, 25, 36, 0.82);
-$scroll-control-border: #2a3e54;
+$scroll-control-surface: rgba(14, 22, 32, 0.82);
+$scroll-control-border: #26364a;
 
 /* ===== GEOMETRY ===== */
 $space-1: 4px;
@@ -229,13 +229,13 @@ $motion-ease: ease;
 $motion-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 
 /* ===== SHADOWS ===== */
-$shadow-card: 0 24px 60px rgba(4, 9, 14, 0.45);
-$shadow-panel: 0 18px 40px rgba(4, 9, 14, 0.25);
+$shadow-card: 0 24px 60px rgba(4, 8, 12, 0.45);
+$shadow-panel: 0 18px 40px rgba(4, 8, 12, 0.25);
 $shadow-popover: 0 10px 20px rgba(0, 0, 0, 0.4);
 $shadow-scroll-control: 0 2px 5px rgba(0, 0, 0, 0.35);
 $shadow-modal: 0 18px 50px rgba(0, 0, 0, 0.45);
-$shadow-bulma-card: 0 12px 28px rgba(4, 9, 14, 0.4);
-$shadow-primary: 0 0 24px rgba(16, 185, 129, 0.25);
+$shadow-bulma-card: 0 12px 28px rgba(4, 8, 12, 0.4);
+$shadow-primary: 0 0 24px rgba(6, 182, 212, 0.25);
 $backdrop-blur: 12px;
 
 /* ===== LEGACY COMPATIBILITY ALIASES ===== */
@@ -248,7 +248,7 @@ $button-light: $primary-accent;
 $header-background-color: $surface-container;
 $main-background-color: $surface-main;
 $light-text-color: $text-high;
-$dark-text-color: #04090e;
+$dark-text-color: #04080c;
 $header-height: $topbar-height;
 $filter-height: 30px;
 $tableLevel1: $surface-container;
@@ -259,9 +259,7 @@ $rowTextColor: $text-high;
 $dropdown-background: $surface-input;
 $dropdown-border: $outline-dark;
 
-/*
- * Runtime CSS tokens for plain CSS, Bulma compatibility and inline browser APIs.
- */
+/* Runtime CSS & Bulma mixins */
 @mixin export-theme-custom-properties {
   color-scheme: $native-color-scheme;
   --ui-color-transparent: #{$color-transparent};
@@ -380,30 +378,10 @@ $dropdown-border: $outline-dark;
 }
 
 @mixin export-bulma-theme-utilities {
-  .has-text-white {
-    color: var(--ui-color-text-high) !important;
-  }
-
-  .has-text-primary,
-  .has-text-success {
-    color: var(--ui-color-accent-light) !important;
-  }
-
-  .has-text-grey,
-  .has-text-grey-light {
-    color: var(--ui-color-text-muted) !important;
-  }
-
-  .has-text-danger {
-    color: var(--ui-color-danger) !important;
-  }
-
-  .has-text-warning {
-    color: var(--ui-color-warning) !important;
-  }
-
-  .has-text-info,
-  .has-text-link {
-    color: var(--ui-color-info) !important;
-  }
+  .has-text-white { color: var(--ui-color-text-high) !important; }
+  .has-text-primary, .has-text-success { color: var(--ui-color-accent-light) !important; }
+  .has-text-grey, .has-text-grey-light { color: var(--ui-color-text-muted) !important; }
+  .has-text-danger { color: var(--ui-color-danger) !important; }
+  .has-text-warning { color: var(--ui-color-warning) !important; }
+  .has-text-info, .has-text-link { color: var(--ui-color-info) !important; }
 }

@@ -2022,3 +2022,17 @@ Frontend:
   - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
   - generated `client/dist` XLSX changes were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-26 - Emerald and cyan light theme palettes
+
+- Added complete `variables-emerald-light.scss` and `variables-cyan-light.scss` token sets based on the approved Stitch light-theme direction without adopting Stitch's changed layouts, cards, extra data, or mobile navigation.
+- Preserved all 219 SCSS variable names, geometry, motion, responsive sizes, aliases, and runtime/Bulma mixin contracts across emerald dark, cyan dark, emerald light, and cyan light.
+- Built restrained light surface hierarchies for the shell, forms, dropdowns, modals, dense table headers/groups/zebra rows, hover/selection, statuses, reports, XLSX views, loaders, and legacy controls.
+- Added the shared `--ui-color-text-on-accent` runtime token to all four themes and mapped Bulma primary-button text to it so light and dark primary actions retain appropriate contrast.
+- Kept the active application theme unchanged; runtime theme selection remains a separate implementation step.
+- Verification:
+  - both light theme files compile directly with the installed Sass compiler
+  - all four theme files expose the same 219-variable contract
+  - key foreground/background contrast checks meet WCAG AA, including primary buttons after darkening the cyan accent to `#087f9c`
+  - `npm run lint` and `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
