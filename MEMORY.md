@@ -2002,3 +2002,9 @@ Frontend:
   - targeted `git diff --check` passed
   - generated `client/dist` XLSX changes were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-26 - Plain-text configuration table states
+
+- Removed filled badge/tag surfaces from every table inside the Admin configuration workspace, including report roles/statuses and scheduler states.
+- Preserved semantic meaning through compact colored text using the shared accent, warning, danger, info, and muted theme variables; tags outside configuration tables and action buttons remain unchanged.
+- Verification: `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings; generated `client/dist` XLSX changes were restored.
