@@ -1,4 +1,4 @@
-@use "../../variables.scss" as *;
+@use "../../theme.scss" as *;
 
 .report { padding: 10px 12px 20px; color: $report-text-high; }
 .header { display: flex; justify-content: space-between; align-items: end; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }

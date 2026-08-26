@@ -1,4 +1,4 @@
-@use "../variables.scss" as *;
+@use "../theme.scss" as *;
 
 .mainWrapper {
   min-height: 100vh;
@@ -20,7 +20,7 @@
   margin-bottom: $space-1;
   overflow: hidden;
   border-radius: $radius-lg;
-  // background: $primary-accent;
+  background: $primary-accent-dark;
   box-shadow: $shadow-primary;
 
   img {

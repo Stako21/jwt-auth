@@ -1,0 +1,40 @@
+@use "../../theme.scss" as *;
+
+.themeSelector {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-2;
+  width: min(100%, 760px);
+  margin: 0 auto $space-2;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  color: $text-muted;
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
+
+  i {
+    color: $primary-accent-light;
+  }
+}
+
+.select {
+  width: 190px;
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .themeSelector {
+    justify-content: space-between;
+    margin-bottom: $space-2;
+    padding: 0 $space-1;
+  }
+
+  .select {
+    width: min(58vw, 210px);
+  }
+}

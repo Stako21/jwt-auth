@@ -1,9 +1,38 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="uk" data-theme="dark" data-ui-theme="emerald-dark">
   <head>
     <meta charset="UTF-8" />
     <!-- <link rel="icon" type="image/svg+xml" href="/ST_Wight.png" /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        var fallbackTheme = "emerald-dark";
+        var allowedThemes = [
+          "emerald-dark",
+          "cyan-dark",
+          "emerald-light",
+          "cyan-light",
+        ];
+        var storedTheme = null;
+
+        try {
+          storedTheme = window.localStorage.getItem("ui-theme");
+        } catch (error) {
+          storedTheme = null;
+        }
+
+        var activeTheme = allowedThemes.includes(storedTheme)
+          ? storedTheme
+          : fallbackTheme;
+
+        document.documentElement.dataset.uiTheme = activeTheme;
+        document.documentElement.dataset.theme = activeTheme.endsWith(
+          "-light",
+        )
+          ? "light"
+          : "dark";
+      })();
+    </script>
     <title>Balanсe</title>
     <link
       rel="stylesheet"

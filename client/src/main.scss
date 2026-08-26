@@ -1,7 +1,32 @@
-@use "./variables" as *;
+@use "./theme" as *;
+@use "./variables" as emerald-dark;
+@use "./variables-cyan-dark" as cyan-dark;
+@use "./variables-emerald-light" as emerald-light;
+@use "./variables-cyan-light" as cyan-light;
 
 :root {
-  @include export-theme-custom-properties;
+  @include emerald-dark.export-runtime-theme-colors;
+  @include emerald-dark.export-theme-custom-properties;
+}
+
+html[data-ui-theme="emerald-dark"] {
+  @include emerald-dark.export-runtime-theme-colors;
+  @include emerald-dark.export-theme-custom-properties;
+}
+
+html[data-ui-theme="cyan-dark"] {
+  @include cyan-dark.export-runtime-theme-colors;
+  @include cyan-dark.export-theme-custom-properties;
+}
+
+html[data-ui-theme="emerald-light"] {
+  @include emerald-light.export-runtime-theme-colors;
+  @include emerald-light.export-theme-custom-properties;
+}
+
+html[data-ui-theme="cyan-light"] {
+  @include cyan-light.export-runtime-theme-colors;
+  @include cyan-light.export-theme-custom-properties;
 }
 
 * {

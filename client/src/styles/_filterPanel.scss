@@ -1,4 +1,4 @@
-@use "../variables.scss" as *;
+@use "../theme.scss" as *;
 
 @mixin shell($padding: $space-4, $radius: $radius-xl) {
   min-width: 0;

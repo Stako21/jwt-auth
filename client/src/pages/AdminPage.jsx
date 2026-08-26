@@ -12,6 +12,7 @@ import { ReportsConfig } from "../components/Configuration/ReportsConfig";
 import { ImportSourcesConfig } from "../components/Configuration/ImportSourcesConfig";
 import { SchedulerConfig } from "../components/Configuration/SchedulerConfig";
 import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton";
+import ThemeSelector from "../components/ThemeSelector/ThemeSelector.jsx";
 import "../components/Configuration/configurationCompact.css";
 import style from "./AdminPage.module.scss";
 
@@ -126,6 +127,7 @@ export default function AdminPage() {
 
   return (
     <main className={`${style.adminPage} admin-theme`}>
+      <ThemeSelector />
       <nav className={style.tabBar} aria-label="Розділи адміністрування">
         {[
           ["users", "Користувачі", "fa-users"],

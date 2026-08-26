@@ -2036,3 +2036,19 @@ Frontend:
   - key foreground/background contrast checks meet WCAG AA, including primary buttons after darkening the cyan accent to `#087f9c`
   - `npm run lint` and `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
   - generated `client/dist` XLSX changes were restored
+
+## 2026-08-26 - Runtime theme selector
+
+- Added a compact Admin theme selector for Emerald Dark, Cyan Dark, Emerald Light, and Cyan Light; changes apply immediately and persist for the current browser in `localStorage` under `ui-theme`.
+- Added an early inline restore in `client/index.html` so the saved theme is applied before React and stylesheet rendering, avoiding a dark/light flash on reload.
+- Kept `data-ui-theme` for the four application palettes and synchronized the standard `data-theme` to `dark` or `light`, preserving Bulma's full native scheme behavior and native control rendering.
+- Added `theme.scss` as the component-facing facade: theme-dependent colors, gradients, filters, and shadows resolve through runtime CSS custom properties, while geometry, spacing, radii, breakpoints, and motion remain compile-time Sass values.
+- Extended all four palette files with matching `export-runtime-theme-colors` mixins and migrated authored component SCSS imports from the fixed Emerald Dark palette to the runtime facade.
+- Added an accent-backed login brand mark so the existing white logo remains visible in both light themes.
+- Verification:
+  - all four palette SCSS files compile directly
+  - theme application/localStorage behavior passed a focused runtime check
+  - built CSS contains all four `data-ui-theme` selectors
+  - Emerald Dark, Emerald Light, and Cyan Light login surfaces were visually checked in headless Edge
+  - `npm run lint` and `npm run build` passed with existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
