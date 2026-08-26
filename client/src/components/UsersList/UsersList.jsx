@@ -260,16 +260,16 @@ export const UsersList = ({
     onUserSelect(userId);
   };
 
-  const getRowStyle = (user) => {
+  const getRowClassName = (user) => {
     if (user.role === ROLE_IDS.TA && user.parent_user_id) {
-      return { backgroundColor: "#0f3d2e99" };
+      return style.agentRow;
     }
 
     if (user.role === ROLE_IDS.SV && user.parent_user_id) {
-      return { backgroundColor: "#4a3f0b99" };
+      return style.supervisorRow;
     }
 
-    return {};
+    return "";
   };
 
   const renderUserRow = (user, { indentLevel = 0 } = {}) => {
@@ -277,7 +277,7 @@ export const UsersList = ({
       Number(user.role) === ROLE_IDS.TA && Boolean(user.parent_user_id);
 
     return (
-      <tr key={user.id} style={getRowStyle(user)}>
+      <tr key={user.id} className={getRowClassName(user)}>
         <td>
           <button
             className="button is-warning is-dark is-small"
@@ -402,9 +402,9 @@ export const UsersList = ({
     }
 
     return (
-      <div className="mb-5">
-        <h4 className="title is-6 mb-2">{title}</h4>
-        <table className="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+      <div className={style.hierarchySection}>
+        <h4 className={style.sectionTitle}>{title}</h4>
+        <table className={`${style.userTable} table is-fullwidth`}>
           <thead>
             <tr>
               <th className="has-text-centered">Пароль</th>
@@ -448,62 +448,60 @@ export const UsersList = ({
 
   return (
     <div className={style.wrapperUserList}>
-      <div className="buttons is-centered mt-3 mb-2">
-        <button
-          type="button"
-          className={`button ${viewMode === "list" ? "is-primary" : "is-light"}`}
-          onClick={() => setViewMode("list")}
-        >
-          Список
-        </button>
-        <button
-          type="button"
-          className={`button ${viewMode === "hierarchy" ? "is-primary" : "is-light"}`}
-          onClick={() => setViewMode("hierarchy")}
-        >
-          Ієрархія
-        </button>
-      </div>
+      <div className={style.toolbar}>
+        <div className={style.viewSwitch} aria-label="Режим відображення">
+          <button
+            type="button"
+            className={viewMode === "list" ? style.activeView : ""}
+            aria-pressed={viewMode === "list"}
+            onClick={() => setViewMode("list")}
+          >
+            Список
+          </button>
+          <button
+            type="button"
+            className={viewMode === "hierarchy" ? style.activeView : ""}
+            aria-pressed={viewMode === "hierarchy"}
+            onClick={() => setViewMode("hierarchy")}
+          >
+            Ієрархія
+          </button>
+        </div>
 
-      <div style={{ margin: 10 }}>
         <button
-          className="button is-success is-dark is-fullwidth"
+          className={`${style.createButton} button is-primary`}
           onClick={() => onCreateUser && onCreateUser()}
         >
+          <i className="fa-solid fa-user-plus" aria-hidden="true" />
           Створити користувача
         </button>
-      </div>
 
-      <div className="field is-grouped is-grouped-centered" style={{ margin: 10 }}>
-        <div className="field is-small">
-          <div className="select is-small">
+        <div className={style.searchControls}>
+          <div className={style.searchSelect}>
             <FormSelect value={searchField} onChange={(e) => setSearchField(e.target.value)}>
               <option value="all">Шукати в логіні та імені</option>
               <option value="name">Шукати в логіні</option>
               <option value="fullName">Шукати в імені</option>
             </FormSelect>
           </div>
-        </div>
-        <div className="field is-expanded">
-          <p className="control has-icons-left is-expanded">
+          <div className={style.searchInput}>
             <FormInput
-              className="input is-small"
               type="search"
               placeholder="Пошук користувача..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <span className="icon is-small is-left">
+            <span className={style.searchIcon} aria-hidden="true">
               <i className="fas fa-search"></i>
             </span>
-          </p>
+          </div>
         </div>
       </div>
 
       <div className={style.wraperTable}>
         <div className={style.scrollContainer}>
           {viewMode === "list" ? (
-            <table className="table is-bordered is-striped is-narrow is-hoverable">
+            <table className={`${style.userTable} table is-fullwidth`}>
               <thead>
                 <tr>
                   <th className="has-text-centered">Пароль</th>
@@ -561,7 +559,7 @@ export const UsersList = ({
       </div>
 
       {isModalOpen && userToDelete && (
-        <div className="modal is-active">
+        <div className="modal is-active admin-modal">
           <div className="modal-background"></div>
           <div className="modal-card">
             <header className="modal-card-head">

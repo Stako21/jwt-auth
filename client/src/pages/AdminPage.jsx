@@ -13,6 +13,7 @@ import { ImportSourcesConfig } from "../components/Configuration/ImportSourcesCo
 import { SchedulerConfig } from "../components/Configuration/SchedulerConfig";
 import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton";
 import "../components/Configuration/configurationCompact.css";
+import style from "./AdminPage.module.scss";
 
 const ADMIN_PAGE_TAB_STORAGE_KEY = "admin-page-active-tab";
 const DEFAULT_ADMIN_TAB = "users";
@@ -57,11 +58,6 @@ export default function AdminPage() {
     window.localStorage.setItem(ADMIN_PAGE_TAB_STORAGE_KEY, activeTab);
   }, [activeTab]);
 
-  const handleTabClick = (event, tab) => {
-    event.preventDefault();
-    handleTabChange(tab);
-  };
-
   const { enqueueSnackbar } = useSnackbar();
 
   const handlePasswordChange = async () => {
@@ -94,54 +90,32 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="container" style={{ minHeight: "100vh" }}>
-      {/* <div className={style.adpWrapperTitle}>"
-        <h1>Administrator Page</h1>
-        <div className={style.adpWrapperTitleUserInfo}>
-          <p>Your name: {userInfo.userName}</p>
-          <p>Your role: {userInfo.role === 1 ? "admin" : "user"}</p>
-        </div>
-      </div> */}
+    <main className={`${style.adminPage} admin-theme`}>
+      <nav className={style.tabBar} aria-label="Розділи адміністрування">
+        {[
+          ["users", "Користувачі", "fa-users"],
+          ["settings", "Сповіщення", "fa-bell"],
+          ["scheduler", "Планувальник", "fa-clock"],
+          ["configuration", "Конфігурація", "fa-sliders"],
+        ].map(([tab, label, icon]) => (
+          <button
+            key={tab}
+            type="button"
+            className={`${style.tabButton} ${
+              activeTab === tab ? style.activeTab : ""
+            }`}
+            aria-current={activeTab === tab ? "page" : undefined}
+            onClick={() => handleTabChange(tab)}
+          >
+            <i className={`fa-solid ${icon}`} aria-hidden="true" />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
 
-      <div
-        className="tabs is-centered is-boxed"
-        style={{ marginTop: 10, marginBottom: 0 }}
-      >
-        <ul>
-          <li className={activeTab === "users" ? "is-active" : ""}>
-            <a href="#users" onClick={(event) => handleTabClick(event, "users")}>
-              Користувачі
-            </a>
-          </li>
-          <li className={activeTab === "settings" ? "is-active" : ""}>
-            <a
-              href="#settings"
-              onClick={(event) => handleTabClick(event, "settings")}
-            >
-              Сповіщення
-            </a>
-          </li>
-          <li className={activeTab === "scheduler" ? "is-active" : ""}>
-            <a
-              href="#scheduler"
-              onClick={(event) => handleTabClick(event, "scheduler")}
-            >
-              Планувальник
-            </a>
-          </li>
-          <li className={activeTab === "configuration" ? "is-active" : ""}>
-            <a
-              href="#configuration"
-              onClick={(event) => handleTabClick(event, "configuration")}
-            >
-              Конфігурація
-            </a>
-          </li>
-        </ul>
-      </div>
-
-      {activeTab === "users" && (
-        <>
+      <section className={style.content}>
+        {activeTab === "users" && (
+          <>
           {(editUser || newUserModalOpen) && (
             <Sidebar
               user={editUser}
@@ -154,7 +128,7 @@ export default function AdminPage() {
           )}
 
           {selectedUserId && (
-            <div className="modal is-active">
+            <div className="modal is-active admin-modal">
               <div className="modal-background"></div>
               <div className="modal-card">
                 <header className="modal-card-head">
@@ -200,31 +174,34 @@ export default function AdminPage() {
             onCreateUser={() => setNewUserModalOpen(true)}
             key={usersReloadKey}
           />
-        </>
-      )}
+          </>
+        )}
 
-      {activeTab === "settings" && (
-        <div style={{ padding: 16 }}>
-          <RegionNotifications />
-        </div>
-      )}
+        {activeTab === "settings" && (
+          <div className={style.panelInset}>
+            <RegionNotifications />
+          </div>
+        )}
 
-      {activeTab === "scheduler" && (
-        <SchedulerConfig title="Ручний запуск планувальника" />
-      )}
+        {activeTab === "scheduler" && (
+          <div className="configuration-compact">
+            <SchedulerConfig title="Ручний запуск планувальника" />
+          </div>
+        )}
 
-      {activeTab === "configuration" && (
-        <div className="configuration-compact">
-          <BranchConfig />
-          <CitiesConfig />
-          <BalancePagesConfig />
-          <ReportsConfig />
-          <ImportSourcesConfig />
-          <SchedulerConfig title="Планувальник" />
-        </div>
-      )}
+        {activeTab === "configuration" && (
+          <div className="configuration-compact">
+            <BranchConfig />
+            <CitiesConfig />
+            <BalancePagesConfig />
+            <ReportsConfig />
+            <ImportSourcesConfig />
+            <SchedulerConfig title="Планувальник" />
+          </div>
+        )}
+      </section>
 
       <ScrollToTopButton />
-    </div>
+    </main>
   );
 }

@@ -117,15 +117,15 @@ export function RegionNotifications() {
 
   return (
     <div className={styles.container}>
-      <div className="columns">
+      <div className={styles.layout}>
         {/* Таблиця */}
-        <div className="column is-7">
-          <h3 className="title is-5">Поточні налаштування</h3>
+        <section className={styles.listPanel}>
+          <h3 className={styles.title}>Поточні налаштування</h3>
           {notifications.length === 0 ? (
             <p className="has-text-grey">Налаштувань ще немає</p>
           ) : (
             <div className="table-container">
-              <table className="table is-fullwidth is-bordered is-striped is-narrow">
+              <table className={`${styles.table} table is-fullwidth`}>
                 <thead>
                   <tr>
                     <th>Місто</th>
@@ -156,14 +156,18 @@ export function RegionNotifications() {
                         <button
                           className="button is-small is-info ml-1"
                           onClick={() => handleEdit(notif)}
+                          aria-label="Редагувати налаштування"
+                          title="Редагувати"
                         >
-                          <i class="fas fa-pen"></i>
+                          <i className="fas fa-pen"></i>
                         </button>
                         <button
                           className="button is-small is-danger ml-1"
                           onClick={() => handleDelete(notif.id)}
+                          aria-label="Видалити налаштування"
+                          title="Видалити"
                         >
-                          <i class="fa-solid fa-xmark"></i>
+                          <i className="fa-solid fa-xmark"></i>
                         </button>
                       </td>
                     </tr>
@@ -172,11 +176,11 @@ export function RegionNotifications() {
               </table>
             </div>
           )}
-        </div>
+        </section>
 
         {/* Форма */}
-        <div className="column is-5">
-          <h3 className="title is-5">
+        <section className={styles.formPanel}>
+          <h3 className={styles.title}>
             {editingId ? "Редагування" : "Додавання налаштування"}
           </h3>
           <form onSubmit={handleSubmit}>
@@ -267,7 +271,7 @@ export function RegionNotifications() {
               )}
             </div>
           </form>
-        </div>
+        </section>
       </div>
     </div>
   );

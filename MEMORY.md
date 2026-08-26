@@ -1953,3 +1953,17 @@ Frontend:
 - Made the report heading its own row; the controls now use a deterministic grid with grouping plus overdue toggle on the first control row and a full-width search field on the second. Phones stack grouping, search, and overdue toggle vertically.
 - Added shared `styles/_filterPanel.scss` mixins for report filter-panel shell, title, and label styling and adopted them in both Debet and Sales report panels.
 - Verification: client lint and build passed, generated `client/dist` XLSX changes were restored, and user-managed source/data files were not changed or staged.
+
+## 2026-08-26 - Compact adaptive administration workspace
+
+- Rebuilt the Admin page shell with a dense token-driven tab bar and bounded content surface that adapts from desktop to phone without changing tab persistence or administration behavior.
+- Consolidated the user list mode switch, create action, search scope, and search field into one responsive toolbar; tightened the user tables, preserved hierarchy coloring, and kept touch-sized actions on phones.
+- Restyled notification settings as a compact table/form workspace and corrected its React icon markup and action accessibility labels.
+- Added an Admin-scoped compatibility theme for remaining Bulma configuration surfaces: shared table palette, compact controls/buttons/tags/notices, internal horizontal table scrolling, responsive list/form stacking, and sidebar-aware modal centering.
+- Made the user create/edit modal a compact two-column form on wide screens and a single ordered column on phones; field order and all user/access logic remain unchanged.
+- Wrapped the scheduler table in an overflow container so long status content no longer expands the Admin page.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

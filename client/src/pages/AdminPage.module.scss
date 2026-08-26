@@ -1,0 +1,112 @@
+@use "../variables.scss" as *;
+
+.adminPage {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  padding: $space-4;
+  color: $text-high;
+}
+
+.tabBar {
+  position: sticky;
+  top: $space-2;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: $space-1;
+  max-width: 760px;
+  margin: 0 auto $space-3;
+  padding: $space-1;
+  overflow-x: auto;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-lg;
+  background: rgba($surface-container-lowest, 0.9);
+  box-shadow: $shadow-popover;
+  backdrop-filter: blur($backdrop-blur);
+}
+
+.tabButton {
+  min-width: 0;
+  min-height: $control-height-md;
+  padding: 0 $space-3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  background: transparent;
+  color: $text-muted;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    color $motion-fast $motion-ease,
+    background-color $motion-fast $motion-ease,
+    border-color $motion-fast $motion-ease;
+
+  &:hover {
+    color: $text-high;
+    background: $surface-container;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $primary-accent-light;
+    outline-offset: 1px;
+  }
+}
+
+.activeTab {
+  border-color: rgba($primary-accent-light, 0.34);
+  background: rgba($primary-accent, 0.14);
+  color: $primary-accent-light;
+}
+
+.content {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-xl;
+  background: rgba($surface-container-lowest, 0.44);
+  box-shadow: $shadow-card;
+  overflow: clip;
+}
+
+.panelInset {
+  padding: $space-3;
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .adminPage {
+    padding: $space-2;
+  }
+
+  .tabBar {
+    top: $space-1;
+    max-width: none;
+    margin-bottom: $space-2;
+  }
+
+  .tabButton {
+    min-height: 40px;
+    padding: 0 $space-2;
+    font-size: 0.7rem;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .content {
+    border-radius: $radius-lg;
+  }
+
+  .panelInset {
+    padding: $space-2;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabButton span {
+    font-size: 0.62rem;
+  }
+}

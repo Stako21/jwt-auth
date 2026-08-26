@@ -324,9 +324,10 @@ export function SchedulerConfig({ title = "Планувальник" }) {
         <p>Немає доступних задач планувальника.</p>
       )}
       {!loading && tasks.length > 0 && (
-        <table className="table is-fullwidth is-striped is-hoverable">
-          <thead>
-            <tr>
+        <div className="table-container">
+          <table className="table is-fullwidth is-striped is-hoverable">
+            <thead>
+              <tr>
               <th>Активна</th>
               <th>Задача</th>
               <th>Інтервал (с)</th>
@@ -334,10 +335,10 @@ export function SchedulerConfig({ title = "Планувальник" }) {
               <th>Філія виконання</th>
               <th>Зберегти інтервал</th>
               <th>Запустити</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((task) => (
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.map((task) => (
               <tr key={task.key}>
                 <td>
                   <label className="checkbox">
@@ -440,9 +441,10 @@ export function SchedulerConfig({ title = "Планувальник" }) {
                   </button>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

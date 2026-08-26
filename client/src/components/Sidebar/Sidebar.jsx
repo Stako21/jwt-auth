@@ -318,7 +318,7 @@ export const Sidebar = ({ user = null, onSaved = null, onCancel = null }) => {
   };
 
   return (
-    <div className="modal is-active">
+    <div className="modal is-active admin-user-modal">
       <div className="modal-background"></div>
       <div className="modal-card">
         <header className="modal-card-head">
