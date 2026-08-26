@@ -1981,3 +1981,9 @@ Frontend:
   - `git diff --check` passed for the changed frontend files
   - generated `client/dist` XLSX changes were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-26 - Toggleable user selection
+
+- Changed the Admin users table's single-selection behavior so clicking the already selected row or its radio indicator clears the selection and disables the contextual actions again.
+- Preserved ordinary single selection when switching directly to another user.
+- Verification: client lint and targeted `git diff --check` passed.

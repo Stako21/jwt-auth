@@ -264,7 +264,12 @@ export const UsersList = ({
     }
   };
 
-  const handleSelectUser = (userId) => setSelectedUserId(Number(userId));
+  const handleSelectUser = (userId) => {
+    const normalizedUserId = Number(userId);
+    setSelectedUserId((currentId) =>
+      Number(currentId) === normalizedUserId ? null : normalizedUserId,
+    );
+  };
 
   const getRowClassName = (user) => {
     const classes = [style.userRow];
@@ -297,8 +302,11 @@ export const UsersList = ({
             type="radio"
             name="selectedUser"
             checked={Number(selectedUserId) === Number(user.id)}
-            onChange={() => handleSelectUser(user.id)}
-            onClick={(event) => event.stopPropagation()}
+            onChange={() => {}}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleSelectUser(user.id);
+            }}
             aria-label={`Вибрати користувача ${displayName(user)}`}
           />
         </td>
