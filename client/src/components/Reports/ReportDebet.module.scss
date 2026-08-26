@@ -85,7 +85,7 @@
   border-right: 1px solid $outline-dark;
   border-radius: 0;
   outline: 0;
-  background: transparent;
+  background: $color-transparent;
   box-shadow: none;
   color: $form-control-text;
   cursor: pointer;
@@ -184,7 +184,7 @@
 }
 
 .error {
-  border-color: rgba(255, 180, 171, 0.24);
+  border-color: $negative-border-soft;
   background: $negative-surface;
   color: $negative-muted;
 }

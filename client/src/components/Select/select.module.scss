@@ -1,4 +1,4 @@
-@import "../../variables.scss";
+@use "../../variables.scss" as *;
 
 .inputBox {
   position: relative;
@@ -10,13 +10,13 @@
   border: none;
   width: 100%;
   background: $main-background-color;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  color: #fff;
+  border: 1px solid $legacy-control-border;
+  color: $legacy-control-text;
   font-weight: 300;
   border-radius: 25px;
   font-size: 1em;
-  box-shadow: -5px -5px 15px rgba(255, 255, 255, 0.1),
-    5px 5px 15px rgba(0, 0, 0, 0.35);
+  box-shadow: -5px -5px 15px $legacy-control-highlight,
+    5px 5px 15px $legacy-control-shadow;
   transition: 0.3s;
   outline: none;
 }

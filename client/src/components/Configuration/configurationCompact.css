@@ -203,7 +203,7 @@
   padding: 0;
   border: 0;
   border-radius: 0;
-  background: transparent !important;
+  background: var(--ui-color-transparent) !important;
   color: var(--ui-table-text);
   font-size: inherit;
   font-weight: 650;

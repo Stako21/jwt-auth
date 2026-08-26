@@ -1,10 +1,12 @@
+@use "../../variables.scss" as *;
+
 .scrollButton {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background-color: #0f32587e;
-  color: white;
-  border: solid 1px #707070;
+  background-color: $scroll-control-surface;
+  color: $legacy-control-text;
+  border: solid 1px $scroll-control-border;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -12,6 +14,6 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  box-shadow: $shadow-scroll-control;
   transition: background-color 0.3s ease;
 }

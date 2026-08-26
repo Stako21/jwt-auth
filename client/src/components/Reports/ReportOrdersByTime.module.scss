@@ -16,12 +16,12 @@
 .title {
   margin: 0;
   font-size: 24px;
-  color: #ffffff;
+  color: $report-text-high;
 }
 
 .subtitle {
   margin: 4px 0 0;
-  color: #b9c4d9;
+  color: $report-text-muted;
 }
 
 .citySummary {
@@ -29,7 +29,7 @@
   flex-wrap: wrap;
   gap: 6px 14px;
   margin: 4px 0 0;
-  color: #dce6f7;
+  color: $report-text;
   font-size: 13px;
 }
 
@@ -45,7 +45,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #dce6f7;
+  color: $report-text;
 }
 
 .field {
@@ -59,11 +59,11 @@
 .state,
 .error {
   padding: 12px;
-  color: #dce6f7;
+  color: $report-text;
 }
 
 .error {
-  color: #ff7f9b;
+  color: $report-negative;
 }
 
 .tableShell {
@@ -121,28 +121,28 @@
   th {
     padding-top: 3px;
     padding-bottom: 3px;
-    color: #101722;
+    color: $report-summary-label;
     font-size: 12px;
     font-style: italic;
     font-weight: 800;
   }
 
   th:first-child {
-    background: #f5f7fb;
-    color: #111827;
+    background: $report-summary-surface;
+    color: $report-summary-text;
   }
 }
 
 .shareLow {
-  background: #f66f73 !important;
+  background: $report-scale-danger !important;
 }
 
 .shareMedium {
-  background: #f3d05f !important;
+  background: $report-scale-warning !important;
 }
 
 .shareHigh {
-  background: #65d97a !important;
+  background: $report-scale-success !important;
 }
 
 .groupRow {
@@ -192,7 +192,7 @@
 
   small {
     margin-top: 2px;
-    color: #b9c4d9;
+    color: $report-text-muted;
     font-size: 11px;
     font-weight: 400;
   }
@@ -208,8 +208,8 @@
 
   &:hover,
   &:focus {
-    background: #29446f !important;
-    color: #ffffff;
+    background: $report-scale-accent !important;
+    color: $report-text-high;
     outline: none;
   }
 }
@@ -222,17 +222,17 @@
   align-items: center;
   justify-content: center;
   padding: 12px;
-  background: rgba(5, 9, 16, 0.68);
+  background: $report-dialog-overlay;
 }
 
 .detailsPanel {
   width: min(420px, 100%);
   max-height: min(620px, calc(100vh - 24px));
   overflow: hidden;
-  border: 1px solid #324766;
-  background: #121b2b;
-  color: #ffffff;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  border: 1px solid $report-dialog-border;
+  background: $report-dialog-surface;
+  color: $report-text-high;
+  box-shadow: $shadow-modal;
 }
 
 .detailsHeader {
@@ -240,8 +240,8 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-bottom: 1px solid #24324a;
-  background: #172235;
+  border-bottom: 1px solid $report-dialog-divider;
+  background: $report-dialog-header;
 
   h3,
   p {
@@ -255,7 +255,7 @@
 
   p {
     margin-top: 3px;
-    color: #b9c4d9;
+    color: $report-text-muted;
     font-size: 12px;
   }
 }
@@ -264,9 +264,9 @@
   flex: 0 0 30px;
   width: 30px;
   height: 30px;
-  border: 1px solid #3a4860;
-  background: #1d2a40;
-  color: #ffffff;
+  border: 1px solid $report-dialog-control-border;
+  background: $report-dialog-control;
+  color: $report-text-high;
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
@@ -282,7 +282,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 12px;
-  border-bottom: 1px solid #24324a;
+  border-bottom: 1px solid $report-dialog-divider;
   font-size: 13px;
 
   span {

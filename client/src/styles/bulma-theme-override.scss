@@ -1,0 +1,17 @@
+@use "../variables.scss" as *;
+
+/* Transitional compatibility for screens that still use Bulma classes. */
+html {
+  @include export-bulma-theme;
+}
+
+@include export-bulma-theme-utilities;
+
+html .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
+  background-color: var(--ui-table-row-even);
+}
+
+/* FormSelect draws its own arrow inside legacy Bulma select wrappers. */
+.select:has(> select[data-ui-control="select"])::after {
+  display: none;
+}

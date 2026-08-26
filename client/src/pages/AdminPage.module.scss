@@ -21,7 +21,7 @@
   overflow-x: auto;
   border: 1px solid $outline-dark;
   border-radius: $radius-lg;
-  background: rgba($surface-container-lowest, 0.9);
+  background: $surface-glass-strong;
   box-shadow: $shadow-popover;
   backdrop-filter: blur($backdrop-blur);
 }
@@ -34,9 +34,9 @@
   align-items: center;
   justify-content: center;
   gap: $space-2;
-  border: 1px solid transparent;
+  border: 1px solid $color-transparent;
   border-radius: $radius-md;
-  background: transparent;
+  background: $color-transparent;
   color: $text-muted;
   font-size: 0.78rem;
   font-weight: 650;
@@ -58,8 +58,8 @@
 }
 
 .activeTab {
-  border-color: rgba($primary-accent-light, 0.34);
-  background: rgba($primary-accent, 0.14);
+  border-color: $primary-accent-border;
+  background: $primary-accent-surface-medium;
   color: $primary-accent-light;
 }
 
@@ -68,7 +68,7 @@
   min-width: 0;
   border: 1px solid $outline-dark;
   border-radius: $radius-xl;
-  background: rgba($surface-container-lowest, 0.44);
+  background: $surface-glass-subtle;
   box-shadow: $shadow-card;
   overflow: clip;
 }
@@ -93,9 +93,9 @@
     flex: 0 0 auto;
     min-height: $control-height-sm;
     padding: 0 $space-3;
-    border: 1px solid transparent;
+    border: 1px solid $color-transparent;
     border-radius: $radius-md;
-    background: transparent;
+    background: $color-transparent;
     color: $text-muted;
     font-size: 0.73rem;
     font-weight: 650;
@@ -117,8 +117,8 @@
 }
 
 .configTabs .activeConfigTab {
-  border-color: rgba($primary-accent-light, 0.28);
-  background: rgba($primary-accent, 0.13);
+  border-color: $primary-accent-border-soft;
+  background: $primary-accent-surface-admin;
   color: $primary-accent-light;
 }
 

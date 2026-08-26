@@ -34,7 +34,7 @@
   &:focus-visible,
   &.open {
     border-color: $primary-accent;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+    box-shadow: 0 0 0 2px $primary-accent-focus-ring;
   }
 
   &.open i {
@@ -82,7 +82,7 @@
   padding: 6px $space-2;
   border: 0;
   border-radius: $radius-sm;
-  background: transparent;
+  background: $color-transparent;
   color: $text-high;
   cursor: pointer;
   font-size: 12px;

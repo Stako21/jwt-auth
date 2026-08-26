@@ -8,7 +8,7 @@
 }
 
 .modalBackdrop {
-  background: rgba(1, 15, 31, 0.82);
+  background: $surface-modal-overlay;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
@@ -32,7 +32,7 @@
   min-height: 48px;
   padding: 8px $space-4 !important;
   border-bottom: 1px solid $outline-dark;
-  background: rgba(18, 33, 49, 0.96);
+  background: $surface-modal;
 }
 
 .modalTitle {
@@ -100,7 +100,7 @@
 
     &:focus {
       border-color: $primary-accent;
-      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+      box-shadow: 0 0 0 2px $primary-accent-focus-ring;
     }
 
     &:disabled {
@@ -189,7 +189,7 @@
 .itemSection {
   border: 1px solid $outline-dark;
   border-radius: $radius-lg;
-  background: rgba(18, 33, 49, 0.72);
+  background: $surface-modal-section;
 }
 
 .executorPanel {
@@ -220,7 +220,7 @@
   padding: 0 $space-3;
   border: 0 !important;
   border-radius: 6px !important;
-  background: transparent !important;
+  background: $color-transparent !important;
   color: $text-medium !important;
   font-size: 12px;
   font-weight: 700;
@@ -232,7 +232,7 @@
 }
 
 .segmentActive {
-  background: rgba(16, 185, 129, 0.16) !important;
+  background: $primary-accent-surface-strong !important;
   color: $primary-accent-light !important;
 }
 
@@ -277,9 +277,9 @@
   gap: 6px;
   min-height: 30px;
   padding: 0 10px;
-  border: 1px solid rgba(78, 222, 163, 0.28) !important;
+  border: 1px solid $primary-accent-border-soft !important;
   border-radius: $radius-md !important;
-  background: rgba(16, 185, 129, 0.1) !important;
+  background: $primary-accent-surface-soft !important;
   color: $primary-accent-light !important;
   font-size: 11px;
   font-weight: 700;

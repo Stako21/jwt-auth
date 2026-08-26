@@ -1,50 +1,7 @@
 @use "./variables" as *;
 
 :root {
-  color-scheme: dark;
-  --ui-color-surface-main: #{$surface-main};
-  --ui-color-surface-container: #{$surface-container};
-  --ui-color-surface-container-low: #{$surface-container-low};
-  --ui-color-surface-container-high: #{$surface-container-high};
-  --ui-color-surface-control: #{$surface-control};
-  --ui-color-surface-input: #{$surface-input};
-  --ui-color-accent: #{$primary-accent};
-  --ui-color-accent-hover: #{$primary-accent-hover};
-  --ui-color-accent-light: #{$primary-accent-light};
-  --ui-color-text-high: #{$text-high};
-  --ui-color-text-medium: #{$text-medium};
-  --ui-color-text-muted: #{$text-muted};
-  --ui-color-outline: #{$outline-dark};
-  --ui-color-outline-accent: #{$outline-green};
-  --ui-form-surface: #{$form-control-surface};
-  --ui-form-surface-disabled: #{$form-control-surface-disabled};
-  --ui-form-border: #{$form-control-border};
-  --ui-form-text: #{$form-control-text};
-  --ui-form-placeholder: #{$form-control-placeholder};
-  --ui-form-focus-ring: #{$form-control-focus-ring};
-  --ui-color-danger: #{$negative};
-  --ui-color-danger-muted: #{$negative-muted};
-  --ui-color-warning: #{$warning};
-  --ui-color-info: #{$info};
-  --ui-table-shell: #{$table-shell-surface};
-  --ui-table-head: #{$table-head-surface};
-  --ui-table-row-odd: #{$table-row-odd};
-  --ui-table-row-even: #{$table-row-even};
-  --ui-table-row-hover: #{$table-row-hover};
-  --ui-table-row-selected: #{$table-row-selected};
-  --ui-table-border: #{$table-border};
-  --ui-table-text: #{$table-text};
-  --ui-table-text-strong: #{$table-text-strong};
-  --ui-radius-sm: #{$radius-sm};
-  --ui-radius-md: #{$radius-md};
-  --ui-radius-lg: #{$radius-lg};
-  --ui-radius-xl: #{$radius-xl};
-  --ui-motion-fast: #{$motion-fast};
-  --ui-motion-normal: #{$motion-normal};
-  --ui-sidebar-current-width: #{$sidebar-width};
-  --ui-admin-editor-modal-width: #{$admin-editor-modal-max-width};
-  --ui-admin-editor-modal-wide-width: #{$admin-editor-modal-wide-max-width};
-  --ui-modal-viewport-gap: #{$modal-viewport-gap};
+  @include export-theme-custom-properties;
 }
 
 * {
@@ -67,7 +24,7 @@ html {
 #root {
   position: relative;
   z-index: 1;
-  background: transparent;
+  background: $color-transparent;
 }
 
 body,
@@ -108,7 +65,7 @@ textarea {
 button,
 a,
 select {
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: $color-transparent;
 }
 
 table {
@@ -119,13 +76,13 @@ table {
   min-height: 100vh;
   padding-top: $topbar-height;
   padding-left: $sidebar-width;
-  background: transparent;
+  background: $color-transparent;
   transition: padding-left $motion-normal $motion-ease;
 }
 
 .authMain {
   min-height: 100vh;
-  background: transparent;
+  background: $color-transparent;
 }
 
 body.appShellCollapsed .appMain {

@@ -1,6 +1,11 @@
 /* Central design tokens. Keep component styles semantic. */
 
 /* ===== PALETTE ===== */
+$native-color-scheme: dark;
+$color-transparent: transparent;
+$calendar-indicator-filter: brightness(0) saturate(100%) invert(88%) sepia(8%) saturate(310%);
+$calendar-indicator-opacity: 0.82;
+$search-cancel-filter: invert(0.82);
 $surface-main: #051424;
 $surface-container-lowest: #010f1f;
 $surface-container-low: #0d1c2d;
@@ -11,6 +16,14 @@ $surface-control: $surface-container;
 $surface-input: $surface-container-low;
 $select-option-hover-surface: rgba(16, 185, 129, 0.1);
 $select-option-selected-surface: rgba(16, 185, 129, 0.16);
+$surface-page-wash: #212d3d62;
+$surface-modal-overlay: rgba(1, 15, 31, 0.82);
+$surface-modal-overlay-strong: rgba(1, 15, 31, 0.84);
+$surface-modal: rgba(18, 33, 49, 0.96);
+$surface-modal-strong: rgba(18, 33, 49, 0.98);
+$surface-modal-section: rgba(18, 33, 49, 0.72);
+$surface-subtle-highlight: rgba(212, 228, 250, 0.06);
+$surface-soft-highlight: rgba(255, 255, 255, 0.08);
 
 /* Variant C: subtle emerald-tinted navy table palette. */
 $table-page-surface: $surface-main;
@@ -33,6 +46,8 @@ $balance-leaf-row-odd: $table-row-odd;
 $balance-leaf-row-even: $table-row-even;
 $balance-leaf-row-hover: $table-row-hover;
 $surface-glass: rgba(18, 33, 49, 0.72);
+$surface-glass-subtle: rgba(1, 15, 31, 0.44);
+$surface-glass-strong: rgba(1, 15, 31, 0.9);
 $surface-overlay: rgba(1, 15, 31, 0.72);
 $background-glow-primary: radial-gradient(
   ellipse at 50% 0%,
@@ -52,6 +67,18 @@ $primary-accent: #10b981;
 $primary-accent-hover: #20cf91;
 $primary-accent-light: #4edea3;
 $primary-accent-dark: #006c49;
+$primary-accent-surface-subtle: rgba(78, 222, 163, 0.06);
+$primary-accent-surface-soft: rgba(16, 185, 129, 0.1);
+$primary-accent-surface: rgba(16, 185, 129, 0.12);
+$primary-accent-surface-admin: rgba(16, 185, 129, 0.13);
+$primary-accent-surface-medium: rgba(16, 185, 129, 0.14);
+$primary-accent-surface-selected: rgba(16, 185, 129, 0.15);
+$primary-accent-surface-strong: rgba(16, 185, 129, 0.16);
+$primary-accent-border-soft: rgba(78, 222, 163, 0.28);
+$primary-accent-border: rgba(78, 222, 163, 0.34);
+$primary-accent-focus-ring: rgba(16, 185, 129, 0.18);
+$primary-accent-focus-ring-strong: rgba(16, 185, 129, 0.2);
+$primary-accent-focus-ring-emphasized: rgba(16, 185, 129, 0.24);
 
 $text-high: #d4e4fa;
 $text-medium: #bbcabf;
@@ -71,7 +98,11 @@ $form-control-focus-ring: rgba(16, 185, 129, 0.18);
 $form-control-error-surface: rgba(147, 0, 10, 0.2);
 $negative: #ffb4ab;
 $negative-muted: #ffb4ab;
+$negative-strong: #ffc5c1;
+$negative-action: #ffbbb5;
 $negative-surface: rgba(147, 0, 10, 0.3);
+$negative-surface-soft: rgba(198, 40, 40, 0.12);
+$negative-border-soft: rgba(255, 180, 171, 0.24);
 $warning: #d9a441;
 $info: #b9c7e0;
 $status-new: #a8b6c8;
@@ -84,6 +115,65 @@ $status-rejected: $negative;
 $status-rejected-surface: rgba(255, 180, 171, 0.1);
 $status-signed: $primary-accent-light;
 $status-signed-surface: rgba(16, 185, 129, 0.12);
+
+/* Report-specific semantic colors. */
+$report-text-high: #ffffff;
+$report-text: #dce6f7;
+$report-text-medium: #c8d5e9;
+$report-text-muted: #b9c4d9;
+$report-text-subtle: #9eacc2;
+$report-negative: #ff7f9b;
+$report-warning: #ffd166;
+$report-success: #70e69a;
+$report-success-base: #48c774;
+$report-info-base: #55b8ff;
+$report-success-surface: rgba(72, 199, 116, 0.16);
+$report-success-border: rgba(72, 199, 116, 0.55);
+$report-info-surface: rgba(185, 199, 224, 0.08);
+$report-warning-surface: rgba(217, 164, 65, 0.1);
+$report-outline-strong: rgba(220, 230, 247, 0.45);
+$report-summary-surface: #f5f7fb;
+$report-summary-text: #111827;
+$report-summary-label: #101722;
+$report-scale-danger: #f66f73;
+$report-scale-warning: #f3d05f;
+$report-scale-success: #65d97a;
+$report-scale-accent: #29446f;
+$report-dialog-overlay: rgba(5, 9, 16, 0.68);
+$report-dialog-surface: #121b2b;
+$report-dialog-header: #172235;
+$report-dialog-control: #1d2a40;
+$report-dialog-border: #324766;
+$report-dialog-divider: #24324a;
+$report-dialog-control-border: #3a4860;
+$report-xlsx-surface: #1c1b1b;
+$report-xlsx-border: #3a3a3a;
+$report-xlsx-text: #cfcfcf;
+$report-xlsx-negative: #c62828;
+$report-xlsx-sales-text: #f1f1f1;
+$report-xlsx-sales-muted: #9e9e9e;
+$report-xlsx-sales-warning-surface: #2a2116;
+$report-xlsx-sales-warning-border: #8a5a20;
+$report-xlsx-sales-warning-text: #ffd9a0;
+$report-xlsx-sales-negative: #ff8a80;
+$report-romashka-info-surface: #007bff0e;
+$report-romashka-neutral-surface: #999a9b2d;
+$report-romashka-negative-surface: #ff5c5c15;
+$report-romashka-negative-hover-surface: #c33a3a15;
+
+/* Legacy control and loader colors kept as named tokens until those components migrate. */
+$legacy-control-text: #fff;
+$legacy-control-border: rgba(0, 0, 0, 0.1);
+$legacy-control-highlight: rgba(255, 255, 255, 0.1);
+$legacy-control-shadow: rgba(0, 0, 0, 0.35);
+$legacy-control-placeholder: rgba(255, 255, 255, 0.5);
+$loader-success-fade: rgba(72, 199, 116, 0.08);
+$loader-info-fade: rgba(85, 184, 255, 0.08);
+$loader-success-glow: rgba(72, 199, 116, 0.22);
+$loader-success-glow-strong: rgba(72, 199, 116, 0.75);
+$loader-info-glow: rgba(85, 184, 255, 0.12);
+$scroll-control-surface: #0f32587e;
+$scroll-control-border: #707070;
 
 /* ===== GEOMETRY ===== */
 $space-1: 4px;
@@ -131,7 +221,11 @@ $motion-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 
 /* ===== SHADOWS ===== */
 $shadow-card: 0 24px 60px rgba(1, 15, 31, 0.34);
+$shadow-panel: 0 18px 40px rgba(1, 15, 31, 0.16);
 $shadow-popover: 0 10px 20px rgba(0, 0, 0, 0.3);
+$shadow-scroll-control: 0 2px 5px rgba(0, 0, 0, 0.3);
+$shadow-modal: 0 18px 50px rgba(0, 0, 0, 0.35);
+$shadow-bulma-card: 0 12px 28px rgba(0, 0, 0, 0.34);
 $shadow-primary: 0 0 20px rgba(16, 185, 129, 0.2);
 $backdrop-blur: 12px;
 
@@ -155,3 +249,152 @@ $evenRow: #dde0e4;
 $rowTextColor: $text-high;
 $dropdown-background: $surface-input;
 $dropdown-border: $outline-dark;
+
+/*
+ * Runtime CSS tokens for plain CSS, Bulma compatibility and inline browser APIs.
+ * Theme values stay in this file; main.scss only emits this mixin at :root.
+ */
+@mixin export-theme-custom-properties {
+  color-scheme: $native-color-scheme;
+  --ui-color-transparent: #{$color-transparent};
+  --ui-color-surface-main: #{$surface-main};
+  --ui-color-surface-container: #{$surface-container};
+  --ui-color-surface-container-low: #{$surface-container-low};
+  --ui-color-surface-container-high: #{$surface-container-high};
+  --ui-color-surface-control: #{$surface-control};
+  --ui-color-surface-input: #{$surface-input};
+  --ui-color-modal-overlay: #{$surface-modal-overlay};
+  --ui-color-accent: #{$primary-accent};
+  --ui-color-accent-hover: #{$primary-accent-hover};
+  --ui-color-accent-light: #{$primary-accent-light};
+  --ui-color-text-high: #{$text-high};
+  --ui-color-text-medium: #{$text-medium};
+  --ui-color-text-muted: #{$text-muted};
+  --ui-color-outline: #{$outline-dark};
+  --ui-color-outline-accent: #{$outline-green};
+  --ui-form-surface: #{$form-control-surface};
+  --ui-form-surface-disabled: #{$form-control-surface-disabled};
+  --ui-form-border: #{$form-control-border};
+  --ui-form-text: #{$form-control-text};
+  --ui-form-placeholder: #{$form-control-placeholder};
+  --ui-form-focus-ring: #{$form-control-focus-ring};
+  --ui-color-danger: #{$negative};
+  --ui-color-danger-muted: #{$negative-muted};
+  --ui-color-warning: #{$warning};
+  --ui-color-info: #{$info};
+  --ui-table-shell: #{$table-shell-surface};
+  --ui-table-head: #{$table-head-surface};
+  --ui-table-row-odd: #{$table-row-odd};
+  --ui-table-row-even: #{$table-row-even};
+  --ui-table-row-hover: #{$table-row-hover};
+  --ui-table-row-selected: #{$table-row-selected};
+  --ui-table-border: #{$table-border};
+  --ui-table-text: #{$table-text};
+  --ui-table-text-strong: #{$table-text-strong};
+  --ui-shadow-bulma-card: #{$shadow-bulma-card};
+  --ui-radius-sm: #{$radius-sm};
+  --ui-radius-md: #{$radius-md};
+  --ui-radius-lg: #{$radius-lg};
+  --ui-radius-xl: #{$radius-xl};
+  --ui-motion-fast: #{$motion-fast};
+  --ui-motion-normal: #{$motion-normal};
+  --ui-sidebar-current-width: #{$sidebar-width};
+  --ui-admin-editor-modal-width: #{$admin-editor-modal-max-width};
+  --ui-admin-editor-modal-wide-width: #{$admin-editor-modal-wide-max-width};
+  --ui-modal-viewport-gap: #{$modal-viewport-gap};
+}
+
+@mixin export-bulma-theme {
+  --bulma-body-background-color: var(--ui-color-surface-main);
+  --bulma-body-color: var(--ui-color-text-high);
+  --bulma-scheme-main: var(--ui-color-surface-main);
+  --bulma-scheme-main-bis: var(--ui-color-surface-container);
+  --bulma-scheme-main-ter: var(--ui-color-surface-container-high);
+  --bulma-background: var(--ui-color-surface-main);
+  --bulma-border: var(--ui-color-outline);
+  --bulma-text: var(--ui-color-text-high);
+  --bulma-text-strong: var(--ui-color-text-high);
+  --bulma-text-light: var(--ui-color-text-medium);
+  --bulma-primary: var(--ui-color-accent);
+  --bulma-link: var(--ui-color-info);
+  --bulma-info: var(--ui-color-info);
+  --bulma-success: var(--ui-color-accent);
+  --bulma-warning: var(--ui-color-warning);
+  --bulma-danger: var(--ui-color-danger);
+  --bulma-modal-background-background-color: var(--ui-color-modal-overlay);
+  --bulma-modal-card-background-color: var(--ui-color-surface-container);
+  --bulma-modal-card-head-background-color: var(--ui-color-surface-container);
+  --bulma-modal-card-foot-background-color: var(--ui-color-surface-container);
+  --bulma-modal-card-title-color: var(--ui-color-text-high);
+  --bulma-modal-card-head-border-bottom: 1px solid var(--ui-color-outline);
+  --bulma-modal-card-foot-border-top: 1px solid var(--ui-color-outline);
+  --bulma-button-background-color: var(--ui-color-surface-control);
+  --bulma-button-border-color: var(--ui-color-outline);
+  --bulma-button-color: var(--ui-color-text-high);
+  --bulma-button-hover-background-color: var(--ui-color-surface-container-high);
+  --bulma-button-hover-border-color: var(--ui-color-outline-accent);
+  --bulma-button-focus-border-color: var(--ui-color-accent-light);
+  --bulma-button-disabled-background-color: var(--ui-color-surface-container-high);
+  --bulma-button-disabled-color: var(--ui-color-text-muted);
+  --bulma-button-primary-background-color: var(--ui-color-accent);
+  --bulma-button-primary-border-color: var(--ui-color-accent);
+  --bulma-button-primary-color: var(--ui-color-text-high);
+  --bulma-button-primary-hover-background-color: var(--ui-color-accent-hover);
+  --bulma-input-background-color: var(--ui-form-surface);
+  --bulma-input-border-color: var(--ui-form-border);
+  --bulma-input-color: var(--ui-form-text);
+  --bulma-input-placeholder-color: var(--ui-form-placeholder);
+  --bulma-input-focus-border-color: var(--ui-color-accent-light);
+  --bulma-input-focus-box-shadow-color: var(--ui-form-focus-ring);
+  --bulma-input-disabled-background-color: var(--ui-form-surface-disabled);
+  --bulma-input-disabled-border-color: var(--ui-color-outline);
+  --bulma-input-disabled-color: var(--ui-color-text-muted);
+  --bulma-table-background-color: var(--ui-table-row-odd);
+  --bulma-table-body-background-color: var(--ui-table-row-odd);
+  --bulma-table-cell-background-color: var(--ui-color-transparent);
+  --bulma-table-cell-border-color: var(--ui-table-border);
+  --bulma-table-color: var(--ui-table-text);
+  --bulma-table-head-background-color: var(--ui-table-head);
+  --bulma-table-head-cell-color: var(--ui-table-text-strong);
+  --bulma-table-row-hover-background-color: var(--ui-table-row-hover);
+  --bulma-table-striped-row-even-background-color: var(--ui-table-row-even);
+  --bulma-table-striped-row-even-hover-background-color: var(--ui-table-row-hover);
+  --bulma-table-border-color: var(--ui-table-border);
+  --bulma-notification-background-color: var(--ui-color-surface-container-high);
+  --bulma-notification-color: var(--ui-color-text-high);
+  --bulma-card-background-color: var(--ui-color-surface-container);
+  --bulma-card-shadow: var(--ui-shadow-bulma-card);
+  --bulma-radius-small: var(--ui-radius-sm);
+  --bulma-radius: var(--ui-radius-md);
+  --bulma-radius-medium: var(--ui-radius-lg);
+  --bulma-radius-large: var(--ui-radius-xl);
+}
+
+@mixin export-bulma-theme-utilities {
+  .has-text-white {
+    color: var(--ui-color-text-high) !important;
+  }
+
+  .has-text-primary,
+  .has-text-success {
+    color: var(--ui-color-accent-light) !important;
+  }
+
+  .has-text-grey,
+  .has-text-grey-light {
+    color: var(--ui-color-text-muted) !important;
+  }
+
+  .has-text-danger {
+    color: var(--ui-color-danger) !important;
+  }
+
+  .has-text-warning {
+    color: var(--ui-color-warning) !important;
+  }
+
+  .has-text-info,
+  .has-text-link {
+    color: var(--ui-color-info) !important;
+  }
+}

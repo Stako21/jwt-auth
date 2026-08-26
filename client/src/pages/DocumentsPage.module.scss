@@ -82,7 +82,7 @@
     &:hover,
     &:focus-visible {
       border-color: $primary-accent;
-      background: rgba(16, 185, 129, 0.1);
+      background: $primary-accent-surface-soft;
       color: $primary-accent-light;
     }
   }
@@ -168,7 +168,7 @@
 
   &:focus-visible {
     border-color: $primary-accent;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+    box-shadow: 0 0 0 2px $primary-accent-focus-ring;
   }
 }
 
@@ -297,7 +297,7 @@
   border: 1px solid $negative-muted;
   border-radius: $radius-md;
   background: $negative-surface;
-  color: #ffc5c1;
+  color: $negative-strong;
   font-size: 13px;
 }
 
@@ -368,7 +368,7 @@
     min-width: 20px;
     height: 20px;
     padding: 0 $space-1;
-    background: rgba(16, 185, 129, 0.16);
+    background: $primary-accent-surface-strong;
     color: $primary-accent-light;
   }
 

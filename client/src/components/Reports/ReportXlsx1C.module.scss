@@ -28,10 +28,10 @@
 }
 
 .count {
-  background: #1c1b1b;
-  border: 1px solid #3a3a3a;
+  background: $report-xlsx-surface;
+  border: 1px solid $report-xlsx-border;
   border-radius: 4px;
-  color: #cfcfcf;
+  color: $report-xlsx-text;
   font-size: 12px;
   padding: 4px 8px;
   white-space: nowrap;
@@ -135,13 +135,13 @@
 
 .state {
   background: $table-page-surface;
-  color: #cfcfcf;
+  color: $report-xlsx-text;
   padding: 24px;
   text-align: center;
 }
 
 .error {
-  color: #c62828;
+  color: $report-xlsx-negative;
 }
 
 @media (max-width: 768px) {

@@ -35,7 +35,7 @@
 
 .inputShell:focus-within {
   border-color: $primary-accent-light;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 0 2px $primary-accent-focus-ring-strong;
 }
 
 .inputIcon {
@@ -51,7 +51,7 @@
   padding: 0 $space-3 0 34px;
   border: 0;
   outline: 0;
-  background: transparent;
+  background: $color-transparent;
   color: $text-high;
   font-size: 13px;
 }
@@ -74,7 +74,7 @@
   padding: 0 $space-3;
   border: 0;
   border-right: 1px solid $outline-dark;
-  background: transparent;
+  background: $color-transparent;
   color: $text-high;
   cursor: pointer;
   font-size: 13px;

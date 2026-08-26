@@ -2008,3 +2008,17 @@ Frontend:
 - Removed filled badge/tag surfaces from every table inside the Admin configuration workspace, including report roles/statuses and scheduler states.
 - Preserved semantic meaning through compact colored text using the shared accent, warning, danger, info, and muted theme variables; tags outside configuration tables and action buttons remain unchanged.
 - Verification: `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings; generated `client/dist` XLSX changes were restored.
+
+## 2026-08-26 - Centralized frontend color system
+
+- Audited all authored files under `client/src` and removed local `hex`, `rgb`/`rgba`, `hsl`/`hsla`, and named visual color literals outside `client/src/variables.scss`.
+- Expanded `variables.scss` with semantic surface, accent, status, modal, loader, legacy-control, report-scale, XLSX-report, calendar-indicator, and shadow tokens while preserving the current dark appearance.
+- Moved the runtime `--ui-*` and transitional Bulma variable mappings into mixins defined in `variables.scss`; `main.scss` and the renamed `bulma-theme-override.scss` now only emit those centralized mappings.
+- Replaced fixed Bulma text utility colors with shared semantic runtime tokens so legacy admin/configuration markup follows the same palette.
+- Moved the remaining inline PDF-viewer error color into a token-driven CSS module and converted the legacy Select stylesheet from Sass `@import` to `@use`.
+- Verification:
+  - a full scan found no authored `hex`/`rgb`/`hsl` literals outside `variables.scss`
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

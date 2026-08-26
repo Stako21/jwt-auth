@@ -43,7 +43,7 @@
   padding: 0 $space-3;
   border: 1px solid $primary-accent;
   border-radius: $radius-md;
-  background: transparent;
+  background: $color-transparent;
   color: $primary-accent-light;
   cursor: pointer;
   font-size: 12px;
@@ -247,13 +247,13 @@
 }
 
 .movedRow td {
-  background: rgba(185, 199, 224, 0.08) !important;
+  background: $report-info-surface !important;
   font-style: italic;
 }
 
 .commentRow td {
   padding: 7px $space-3;
-  background: rgba(217, 164, 65, 0.1) !important;
+  background: $report-warning-surface !important;
   color: $warning !important;
   font-style: italic;
   text-align: left !important;

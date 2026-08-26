@@ -60,7 +60,7 @@
   height: 42px;
   border: 1px solid $outline-dark;
   border-radius: $radius-md;
-  background: rgba(16, 185, 129, 0.12);
+  background: $primary-accent-surface;
   color: $primary-accent;
 }
 
@@ -100,7 +100,7 @@
   gap: $space-3;
   min-height: 42px;
   padding: 0 14px;
-  border-left: 4px solid transparent;
+  border-left: 4px solid $color-transparent;
   border-radius: $radius-md;
   color: $text-high;
   font-size: 14px;
@@ -124,7 +124,7 @@
 
 .activeNavItem {
   border-left-color: $primary-accent;
-  background: rgba(16, 185, 129, 0.14);
+  background: $primary-accent-surface-medium;
   color: $primary-accent-light;
 
   i {
@@ -137,7 +137,7 @@
   width: 100%;
   border: 0;
   outline: 0;
-  background: transparent;
+  background: $color-transparent;
   color: inherit;
   cursor: pointer;
   font: inherit;
@@ -198,7 +198,7 @@
     width: 100%;
     border: 0;
     outline: 0;
-    background: transparent;
+    background: $color-transparent;
     color: $text-high;
     cursor: pointer;
     font: inherit;
@@ -224,15 +224,15 @@
   padding: 10px $space-2;
   border: 0;
   border-radius: $radius-md;
-  background: transparent;
-  color: #ffbbb5;
+  background: $color-transparent;
+  color: $negative-action;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
   transition: background-color $motion-fast $motion-ease;
 
   &:hover {
-    background: rgba(198, 40, 40, 0.12);
+    background: $negative-surface-soft;
   }
 }
 
@@ -270,7 +270,7 @@
   padding: 0;
   border: 0;
   border-radius: $radius-md;
-  background: transparent;
+  background: $color-transparent;
   color: $text-high;
   cursor: pointer;
   transition:
@@ -378,7 +378,7 @@
     height: auto;
     padding: 0;
     border: 0;
-    background: transparent;
+    background: $color-transparent;
   }
 
   .drawerBackdrop {
@@ -404,7 +404,7 @@
     z-index: 75;
     display: block;
     width: $mobile-menu-swipe-edge-width;
-    background: transparent;
+    background: $color-transparent;
     touch-action: pan-y;
   }
 

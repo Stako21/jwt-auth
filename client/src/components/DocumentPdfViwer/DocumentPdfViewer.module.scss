@@ -1,0 +1,10 @@
+@use "../../variables.scss" as *;
+
+.viewer {
+  max-width: 400px;
+}
+
+.error {
+  margin-top: 10px;
+  color: $negative;
+}

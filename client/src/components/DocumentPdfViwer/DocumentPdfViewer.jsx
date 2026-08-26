@@ -1,5 +1,6 @@
 import { useState } from "react";
 import FormInput from "../FormControl/FormInput.jsx";
+import styles from "./DocumentPdfViewer.module.scss";
 
 export default function DocumentPdfViewer() {
   const [docId, setDocId] = useState("");
@@ -55,7 +56,7 @@ export default function DocumentPdfViewer() {
   };
 
   return (
-    <div style={{ maxWidth: 400 }}>
+    <div className={styles.viewer}>
       <h3>Завантаження документа (PDF)</h3>
 
       <FormInput
@@ -71,9 +72,7 @@ export default function DocumentPdfViewer() {
       </button>
 
       {error && (
-        <div style={{ color: "red", marginTop: 10 }}>
-          {error}
-        </div>
+        <div className={styles.error}>{error}</div>
       )}
     </div>
   );

@@ -8,7 +8,7 @@
 }
 
 .modalBackdrop {
-  background: rgba(1, 15, 31, 0.84);
+  background: $surface-modal-overlay-strong;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
 }
@@ -28,7 +28,7 @@
   min-height: 46px;
   padding: 7px $space-3 !important;
   border-bottom: 1px solid $outline-dark;
-  background: rgba(18, 33, 49, 0.98);
+  background: $surface-modal-strong;
 }
 
 .modalTitle {
@@ -93,7 +93,7 @@
 
     &:focus {
       border-color: $primary-accent;
-      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+      box-shadow: 0 0 0 2px $primary-accent-focus-ring;
     }
 
     &:disabled {

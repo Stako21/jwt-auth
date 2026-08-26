@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import AuthProvider from "./context/AuthContext.jsx";
 import "bulma/css/bulma.min.css";
-import "./styles/bulma-dark-override.css";
+import "./styles/bulma-theme-override.scss";
 import "./main.scss";
 import { SnackbarProvider } from "notistack";
 
