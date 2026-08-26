@@ -10,6 +10,7 @@ import {
 } from "../../services/config.api";
 import { useAppConfig } from "../../context/AppConfigContext";
 import { DataLoader } from "../DataLoader/DataLoader";
+import { ConfigurationEditorModal } from "./ConfigurationEditorModal";
 
 const defaultForm = {
   slug: "",
@@ -45,6 +46,7 @@ export function BranchConfig() {
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
   const [createdBranch, setCreatedBranch] = useState(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const currentBranchId = Number(
     userInfo?.currentBranch?.id || userInfo?.branchId || 0,
@@ -98,6 +100,17 @@ export function BranchConfig() {
     setErrors({});
   };
 
+  const openCreateEditor = () => {
+    resetForm();
+    setEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    if (saving) return;
+    resetForm();
+    setEditorOpen(false);
+  };
+
   const reloadBranchViews = async () => {
     await Promise.all([loadBranches(), reloadConfig(), reloadUserInfo()]);
   };
@@ -133,6 +146,7 @@ export function BranchConfig() {
 
       await reloadBranchViews();
       resetForm();
+      setEditorOpen(false);
     } catch (error) {
       console.error("Failed to save branch config:", error);
       enqueueSnackbar(
@@ -155,6 +169,7 @@ export function BranchConfig() {
       await reloadBranchViews();
       if (editingBranchId === branch.id && branch.isActive) {
         resetForm();
+        setEditorOpen(false);
       }
     } catch (error) {
       console.error("Failed to toggle branch active:", error);
@@ -181,8 +196,6 @@ export function BranchConfig() {
 
   return (
     <div style={{ padding: 16 }}>
-      <div className="columns">
-        <div className="column is-7">
           <div className="level mb-3">
             <div className="level-left">
               <div>
@@ -192,6 +205,17 @@ export function BranchConfig() {
                   поточного адміністратора.
                 </p>
               </div>
+            </div>
+            <div className="level-right">
+              <button
+                type="button"
+                className="button is-primary"
+                onClick={openCreateEditor}
+                disabled={saving}
+              >
+                <i className="fa-solid fa-plus" aria-hidden="true" />
+                Нова філія
+              </button>
             </div>
           </div>
 
@@ -280,6 +304,7 @@ export function BranchConfig() {
                               setEditingBranchId(branch.id);
                               setForm(normalizeForm(branch));
                               setErrors({});
+                              setEditorOpen(true);
                             }}
                             disabled={saving}
                           >
@@ -310,12 +335,13 @@ export function BranchConfig() {
               </table>
             </div>
           )}
-        </div>
 
-        <div className="column is-5">
-          <h3 className="title is-5">
-            {editingBranchId ? "Картка філії" : "Нова філія"}
-          </h3>
+        {editorOpen && (
+          <ConfigurationEditorModal
+            title={editingBranchId ? "Картка філії" : "Нова філія"}
+            onClose={closeEditor}
+            busy={saving}
+          >
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label className="label">Слаг *</label>
@@ -401,15 +427,15 @@ export function BranchConfig() {
               <button
                 type="button"
                 className="button is-light"
-                onClick={resetForm}
+                onClick={closeEditor}
                 disabled={saving}
               >
-                Скинути
+                Скасувати
               </button>
             </div>
           </form>
-        </div>
-      </div>
+          </ConfigurationEditorModal>
+        )}
     </div>
   );
 }

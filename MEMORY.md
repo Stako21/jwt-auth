@@ -1987,3 +1987,18 @@ Frontend:
 - Changed the Admin users table's single-selection behavior so clicking the already selected row or its radio indicator clears the selection and disables the contextual actions again.
 - Preserved ordinary single selection when switching directly to another user.
 - Verification: client lint and targeted `git diff --check` passed.
+
+## 2026-08-26 - Tabbed configuration workspace with modal editors
+
+- Split the Admin `Конфігурація` workspace into persisted nested tabs for `Філії`, `Міста`, `Сторінки залишків`, `Звіти`, `Імпорт`, and `Планувальник`; only the selected configuration component is mounted and visible.
+- Removed the permanently visible table/form split from branches, cities, balance pages, reports, and import sources so each selected section now presents a full-width settings table.
+- Added explicit create actions where creation is supported and made existing Edit actions open a shared compact configuration editor modal; fixed import sources remain edit-only.
+- Preserved each form's field order, validation, API calls, active-state behavior, and reload flows. Successful saves close the modal, while cancel, backdrop click, close control, and Escape reset unsaved form state; closing is blocked while saving.
+- Added a sticky separated action area inside long editor forms and a wider modal variant for report configuration. Modal width and viewport-gap values are centralized in shared design tokens/CSS variables and continue to account for the current desktop sidebar width.
+- Nested tabs scroll horizontally on narrow viewports, and all configuration tables retain internal horizontal scrolling rather than widening the page.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - targeted `git diff --check` passed
+  - generated `client/dist` XLSX changes were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

@@ -16,13 +16,26 @@ import "../components/Configuration/configurationCompact.css";
 import style from "./AdminPage.module.scss";
 
 const ADMIN_PAGE_TAB_STORAGE_KEY = "admin-page-active-tab";
+const ADMIN_CONFIG_SECTION_STORAGE_KEY = "admin-page-config-section";
 const DEFAULT_ADMIN_TAB = "users";
+const DEFAULT_CONFIG_SECTION = "branches";
 const ALLOWED_ADMIN_TABS = new Set([
   "users",
   "settings",
   "scheduler",
   "configuration",
 ]);
+const CONFIGURATION_SECTIONS = [
+  ["branches", "Філії"],
+  ["cities", "Міста"],
+  ["balances", "Сторінки залишків"],
+  ["reports", "Звіти"],
+  ["imports", "Імпорт"],
+  ["scheduler", "Планувальник"],
+];
+const ALLOWED_CONFIG_SECTIONS = new Set(
+  CONFIGURATION_SECTIONS.map(([section]) => section),
+);
 
 function getStoredAdminTab() {
   if (typeof window === "undefined") {
@@ -33,6 +46,17 @@ function getStoredAdminTab() {
   return ALLOWED_ADMIN_TABS.has(storedTab) ? storedTab : DEFAULT_ADMIN_TAB;
 }
 
+function getStoredConfigSection() {
+  if (typeof window === "undefined") return DEFAULT_CONFIG_SECTION;
+
+  const storedSection = window.localStorage.getItem(
+    ADMIN_CONFIG_SECTION_STORAGE_KEY,
+  );
+  return ALLOWED_CONFIG_SECTIONS.has(storedSection)
+    ? storedSection
+    : DEFAULT_CONFIG_SECTION;
+}
+
 export default function AdminPage() {
   const [passwordUserId, setPasswordUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
@@ -40,6 +64,9 @@ export default function AdminPage() {
   const [newUserModalOpen, setNewUserModalOpen] = useState(false);
   const [usersReloadKey, setUsersReloadKey] = useState(0);
   const [activeTab, setActiveTab] = useState(getStoredAdminTab);
+  const [activeConfigSection, setActiveConfigSection] = useState(
+    getStoredConfigSection,
+  );
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -57,6 +84,14 @@ export default function AdminPage() {
 
     window.localStorage.setItem(ADMIN_PAGE_TAB_STORAGE_KEY, activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      ADMIN_CONFIG_SECTION_STORAGE_KEY,
+      activeConfigSection,
+    );
+  }, [activeConfigSection]);
 
   const { enqueueSnackbar } = useSnackbar();
 
@@ -190,13 +225,38 @@ export default function AdminPage() {
         )}
 
         {activeTab === "configuration" && (
-          <div className="configuration-compact">
-            <BranchConfig />
-            <CitiesConfig />
-            <BalancePagesConfig />
-            <ReportsConfig />
-            <ImportSourcesConfig />
-            <SchedulerConfig title="Планувальник" />
+          <div className={style.configurationWorkspace}>
+            <nav
+              className={style.configTabs}
+              aria-label="Розділи конфігурації"
+            >
+              {CONFIGURATION_SECTIONS.map(([section, label]) => (
+                <button
+                  key={section}
+                  type="button"
+                  className={
+                    activeConfigSection === section ? style.activeConfigTab : ""
+                  }
+                  aria-current={
+                    activeConfigSection === section ? "page" : undefined
+                  }
+                  onClick={() => setActiveConfigSection(section)}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+
+            <div className="configuration-compact">
+              {activeConfigSection === "branches" && <BranchConfig />}
+              {activeConfigSection === "cities" && <CitiesConfig />}
+              {activeConfigSection === "balances" && <BalancePagesConfig />}
+              {activeConfigSection === "reports" && <ReportsConfig />}
+              {activeConfigSection === "imports" && <ImportSourcesConfig />}
+              {activeConfigSection === "scheduler" && (
+                <SchedulerConfig title="Планувальник" />
+              )}
+            </div>
           </div>
         )}
       </section>

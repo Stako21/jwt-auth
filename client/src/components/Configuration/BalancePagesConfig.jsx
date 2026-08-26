@@ -10,6 +10,7 @@ import {
 } from "../../services/config.api";
 import { useAppConfig } from "../../context/AppConfigContext";
 import { DataLoader } from "../DataLoader/DataLoader";
+import { ConfigurationEditorModal } from "./ConfigurationEditorModal";
 
 const defaultForm = {
   slug: "",
@@ -46,6 +47,7 @@ export function BalancePagesConfig() {
   const [editingPageId, setEditingPageId] = useState(null);
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const loadPages = async () => {
     setLoading(true);
@@ -114,6 +116,17 @@ export function BalancePagesConfig() {
     setErrors({});
   };
 
+  const openCreateEditor = () => {
+    resetForm();
+    setEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    if (saving) return;
+    resetForm();
+    setEditorOpen(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -148,6 +161,7 @@ export function BalancePagesConfig() {
 
       await Promise.all([loadPages(), reloadConfig()]);
       resetForm();
+      setEditorOpen(false);
     } catch (error) {
       console.error("Failed to save balance page:", error);
       enqueueSnackbar(
@@ -187,9 +201,22 @@ export function BalancePagesConfig() {
 
   return (
     <div style={{ padding: 16 }}>
-      <div className="columns">
-        <div className="column is-7">
-          <h3 className="title is-5 mb-3">Сторінки залишків</h3>
+          <div className="level mb-3">
+            <div className="level-left">
+              <h3 className="title is-5 mb-0">Сторінки залишків</h3>
+            </div>
+            <div className="level-right">
+              <button
+                type="button"
+                className="button is-primary"
+                onClick={openCreateEditor}
+                disabled={saving}
+              >
+                <i className="fa-solid fa-plus" aria-hidden="true" />
+                Нова сторінка
+              </button>
+            </div>
+          </div>
 
           {loading ? (
             <DataLoader label="Завантаження сторінок залишків…" compact />
@@ -239,6 +266,7 @@ export function BalancePagesConfig() {
                               setEditingPageId(page.id);
                               setForm(normalizeForm(page));
                               setErrors({});
+                              setEditorOpen(true);
                             }}
                             disabled={saving}
                           >
@@ -269,12 +297,13 @@ export function BalancePagesConfig() {
               </table>
             </div>
           )}
-        </div>
 
-        <div className="column is-5">
-          <h3 className="title is-5">
-            {editingPageId ? "Картка сторінки" : "Нова сторінка"}
-          </h3>
+        {editorOpen && (
+          <ConfigurationEditorModal
+            title={editingPageId ? "Картка сторінки" : "Нова сторінка"}
+            onClose={closeEditor}
+            busy={saving}
+          >
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label className="label">Слаг *</label>
@@ -451,15 +480,15 @@ export function BalancePagesConfig() {
               <button
                 type="button"
                 className="button is-light"
-                onClick={resetForm}
+                onClick={closeEditor}
                 disabled={saving}
               >
-                Скинути
+                Скасувати
               </button>
             </div>
           </form>
-        </div>
-      </div>
+          </ConfigurationEditorModal>
+        )}
     </div>
   );
 }

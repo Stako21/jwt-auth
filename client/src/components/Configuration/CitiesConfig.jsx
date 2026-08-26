@@ -9,6 +9,7 @@ import {
 } from "../../services/config.api";
 import { useAppConfig } from "../../context/AppConfigContext";
 import { DataLoader } from "../DataLoader/DataLoader";
+import { ConfigurationEditorModal } from "./ConfigurationEditorModal";
 
 const defaultForm = {
   slug: "",
@@ -41,6 +42,7 @@ export function CitiesConfig() {
   const [editingCityId, setEditingCityId] = useState(null);
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const branch = appConfig?.branch || null;
 
@@ -96,6 +98,17 @@ export function CitiesConfig() {
     setErrors({});
   };
 
+  const openCreateEditor = () => {
+    resetForm();
+    setEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    if (saving) return;
+    resetForm();
+    setEditorOpen(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -121,6 +134,7 @@ export function CitiesConfig() {
 
       await Promise.all([loadCities(), reloadConfig()]);
       resetForm();
+      setEditorOpen(false);
     } catch (error) {
       console.error("Failed to save city:", error);
       enqueueSnackbar(
@@ -157,8 +171,6 @@ export function CitiesConfig() {
 
   return (
     <div style={{ padding: 16 }}>
-      <div className="columns">
-        <div className="column is-7">
           <div className="level mb-3">
             <div className="level-left">
               <div>
@@ -167,6 +179,17 @@ export function CitiesConfig() {
                   Філія: {branch?.name || "—"}
                 </p>
               </div>
+            </div>
+            <div className="level-right">
+              <button
+                type="button"
+                className="button is-primary"
+                onClick={openCreateEditor}
+                disabled={saving}
+              >
+                <i className="fa-solid fa-plus" aria-hidden="true" />
+                Нове місто
+              </button>
             </div>
           </div>
 
@@ -214,6 +237,7 @@ export function CitiesConfig() {
                               setEditingCityId(city.id);
                               setForm(normalizeForm(city));
                               setErrors({});
+                              setEditorOpen(true);
                             }}
                             disabled={saving}
                           >
@@ -244,12 +268,13 @@ export function CitiesConfig() {
               </table>
             </div>
           )}
-        </div>
 
-        <div className="column is-5">
-          <h3 className="title is-5">
-            {editingCityId ? "Картка міста" : "Нове місто"}
-          </h3>
+        {editorOpen && (
+          <ConfigurationEditorModal
+            title={editingCityId ? "Картка міста" : "Нове місто"}
+            onClose={closeEditor}
+            busy={saving}
+          >
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label className="label">Слаг *</label>
@@ -370,15 +395,15 @@ export function CitiesConfig() {
               <button
                 type="button"
                 className="button is-light"
-                onClick={resetForm}
+                onClick={closeEditor}
                 disabled={saving}
               >
-                Скинути
+                Скасувати
               </button>
             </div>
           </form>
-        </div>
-      </div>
+          </ConfigurationEditorModal>
+        )}
     </div>
   );
 }

@@ -77,6 +77,51 @@
   padding: $space-3;
 }
 
+.configurationWorkspace {
+  min-width: 0;
+}
+
+.configTabs {
+  display: flex;
+  gap: $space-1;
+  padding: $space-2 $space-3;
+  overflow-x: auto;
+  border-bottom: 1px solid $outline-dark;
+  background: $surface-container-low;
+
+  button {
+    flex: 0 0 auto;
+    min-height: $control-height-sm;
+    padding: 0 $space-3;
+    border: 1px solid transparent;
+    border-radius: $radius-md;
+    background: transparent;
+    color: $text-muted;
+    font-size: 0.73rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: color $motion-fast $motion-ease,
+      border-color $motion-fast $motion-ease,
+      background-color $motion-fast $motion-ease;
+
+    &:hover {
+      color: $text-high;
+      background: $surface-container;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $primary-accent-light;
+      outline-offset: 1px;
+    }
+  }
+}
+
+.configTabs .activeConfigTab {
+  border-color: rgba($primary-accent-light, 0.28);
+  background: rgba($primary-accent, 0.13);
+  color: $primary-accent-light;
+}
+
 @media (max-width: $mobile-breakpoint) {
   .adminPage {
     padding: $space-2;
@@ -101,6 +146,10 @@
   }
 
   .panelInset {
+    padding: $space-2;
+  }
+
+  .configTabs {
     padding: $space-2;
   }
 }

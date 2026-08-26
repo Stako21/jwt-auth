@@ -7,6 +7,7 @@ import {
   updateImportSourceConfig,
 } from "../../services/config.api";
 import { DataLoader } from "../DataLoader/DataLoader";
+import { ConfigurationEditorModal } from "./ConfigurationEditorModal";
 
 const defaultForm = {
   sourceKey: "",
@@ -48,6 +49,7 @@ export function ImportSourcesConfig() {
   const [editingSourceId, setEditingSourceId] = useState(null);
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const loadSources = async () => {
     setLoading(true);
@@ -87,6 +89,12 @@ export function ImportSourcesConfig() {
     setErrors({});
   };
 
+  const closeEditor = () => {
+    if (saving) return;
+    resetForm();
+    setEditorOpen(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!editingSourceId) return;
@@ -104,6 +112,8 @@ export function ImportSourcesConfig() {
         variant: "success",
       });
       await loadSources();
+      resetForm();
+      setEditorOpen(false);
     } catch (error) {
       console.error("Failed to save import source config:", error);
       enqueueSnackbar(
@@ -144,8 +154,6 @@ export function ImportSourcesConfig() {
 
   return (
     <div style={{ padding: 16 }}>
-      <div className="columns">
-        <div className="column is-7">
           <h3 className="title is-5 mb-3">Імпорт</h3>
 
           {loading ? (
@@ -190,6 +198,7 @@ export function ImportSourcesConfig() {
                               setEditingSourceId(source.id);
                               setForm(normalizeForm(source));
                               setErrors({});
+                              setEditorOpen(true);
                             }}
                             disabled={saving}
                           >
@@ -220,12 +229,13 @@ export function ImportSourcesConfig() {
               </table>
             </div>
           )}
-        </div>
 
-        <div className="column is-5">
-          <h3 className="title is-5">
-            {editingSourceId ? "Картка джерела" : "Оберіть джерело"}
-          </h3>
+        {editorOpen && editingSourceId && (
+          <ConfigurationEditorModal
+            title="Картка джерела"
+            onClose={closeEditor}
+            busy={saving}
+          >
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label className="label">Ключ</label>
@@ -307,15 +317,15 @@ export function ImportSourcesConfig() {
               <button
                 type="button"
                 className="button is-light"
-                onClick={resetForm}
+                onClick={closeEditor}
                 disabled={saving}
               >
-                Скинути
+                Скасувати
               </button>
             </div>
           </form>
-        </div>
-      </div>
+          </ConfigurationEditorModal>
+        )}
     </div>
   );
 }

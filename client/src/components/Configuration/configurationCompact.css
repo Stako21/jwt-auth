@@ -136,6 +136,38 @@
   grid-column: 1 / -1;
 }
 
+.admin-theme .config-editor-modal .modal-card {
+  width: min(
+    var(--ui-admin-editor-modal-width),
+    calc(100vw - var(--ui-sidebar-current-width, 0px) - var(--ui-modal-viewport-gap))
+  );
+}
+
+.admin-theme .config-editor-modal-wide .modal-card {
+  width: min(
+    var(--ui-admin-editor-modal-wide-width),
+    calc(100vw - var(--ui-sidebar-current-width, 0px) - var(--ui-modal-viewport-gap))
+  );
+}
+
+.admin-theme .config-editor-modal .modal-card-body {
+  overflow-y: auto;
+}
+
+.admin-theme .config-editor-modal form > .buttons:last-child {
+  position: sticky;
+  bottom: -1rem;
+  z-index: 2;
+  margin: 0.85rem -1rem -1rem;
+  padding: 0.7rem 1rem;
+  border-top: 1px solid var(--ui-color-outline);
+  background: var(--ui-color-surface-container-low);
+}
+
+.admin-theme .config-editor-modal form > .buttons:last-child .button {
+  flex: 1 1 0;
+}
+
 .admin-theme .field:not(:last-child) { margin-bottom: 0.55rem; }
 .admin-theme .label { margin-bottom: 0.2rem; font-size: 0.72rem; }
 .admin-theme .checkbox {
@@ -211,6 +243,11 @@
 
   .admin-theme .admin-user-modal .modal-card {
     width: min(720px, calc(100vw - 16px));
+  }
+
+  .admin-theme .config-editor-modal .modal-card,
+  .admin-theme .config-editor-modal-wide .modal-card {
+    width: min(var(--ui-admin-editor-modal-wide-width), calc(100vw - 16px));
   }
 }
 

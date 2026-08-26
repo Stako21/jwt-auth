@@ -11,6 +11,7 @@ import {
 import { useAppConfig } from "../../context/AppConfigContext";
 import { ROLE_IDS, ROLE_OPTIONS } from "../../utils/roles";
 import { DataLoader } from "../DataLoader/DataLoader";
+import { ConfigurationEditorModal } from "./ConfigurationEditorModal";
 
 const ALL_NON_ADMIN_ROLE_IDS = ROLE_OPTIONS.map((option) =>
   Number(option.value),
@@ -132,6 +133,7 @@ export function ReportsConfig() {
   const [editingReportId, setEditingReportId] = useState(null);
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const branch = appConfig?.branch || null;
 
@@ -222,6 +224,17 @@ export function ReportsConfig() {
     setErrors({});
   };
 
+  const openCreateEditor = () => {
+    resetForm();
+    setEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    if (saving) return;
+    resetForm();
+    setEditorOpen(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -262,6 +275,7 @@ export function ReportsConfig() {
 
       await Promise.all([loadReports(), reloadConfig()]);
       resetForm();
+      setEditorOpen(false);
     } catch (error) {
       console.error("Failed to save report config:", error);
       enqueueSnackbar(
@@ -314,8 +328,6 @@ export function ReportsConfig() {
 
   return (
     <div style={{ padding: 10, fontSize: 13 }}>
-      <div className="columns is-variable is-2">
-        <div className="column is-8">
           <div className="level mb-3">
             <div className="level-left">
               <div>
@@ -324,6 +336,17 @@ export function ReportsConfig() {
                   Філія: {branch?.name || "—"}
                 </p>
               </div>
+            </div>
+            <div className="level-right">
+              <button
+                type="button"
+                className="button is-primary"
+                onClick={openCreateEditor}
+                disabled={saving}
+              >
+                <i className="fa-solid fa-plus" aria-hidden="true" />
+                Новий звіт
+              </button>
             </div>
           </div>
 
@@ -411,6 +434,7 @@ export function ReportsConfig() {
                               setEditingReportId(report.id);
                               setForm(normalizeForm(report));
                               setErrors({});
+                              setEditorOpen(true);
                             }}
                             disabled={saving}
                             title="Редагувати"
@@ -443,12 +467,14 @@ export function ReportsConfig() {
               </table>
             </div>
           )}
-        </div>
 
-        <div className="column is-4">
-          <h3 className="title is-6 mb-3">
-            {editingReportId ? "Картка звіту" : "Оберіть звіт"}
-          </h3>
+        {editorOpen && (
+          <ConfigurationEditorModal
+            title={editingReportId ? "Картка звіту" : "Новий звіт"}
+            onClose={closeEditor}
+            busy={saving}
+            wide
+          >
           <form onSubmit={handleSubmit}>
             <div className={formFieldClassName}>
               <label className={labelClassName}>Ключ</label>
@@ -770,15 +796,15 @@ export function ReportsConfig() {
               <button
                 type="button"
                 className="button is-light"
-                onClick={resetForm}
+                onClick={closeEditor}
                 disabled={saving}
               >
-                Скинути
+                Скасувати
               </button>
             </div>
           </form>
-        </div>
-      </div>
+          </ConfigurationEditorModal>
+        )}
     </div>
   );
 }

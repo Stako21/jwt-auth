@@ -42,6 +42,9 @@
   --ui-motion-fast: #{$motion-fast};
   --ui-motion-normal: #{$motion-normal};
   --ui-sidebar-current-width: #{$sidebar-width};
+  --ui-admin-editor-modal-width: #{$admin-editor-modal-max-width};
+  --ui-admin-editor-modal-wide-width: #{$admin-editor-modal-wide-max-width};
+  --ui-modal-viewport-gap: #{$modal-viewport-gap};
 }
 
 * {
