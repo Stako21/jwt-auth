@@ -1,5 +1,8 @@
 export const THEME_STORAGE_KEY = "ui-theme";
-export const DEFAULT_THEME = "emerald-dark";
+export const THEME_CHANGE_EVENT = "ui-theme-change";
+export const DEFAULT_THEME = "cyan-light";
+export const CYAN_DARK_THEME = "cyan-dark";
+export const CYAN_LIGHT_THEME = "cyan-light";
 
 export const UI_THEMES = [
   { value: "emerald-dark", label: "Emerald — темна" },
@@ -35,6 +38,10 @@ export function applyTheme(theme) {
     } catch {
       // Theme still applies when storage is unavailable.
     }
+
+    window.dispatchEvent(
+      new CustomEvent(THEME_CHANGE_EVENT, { detail: { theme: nextTheme } }),
+    );
   }
 
   return nextTheme;

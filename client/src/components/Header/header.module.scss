@@ -195,6 +195,14 @@
   border-top: 1px solid $outline-dark;
 }
 
+.sidebarThemeToggle {
+  justify-self: start;
+}
+
+.collapsed .sidebarThemeToggle {
+  justify-self: center;
+}
+
 .drawerBranchSelect,
 .branchSelect {
   display: flex;

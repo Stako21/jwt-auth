@@ -1,10 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FormSelect from "../FormControl/FormSelect.jsx";
-import { applyTheme, getActiveTheme, UI_THEMES } from "../../utils/theme.js";
+import {
+  applyTheme,
+  getActiveTheme,
+  THEME_CHANGE_EVENT,
+  UI_THEMES,
+} from "../../utils/theme.js";
 import style from "./ThemeSelector.module.scss";
 
 export default function ThemeSelector() {
   const [theme, setTheme] = useState(getActiveTheme);
+
+  useEffect(() => {
+    const syncTheme = (event) => {
+      setTheme(event.detail?.theme || getActiveTheme());
+    };
+
+    window.addEventListener(THEME_CHANGE_EVENT, syncTheme);
+    return () => window.removeEventListener(THEME_CHANGE_EVENT, syncTheme);
+  }, []);
 
   const handleChange = (event) => {
     setTheme(applyTheme(event.target.value));

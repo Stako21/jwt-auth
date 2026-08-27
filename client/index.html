@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="uk" data-theme="dark" data-ui-theme="emerald-dark">
+<html lang="uk" data-theme="light" data-ui-theme="cyan-light">
   <head>
     <meta charset="UTF-8" />
     <!-- <link rel="icon" type="image/svg+xml" href="/ST_Wight.png" /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
       (function () {
-        var fallbackTheme = "emerald-dark";
+        var fallbackTheme = "cyan-light";
         var allowedThemes = [
           "emerald-dark",
           "cyan-dark",
@@ -19,6 +19,14 @@
           storedTheme = window.localStorage.getItem("ui-theme");
         } catch (error) {
           storedTheme = null;
+        }
+
+        if (
+          !storedTheme &&
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches
+        ) {
+          fallbackTheme = "cyan-dark";
         }
 
         var activeTheme = allowedThemes.includes(storedTheme)

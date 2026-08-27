@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import FormSelect from "../FormControl/FormSelect.jsx";
 import CompactSelect from "../CompactSelect/CompactSelect.jsx";
+import PublicThemeToggle from "../PublicThemeToggle/PublicThemeToggle.jsx";
 import { Link, useLocation } from "react-router-dom";
 import cn from "classnames";
 import { AuthContext } from "../../context/AuthContext";
@@ -257,6 +258,11 @@ function SidebarContent({
       </nav>
 
       <div className={style.sidebarFooter}>
+        <PublicThemeToggle
+          className={style.sidebarThemeToggle}
+          compact={isCompact}
+        />
+
         {canSwitchBranches ? (
           <div className={style.drawerBranchSelect}>
             <i className="fa-regular fa-building"></i>

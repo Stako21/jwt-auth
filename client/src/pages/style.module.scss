@@ -11,6 +11,13 @@
   background: $color-transparent;
 }
 
+.loginThemeToggle {
+  position: fixed;
+  top: $space-4;
+  right: $space-4;
+  z-index: 10;
+}
+
 .brandMark {
   display: flex;
   align-items: center;
@@ -264,6 +271,11 @@
 }
 
 @media (max-width: 500px) {
+  .loginThemeToggle {
+    top: $space-3;
+    right: $space-3;
+  }
+
   .mainWrapper {
     padding: 18px;
   }

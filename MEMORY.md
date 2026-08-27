@@ -2087,3 +2087,17 @@ Frontend:
   - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
   - generated `client/dist` XLSX changes were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-27 - Public Cyan light/dark theme toggle
+
+- Added an always-available two-state Light/Dark control styled as a compact pill: it appears on Sign In and in the sidebar footer for every authenticated role, remaining icon-only when the desktop sidebar is collapsed.
+- The public control intentionally switches only between Cyan Light and Cyan Dark and persists the result through the existing `ui-theme` browser setting.
+- Changed the first-visit default to the device `prefers-color-scheme` using the corresponding Cyan palette, with Cyan Light as the fallback when the preference API is unavailable.
+- Preserved Admin's four-palette selector and added a shared theme-change event so the public toggle and Admin selector remain synchronized when either control changes the theme.
+- Visually checked the complete toggle and device-dark default on the Sign In page at a 500px viewport.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
+  - the temporary Vite process used for the visual check was stopped
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

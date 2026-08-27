@@ -1,0 +1,82 @@
+@use "../../theme.scss" as *;
+
+.toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 126px;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid $outline-medium;
+  border-radius: 999px;
+  background: $surface-container-low;
+  box-shadow: $shadow-scroll-control;
+  color: $text-muted;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color $motion-fast $motion-ease,
+    background-color $motion-fast $motion-ease;
+
+  &:hover {
+    border-color: $outline-green;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $primary-accent-focus-ring;
+    outline-offset: 2px;
+  }
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  min-width: 0;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  transition:
+    background-color $motion-fast $motion-ease,
+    color $motion-fast $motion-ease,
+    box-shadow $motion-fast $motion-ease;
+
+  i {
+    font-size: 12px;
+  }
+}
+
+.active {
+  background: $primary-accent-surface-medium;
+  box-shadow: $shadow-scroll-control;
+  color: $primary-accent-light;
+}
+
+@mixin compact-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+
+  .option {
+    display: none;
+  }
+
+  .active {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+  }
+
+  .optionLabel {
+    display: none;
+  }
+}
+
+.compact {
+  @include compact-toggle;
+}

@@ -1,5 +1,6 @@
 import React, { useContext, useState } from "react";
 import FormInput from "../components/FormControl/FormInput.jsx";
+import PublicThemeToggle from "../components/PublicThemeToggle/PublicThemeToggle.jsx";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { AuthContext } from "../context/AuthContext";
@@ -65,6 +66,7 @@ export default function SignIn() {
 
   return (
     <div className={style.mainWrapper}>
+      <PublicThemeToggle className={style.loginThemeToggle} />
       <div className={style.brandMark} aria-hidden="true">
         <img src={logo} alt="" />
       </div>
