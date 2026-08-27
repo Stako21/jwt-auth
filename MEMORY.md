@@ -2101,3 +2101,18 @@ Frontend:
   - generated `client/dist` XLSX changes were restored
   - the temporary Vite process used for the visual check was stopped
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-27 - Documents mobile statuses and filter controls
+
+- Added the localized status name beside the status icon in every mobile document card while preserving icon-only desktop table cells and their tooltips.
+- Restored semantic green Signed icon/text in Cyan Dark; the other three theme palettes already used green Signed tokens.
+- Replaced the collapsed status filter selector with an always-visible, wrapping checklist; no selected statuses continues to mean all statuses.
+- Replaced the contractor native select with the creation-modal interaction: users can type to narrow the contractor list and select a matching suggestion; applying an unselected partial query performs a case-insensitive contractor-name match instead of silently reverting to all contractors.
+- Moved the shared contractor dropdown blur delay into `UI_TIMING` and reused it in Documents plus both return/exchange creation modals.
+- Raised the desktop filter reflow breakpoint to 1550px so the denser checklist and typeahead reflow before colliding within the sidebar-reduced viewport.
+- Verification:
+  - focused document-filter check confirmed combined status and case-insensitive partial contractor matching
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

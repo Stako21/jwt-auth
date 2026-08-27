@@ -1,4 +1,5 @@
 export const UI_TIMING = Object.freeze({
+  dropdownBlurDelayMs: 200,
   pricePopoverTimeoutMs: 10000,
   statusTooltipTimeoutMs: 2200,
 });

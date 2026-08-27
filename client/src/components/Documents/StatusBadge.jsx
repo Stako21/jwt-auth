@@ -26,7 +26,7 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function StatusBadge({ status }) {
+export default function StatusBadge({ status, showLabel = false }) {
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
   const config = STATUS_CONFIG[status] || {
     label: status || "Невідомий статус",
@@ -45,7 +45,9 @@ export default function StatusBadge({ status }) {
 
   return (
     <button
-      className={`${style.statusIndicator} ${config.className}`}
+      className={`${style.statusIndicator} ${config.className} ${
+        showLabel ? style.withLabel : ""
+      }`}
       type="button"
       aria-label={`Статус: ${config.label}`}
       data-label={config.label}
@@ -57,6 +59,7 @@ export default function StatusBadge({ status }) {
       onBlur={() => setIsTooltipOpen(false)}
     >
       <i className={`fa-solid ${config.icon}`} aria-hidden="true"></i>
+      {showLabel ? <span>{config.label}</span> : null}
     </button>
   );
 }

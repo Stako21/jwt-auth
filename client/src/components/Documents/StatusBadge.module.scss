@@ -77,6 +77,20 @@
   color: $text-muted;
 }
 
+.withLabel {
+  width: auto;
+  padding: 0 $space-2;
+  gap: $space-2;
+  cursor: default;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &::after {
+    display: none;
+  }
+}
+
 @media (max-width: $mobile-breakpoint) {
   .statusIndicator {
     width: $document-status-size-mobile;
@@ -94,6 +108,19 @@
     &:focus-visible::after,
     &[data-open="true"]::after {
       transform: translateY(0);
+    }
+  }
+
+  .withLabel {
+    width: auto;
+    max-width: min(62vw, 220px);
+    padding: 0 10px;
+    font-size: 12px;
+
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 }

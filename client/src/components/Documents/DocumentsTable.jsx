@@ -140,7 +140,7 @@ export default function DocumentTable({
             onClick={(event) => handleDocumentOpen(event, doc)}
           >
             <div className={style.cardHeader}>
-              <StatusBadge status={doc.status} />
+              <StatusBadge status={doc.status} showLabel />
               <strong>№ {doc.document_number}</strong>
             </div>
 

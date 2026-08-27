@@ -9,6 +9,7 @@ import ItemModal from "./ItemModal";
 import { getUnitLabel } from "../utils/unitLabels";
 import { useSnackbar } from "notistack";
 import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
+import { UI_TIMING } from "../uiTokens.js";
 import styles from "./CreateReturnDocumentModal.module.scss";
 
 export default function CreateReturnDocumentModal({
@@ -302,7 +303,10 @@ export default function CreateReturnDocumentModal({
                   }}
                   onFocus={() => setShowContractorDropdown(true)}
                   onBlur={() =>
-                    setTimeout(() => setShowContractorDropdown(false), 200)
+                    setTimeout(
+                      () => setShowContractorDropdown(false),
+                      UI_TIMING.dropdownBlurDelayMs,
+                    )
                   }
                 />
                 {errors.contractorId && (

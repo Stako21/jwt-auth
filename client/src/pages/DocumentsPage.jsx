@@ -18,6 +18,7 @@ import {
   filterDocuments,
   getDocumentAuthorOptions,
 } from "../utils/documentFilters.js";
+import { UI_TIMING } from "../uiTokens.js";
 import style from "./DocumentsPage.module.scss";
 
 const DOCUMENT_STATUSES = [
@@ -67,6 +68,8 @@ export default function DocumentsPage() {
   const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS }));
   const [appliedFilters, setAppliedFilters] = useState(() => ({ ...EMPTY_FILTERS }));
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [contractorSearch, setContractorSearch] = useState("");
+  const [showContractorDropdown, setShowContractorDropdown] = useState(false);
 
   const currentBranchName =
     userInfo?.currentBranch?.shortName || userInfo?.currentBranch?.name || null;
@@ -123,6 +126,16 @@ export default function DocumentsPage() {
     [documents],
   );
 
+  const filteredContractors = useMemo(() => {
+    const query = contractorSearch.trim().toLocaleLowerCase("uk");
+    return [...contractors]
+      .sort((left, right) => left.name.localeCompare(right.name, "uk"))
+      .filter(
+        (contractor) =>
+          !query || contractor.name.toLocaleLowerCase("uk").includes(query),
+      );
+  }, [contractorSearch, contractors]);
+
   const filteredDocuments = useMemo(
     () => filterDocuments(documents, appliedFilters),
     [appliedFilters, documents],
@@ -132,14 +145,6 @@ export default function DocumentsPage() {
     Number(filters.statuses.length > 0) +
     Number(Boolean(filters.contractor)) +
     Number(Boolean(filters.authorId));
-
-  const statusSummary =
-    filters.statuses.length === 0
-      ? "Усі статуси"
-      : filters.statuses.length === 1
-        ? DOCUMENT_STATUSES.find((status) => status.value === filters.statuses[0])
-            ?.label
-        : `${filters.statuses.length} обрано`;
 
   const applyFilters = (event) => {
     event.preventDefault();
@@ -159,6 +164,8 @@ export default function DocumentsPage() {
     setAppliedPeriod(defaultPeriod);
     setFilters({ ...EMPTY_FILTERS });
     setAppliedFilters({ ...EMPTY_FILTERS });
+    setContractorSearch("");
+    setShowContractorDropdown(false);
   };
 
   const toggleStatus = (statusValue) => {
@@ -295,46 +302,78 @@ export default function DocumentsPage() {
           />
         </div>
 
-        <div className={style.filterControl}>
+        <div className={`${style.filterControl} ${style.statusFilter}`}>
           <span className={style.filterLabel}>Статус</span>
-          <details className={style.statusSelect}>
-            <summary>{statusSummary}</summary>
-            <div className={style.statusOptions}>
-              {DOCUMENT_STATUSES.map((status) => (
-                <label key={status.value}>
-                  <FormInput
-                    type="checkbox"
-                    checked={filters.statuses.includes(status.value)}
-                    onChange={() => toggleStatus(status.value)}
-                  />
-                  {status.label}
-                </label>
-              ))}
-            </div>
-          </details>
+          <div className={style.statusChecklist}>
+            {DOCUMENT_STATUSES.map((status) => (
+              <label key={status.value}>
+                <FormInput
+                  type="checkbox"
+                  checked={filters.statuses.includes(status.value)}
+                  onChange={() => toggleStatus(status.value)}
+                />
+                <span>{status.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
-        <label className={style.filterControl}>
+        <div className={style.filterControl}>
           <span className={style.filterLabel}>Контрагент</span>
-          <FormSelect
-            value={filters.contractor}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                contractor: event.target.value,
-              }))
-            }
-          >
-            <option value="">Усі контрагенти</option>
-            {[...contractors]
-              .sort((left, right) => left.name.localeCompare(right.name, "uk"))
-              .map((contractor) => (
-                <option key={contractor.id} value={contractor.name}>
-                  {contractor.name}
-                </option>
-              ))}
-          </FormSelect>
-        </label>
+          <div className={style.contractorAutocomplete}>
+            <FormInput
+              value={contractorSearch}
+              placeholder="Почніть вводити назву"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={showContractorDropdown}
+              aria-controls="document-contractor-options"
+              onChange={(event) => {
+                const nextSearch = event.target.value;
+                setContractorSearch(nextSearch);
+                setFilters((current) => ({
+                  ...current,
+                  contractor: nextSearch.trim(),
+                }));
+                setShowContractorDropdown(true);
+              }}
+              onFocus={() => setShowContractorDropdown(true)}
+              onBlur={() =>
+                window.setTimeout(
+                  () => setShowContractorDropdown(false),
+                  UI_TIMING.dropdownBlurDelayMs,
+                )
+              }
+            />
+            {showContractorDropdown && filteredContractors.length > 0 ? (
+              <div
+                id="document-contractor-options"
+                className={style.contractorOptions}
+                role="listbox"
+              >
+                {filteredContractors.map((contractor) => (
+                  <button
+                    key={contractor.id}
+                    type="button"
+                    role="option"
+                    aria-selected={filters.contractor === contractor.name}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setContractorSearch(contractor.name);
+                      setFilters((current) => ({
+                        ...current,
+                        contractor: contractor.name,
+                      }));
+                      setShowContractorDropdown(false);
+                    }}
+                  >
+                    {contractor.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
 
         <label className={style.filterControl}>
           <span className={style.filterLabel}>Автор</span>

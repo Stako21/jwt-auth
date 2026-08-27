@@ -3,8 +3,12 @@ export function filterDocuments(documents, filters) {
     if (filters.statuses.length > 0 && !filters.statuses.includes(doc.status)) {
       return false;
     }
-    if (filters.contractor && doc.contractor !== filters.contractor) {
-      return false;
+    if (filters.contractor) {
+      const contractorQuery = String(filters.contractor)
+        .trim()
+        .toLocaleLowerCase("uk");
+      const contractorName = String(doc.contractor || "").toLocaleLowerCase("uk");
+      if (!contractorName.includes(contractorQuery)) return false;
     }
     if (filters.authorId && String(doc.author_user_id) !== filters.authorId) {
       return false;

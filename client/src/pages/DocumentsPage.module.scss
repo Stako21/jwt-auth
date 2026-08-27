@@ -97,7 +97,7 @@
   z-index: 20;
   display: grid;
   grid-template-columns:
-    160px 160px minmax(130px, 0.75fr) minmax(150px, 1fr)
+    160px 160px minmax(320px, 1.5fr) minmax(180px, 1fr)
     minmax(135px, 0.8fr) auto;
   align-items: end;
   gap: $space-3;
@@ -152,8 +152,7 @@
 }
 
 .dateControl > input,
-.filterControl > select,
-.statusSelect summary {
+.filterControl > select {
   width: 100%;
   height: $control-height-md;
   border: 1px solid $outline-green;
@@ -182,63 +181,28 @@
   opacity: 0.48;
 }
 
-.statusSelect {
-  position: relative;
-
-  summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 $space-3;
-    cursor: pointer;
-    list-style: none;
-
-    &::-webkit-details-marker {
-      display: none;
-    }
-
-    &::after {
-      content: "\f078";
-      color: $text-muted;
-      font-family: "Font Awesome 6 Free";
-      font-size: 11px;
-      font-weight: 900;
-    }
-  }
-
-  &[open] summary {
-    border-color: $primary-accent;
-  }
-}
-
-.statusOptions {
-  position: absolute;
-  top: calc(100% + $space-1);
-  right: 0;
-  left: 0;
-  z-index: 30;
-  display: grid;
-  gap: 2px;
-  min-width: 190px;
-  padding: $space-2;
+.statusChecklist {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-1 $space-3;
+  min-height: $control-height-md;
+  padding: 5px $space-2;
   border: 1px solid $outline-medium;
   border-radius: $radius-md;
-  background: $surface-container;
-  box-shadow: $shadow-popover;
+  background: $surface-container-lowest;
 
   label {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: $space-2;
-    min-height: 32px;
-    padding: 0 $space-2;
-    border-radius: $radius-sm;
+    gap: $space-1;
+    min-height: 24px;
     color: $text-medium;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
+    white-space: nowrap;
 
     &:hover {
-      background: $surface-container-high;
       color: $text-high;
     }
   }
@@ -246,7 +210,52 @@
   input {
     width: 14px;
     height: 14px;
+    margin-right: 0;
     accent-color: $primary-accent;
+  }
+}
+
+.contractorAutocomplete {
+  position: relative;
+  min-width: 0;
+}
+
+.contractorOptions {
+  position: absolute;
+  top: calc(100% + $space-1);
+  right: 0;
+  left: 0;
+  z-index: 45;
+  display: grid;
+  max-height: 220px;
+  padding: $space-1;
+  overflow-y: auto;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-md;
+  isolation: isolate;
+  background: $surface-container-highest;
+  box-shadow: $shadow-popover;
+
+  button {
+    width: 100%;
+    min-height: 32px;
+    padding: 7px $space-2;
+    border: 0;
+    border-radius: $radius-sm;
+    background: $color-transparent;
+    color: $text-high;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: left;
+
+    &:hover,
+    &:focus-visible,
+    &[aria-selected="true"] {
+      outline: 0;
+      background: $select-option-hover-surface;
+      color: $primary-accent-light;
+    }
   }
 }
 
@@ -301,9 +310,13 @@
   font-size: 13px;
 }
 
-@media (max-width: 1320px) and (min-width: 901px) {
+@media (max-width: 1550px) and (min-width: 901px) {
   .filterPanel {
     grid-template-columns: 160px 160px minmax(130px, 1fr) minmax(150px, 1fr);
+  }
+
+  .statusFilter {
+    grid-column: span 2;
   }
 
   .filterActions {
