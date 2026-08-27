@@ -1,0 +1,23 @@
+@use "../theme.scss" as *;
+
+// Desktop report pages keep their controls visible and scroll only the data area.
+@mixin page {
+  @media (min-width: ($mobile-breakpoint + 1px)) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - #{$topbar-height});
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+@mixin scroller {
+  @media (min-width: ($mobile-breakpoint + 1px)) {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+}

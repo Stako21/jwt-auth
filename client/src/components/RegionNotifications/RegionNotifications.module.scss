@@ -1,13 +1,17 @@
 @use "../../theme.scss" as *;
 
 .container {
+  height: 100%;
   min-width: 0;
+  min-height: 0;
 }
 
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.7fr);
   gap: $space-3;
+  height: 100%;
+  min-height: 0;
 }
 
 .listPanel,
@@ -17,6 +21,18 @@
   border: 1px solid $outline-dark;
   border-radius: $radius-lg;
   background: $surface-container-low;
+}
+
+.listPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  :global(.table-container) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
 }
 
 .title {

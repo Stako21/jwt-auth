@@ -1,6 +1,9 @@
 @use "../../theme.scss" as *;
+@use "../../styles/dataViewport" as data-viewport;
 
 .report {
+  @include data-viewport.page;
+
   background: $table-page-surface;
   color: $table-text;
   min-height: calc(100vh - 60px);
@@ -72,10 +75,12 @@
 }
 
 .tableShell {
+  @include data-viewport.scroller;
+
   background: $table-shell-surface;
   border: 1px solid $table-border;
   border-radius: 4px;
-  max-height: calc(100vh - 190px);
+  max-height: none;
   overflow: auto;
 }
 

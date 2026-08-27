@@ -2116,3 +2116,15 @@ Frontend:
   - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
   - generated `client/dist` XLSX changes were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-27 - Document history modal and desktop data viewports
+
+- Rebuilt the document history dialog as a portal-mounted, token-driven modal so it is no longer constrained by the document table's sticky action cell; combined document and notification history into one compact scrollable body with desktop live-content centering and a mobile bottom-sheet layout.
+- Added the shared `styles/_dataViewport.scss` desktop layout mixins so report controls remain visible while only the results region scrolls vertically and horizontally.
+- Applied the bounded desktop results viewport to Documents, Sales, Debet, Romashka, XLSX 1C reports, orders-by-time, collected-bills, picker earnings, Admin users, notifications, scheduler, and configuration tables; Balance already used the same bounded-table behavior.
+- Kept mobile pages in normal document flow and added sticky table headings where the new desktop scroll container required them.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
+  - user-managed `client/public/Sorce/*`, the pre-existing UsersList default-view edit, and `documentation/*` files were not changed or staged

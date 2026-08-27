@@ -443,13 +443,15 @@ export default function DocumentsPage() {
       {error ? <div className={style.errorBanner}>{error}</div> : null}
 
       {!loading && !error ? (
-        <DocumentTable
-          documents={filteredDocuments}
-          currentUser={userInfo}
-          reloadDocuments={loadDocuments}
-          onEditDocument={(doc) => openDocumentModal(doc, false)}
-          onViewDocument={(doc) => openDocumentModal(doc, true)}
-        />
+        <div className={style.resultsViewport}>
+          <DocumentTable
+            documents={filteredDocuments}
+            currentUser={userInfo}
+            reloadDocuments={loadDocuments}
+            onEditDocument={(doc) => openDocumentModal(doc, false)}
+            onViewDocument={(doc) => openDocumentModal(doc, true)}
+          />
+        </div>
       ) : null}
     </section>
   );

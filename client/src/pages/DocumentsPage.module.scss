@@ -1,9 +1,18 @@
 @use "../theme.scss" as *;
+@use "../styles/dataViewport" as data-viewport;
 
 .documentsPage {
+  @include data-viewport.page;
+
   width: 100%;
   min-width: 0;
   padding: $space-5;
+}
+
+.resultsViewport {
+  @include data-viewport.scroller;
+
+  min-width: 0;
 }
 
 .pageHeader {

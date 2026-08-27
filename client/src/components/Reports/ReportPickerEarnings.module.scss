@@ -1,6 +1,7 @@
 @use "../../theme.scss" as *;
+@use "../../styles/dataViewport" as data-viewport;
 
-.report { padding: 10px 12px 20px; color: $report-text-high; }
+.report { @include data-viewport.page; padding: 10px 12px 20px; color: $report-text-high; }
 .header { display: flex; justify-content: space-between; align-items: end; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
 .header h2 { margin: 0; font-size: 22px; }
 .header p { margin: 3px 0 0; color: $report-text-muted; font-size: 12px; }
@@ -10,10 +11,10 @@
 .dateLabel small { color: $report-text-subtle; font-size: 10px; font-weight: 400; white-space: nowrap; }
 .searchField { min-width: 230px; }
 .warehouseField { min-width: 190px; }
-.tableShell { overflow-x: auto; border: 1px solid $table-border; background: $table-shell-surface; }
+.tableShell { @include data-viewport.scroller; overflow: auto; border: 1px solid $table-border; background: $table-shell-surface; }
 .table { width: 100%; min-width: 850px; border-collapse: collapse; background: $table-row-odd; color: $table-text; font-size: 11px; }
 .table th, .table td { padding: 5px 7px; border-right: 1px solid $table-border; border-bottom: 1px solid $table-border; text-align: right; }
-.table th { background: $table-head-surface; color: $table-text-strong; }
+.table th { position: sticky; top: 0; z-index: 2; background: $table-head-surface; color: $table-text-strong; }
 .table tbody tr:nth-child(even) td { background: $table-row-even; }
 .table tbody tr:hover td { background: $table-row-hover; }
 .table th:first-child, .table td:first-child { text-align: left; }

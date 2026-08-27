@@ -1,6 +1,9 @@
 @use "../../theme.scss" as *;
+@use "../../styles/dataViewport" as data-viewport;
 
 .report {
+  @include data-viewport.page;
+
   padding: 10px 12px 20px;
 }
 
@@ -100,7 +103,9 @@
 }
 
 .tableShell {
-  overflow-x: auto;
+  @include data-viewport.scroller;
+
+  overflow: auto;
   border: 1px solid $table-border;
   background: $table-shell-surface;
 }
@@ -128,7 +133,9 @@
   }
 
   th {
+    position: sticky;
     top: 0;
+    z-index: 2;
     background: $table-head-surface;
     color: $table-text-strong;
     font-size: 11px;

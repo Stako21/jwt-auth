@@ -249,6 +249,27 @@
   .configuration-compact .column.is-5 { width: 33.3333%; }
 }
 
+@media screen and (min-width: 901px) {
+  .configuration-compact {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .configuration-compact .table-container {
+    max-height: calc(100dvh - 220px);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .configuration-compact .table thead th,
+  .admin-theme .table-container .table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+}
+
 @media screen and (max-width: 900px) {
   .configuration-compact > div { padding: 0.55rem !important; }
   .configuration-compact .columns { display: block; margin: 0; }

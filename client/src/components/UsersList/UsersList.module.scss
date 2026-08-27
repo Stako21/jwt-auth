@@ -1,7 +1,12 @@
 @use "../../theme.scss" as *;
+@use "../../styles/dataViewport" as data-viewport;
 
 .wrapperUserList {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   padding: $space-3;
 }
 
@@ -131,10 +136,19 @@
 .wraperTable,
 .scrollContainer {
   min-width: 0;
+  min-height: 0;
+}
+
+.wraperTable {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
 }
 
 .scrollContainer {
-  overflow-x: auto;
+  @include data-viewport.scroller;
+
+  overflow: auto;
   border: 1px solid $table-border;
   border-radius: $radius-lg;
   background: $table-shell-surface;

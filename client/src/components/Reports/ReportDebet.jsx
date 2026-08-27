@@ -426,21 +426,22 @@ export function ReportDebet({ setLastUpdateTime }) {
         </div>
       </div>
 
-      <div className={style.totalBar}>
-        <span>{groupingSubtitle}</span>
-        <strong>{formatMoney(grandTotal)}</strong>
-      </div>
+      <div className={style.resultsViewport}>
+        <div className={style.totalBar}>
+          <span>{groupingSubtitle}</span>
+          <strong>{formatMoney(grandTotal)}</strong>
+        </div>
 
-      {loading ? <DataLoader label="Завантаження дебіторської заборгованості…" /> : null}
-      {!loading && error ? <p className={style.error}>{error}</p> : null}
-      {!loading && !error && groupedRows.length === 0 ? (
-        <p className={style.state}>Немає даних для відображення</p>
-      ) : null}
+        {loading ? <DataLoader label="Завантаження дебіторської заборгованості…" /> : null}
+        {!loading && error ? <p className={style.error}>{error}</p> : null}
+        {!loading && !error && groupedRows.length === 0 ? (
+          <p className={style.state}>Немає даних для відображення</p>
+        ) : null}
 
-      {!loading &&
-        !error &&
-        groupedRows.map((group) => (
-          <div key={group.id} className={style.group}>
+        {!loading &&
+          !error &&
+          groupedRows.map((group) => (
+            <div key={group.id} className={style.group}>
             <div
               className={style.groupHeader}
               onClick={() =>
@@ -508,8 +509,9 @@ export function ReportDebet({ setLastUpdateTime }) {
                 ))}
               </div>
             ) : null}
-          </div>
-        ))}
+            </div>
+          ))}
+      </div>
     </section>
   );
 }

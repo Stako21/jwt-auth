@@ -1,4 +1,11 @@
 @use "../../theme.scss" as *;
+@use "../../styles/dataViewport" as data-viewport;
+
+.report {
+  @include data-viewport.page;
+
+  min-width: 0;
+}
 
 /* =============================
   Основные стили (скопированы и локализованы)
@@ -24,6 +31,8 @@
 ============================= */
 
 .wrapperTable {
+  @include data-viewport.scroller;
+
   width: 100%;
   padding: 0 4px;
   display: flex;
@@ -32,7 +41,7 @@
   align-items: stretch;
   /* allow wrapper to expand with table content */
   height: auto;
-  overflow: visible;
+  overflow: hidden;
   // position: relative; // нужно для кнопки "На весь экран"
 }
 
@@ -64,7 +73,8 @@
 /* NOTE: removed inner scroll container so page height grows with table and whole page scrolls */
 .scrollContainer {
   /* no internal max-height — allow page to grow */
-  overflow: visible;
+  height: 100%;
+  overflow: auto;
 }
 
 /* =============================
@@ -85,6 +95,9 @@
   }
 
   th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     /* no sticky headers — let thead scroll with the page */
     border-top: 0;
     background-color: $table-head-surface;

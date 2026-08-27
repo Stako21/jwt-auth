@@ -277,7 +277,8 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
         </div>
       </div>
 
-      {loading && <DataLoader label="Формування звіту продажів…" />}
+      <div className={style.resultsViewport}>
+        {loading && <DataLoader label="Формування звіту продажів…" />}
 
       {showGrandTotal && (
         <div className={style.grandTotal}>
@@ -415,6 +416,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
             </div>
           );
         })}
+      </div>
 
       <ScrollToTopButton />
     </div>

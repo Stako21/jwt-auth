@@ -1,9 +1,19 @@
 @use "../../theme.scss" as *;
 @use "../../styles/filterPanel" as filter-panel;
+@use "../../styles/dataViewport" as data-viewport;
 
 .salesReportWrapper {
+  @include data-viewport.page;
+
   padding: $space-5;
   color: $table-text;
+}
+
+.resultsViewport {
+  @include data-viewport.scroller;
+
+  min-width: 0;
+  padding-right: 2px;
 }
 
 .header {

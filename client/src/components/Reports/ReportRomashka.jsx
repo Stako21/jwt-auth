@@ -69,7 +69,7 @@ export const ReportRomashka = ({ isOpen, setLastUpdateTime }) => {
   }
 
   return (
-    <div>
+    <div className={style.report}>
       {/* Кнопка для мобильных устройств */}
 
       <h2 className={style.title}>Продажі Ромашка</h2>
