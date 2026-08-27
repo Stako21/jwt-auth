@@ -100,7 +100,7 @@
     position: sticky;
     text-align: right;
     top: 0;
-    z-index: 2;
+    z-index: 3;
   }
 
   th:first-child {
@@ -108,17 +108,17 @@
     min-width: 220px;
     position: sticky;
     text-align: left;
-    z-index: 3;
+    z-index: 4;
   }
 
   td:first-child {
     left: 0;
     position: sticky;
-    z-index: 1;
+    z-index: 2;
   }
 
   tbody tr:hover td {
-    background: $table-row-hover;
+    background-image: linear-gradient($table-row-hover, $table-row-hover);
   }
 }
 
@@ -192,6 +192,18 @@
     th,
     td {
       padding: 4px 6px;
+    }
+
+    th:first-child,
+    td:first-child {
+      min-width: 0;
+      width: 1%;
+    }
+
+    .nameCell {
+      max-width: none;
+      overflow: visible;
+      text-overflow: clip;
     }
   }
 }

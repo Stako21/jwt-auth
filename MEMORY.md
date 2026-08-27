@@ -2052,3 +2052,14 @@ Frontend:
   - Emerald Dark, Emerald Light, and Cyan Light login surfaces were visually checked in headless Edge
   - `npm run lint` and `npm run build` passed with existing Sass legacy API and chunk-size warnings
   - generated `client/dist` XLSX changes were restored
+
+## 2026-08-27 - XLSX 1C sales mobile sticky column
+
+- Changed the mobile `СВ / ТА` column from the fixed 220px minimum to content-driven sizing while preserving the fixed first column and horizontal scrolling for metric columns.
+- Kept sticky body cells above horizontally scrolling cells and raised sticky headers above body cells for correct two-axis scrolling.
+- Changed row hover from a transparent replacement background to a token-driven overlay on each row's opaque base surface, preventing scrolled metric text from showing through the sticky first column.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
