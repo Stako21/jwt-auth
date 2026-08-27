@@ -27,7 +27,7 @@
   .subNav,
   .drawerBranchSelect,
   .logoutButton span,
-  .navSelectItem select {
+  .navChevron {
     display: none;
   }
 
@@ -122,6 +122,39 @@
   }
 }
 
+.navGroupButton {
+  width: 100%;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  background: $color-transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  span {
+    min-width: 0;
+    flex: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $primary-accent-focus-ring;
+    outline-offset: -2px;
+  }
+}
+
+.navItem i.navChevron {
+  flex: 0 0 auto;
+  width: auto;
+  margin-left: auto;
+  font-size: 10px;
+  transition: transform $motion-fast $motion-ease;
+}
+
+.navChevronExpanded {
+  transform: rotate(180deg);
+}
+
 .activeNavItem {
   border-left-color: $primary-accent;
   background: $primary-accent-surface-medium;
@@ -129,22 +162,6 @@
 
   i {
     color: $primary-accent-light;
-  }
-}
-
-.navSelectItem select {
-  min-width: 0;
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: $color-transparent;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-
-  option {
-    background: $surface-container-low;
-    color: $text-high;
   }
 }
 
@@ -214,6 +231,25 @@
   height: 40px;
   padding: 0 10px;
   font-size: 13px;
+}
+
+.drawerBranchDropdown {
+  flex: 1;
+  min-width: 0;
+
+  :global(button[role="combobox"]) {
+    min-height: 0;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: $color-transparent;
+    box-shadow: none;
+    color: $text-high;
+  }
+
+  :global([role="listbox"]) {
+    min-width: 200px;
+  }
 }
 
 .logoutButton {

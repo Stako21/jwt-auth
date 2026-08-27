@@ -11,6 +11,7 @@ export default function CompactSelect({
   hasError = false,
   ariaLabel,
   className,
+  placement = "bottom",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef(null);
@@ -44,7 +45,12 @@ export default function CompactSelect({
   };
 
   return (
-    <div ref={rootRef} className={cn(style.root, className)}>
+    <div
+      ref={rootRef}
+      className={cn(style.root, className, {
+        [style.openUp]: placement === "top",
+      })}
+    >
       <button
         ref={triggerRef}
         className={cn(style.trigger, {

@@ -72,6 +72,11 @@
   box-shadow: $shadow-popover;
 }
 
+.openUp .options {
+  top: auto;
+  bottom: calc(100% + $space-1);
+}
+
 .option {
   display: flex;
   align-items: center;

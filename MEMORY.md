@@ -2063,3 +2063,16 @@ Frontend:
   - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
   - generated `client/dist` XLSX changes were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-27 - Sidebar disclosure navigation
+
+- Replaced the sidebar's native report and settings navigation selects with consistent expandable link groups; multi-page balance navigation now uses the same interaction.
+- Changed compact desktop behavior so clicking a parent icon expands the sidebar and opens its child list instead of navigating to the first child.
+- Preserved direct navigation for leaf items and for balances with only one configured page.
+- Replaced the sidebar branch native select with the shared theme-controlled `CompactSelect`; added an upward-opening placement so its list remains visible above the footer.
+- Kept desktop and mobile disclosure state independent, opened the group containing the active route, and added `aria-expanded` / `aria-controls` semantics and keyboard focus styling.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

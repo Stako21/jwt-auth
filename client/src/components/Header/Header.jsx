@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import FormSelect from "../FormControl/FormSelect.jsx";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import CompactSelect from "../CompactSelect/CompactSelect.jsx";
+import { Link, useLocation } from "react-router-dom";
 import cn from "classnames";
 import { AuthContext } from "../../context/AuthContext";
 import { useAppConfig } from "../../context/AppConfigContext";
@@ -28,13 +29,20 @@ function SidebarContent({
   currentStaticReport,
   handleLinkClick,
   handleLogOut,
-  handleNavigationSelect,
   handleSwitchBranch,
+  idPrefix,
+  isCompact = false,
   isPicker,
   isSwitchingBranch,
   location,
+  onRequestExpand,
   userInfo,
 }) {
+  const [openGroups, setOpenGroups] = useState(() => ({
+    balances: Boolean(currentBalancePage),
+    reports: Boolean(currentStaticReport),
+    settings: location.pathname.startsWith("/settings"),
+  }));
   const currentBranchId = userInfo?.currentBranch?.id || userInfo?.branchId || "";
   const userLabel = userInfo?.displayName || userInfo?.userName || "Користувач";
   const branchLabel =
@@ -44,6 +52,56 @@ function SidebarContent({
   const firstBalancePath = activeBalancePages[0]
     ? `/balance/${activeBalancePages[0].slug}`
     : "/documents";
+
+  useEffect(() => {
+    const activeGroup = currentBalancePage
+      ? "balances"
+      : currentStaticReport
+        ? "reports"
+        : location.pathname.startsWith("/settings")
+          ? "settings"
+          : null;
+
+    if (!activeGroup) return;
+    setOpenGroups((current) =>
+      current[activeGroup] ? current : { ...current, [activeGroup]: true },
+    );
+  }, [currentBalancePage, currentStaticReport, location.pathname]);
+
+  const toggleGroup = (group) => {
+    if (isCompact) {
+      onRequestExpand?.();
+      setOpenGroups((current) => ({ ...current, [group]: true }));
+      return;
+    }
+
+    setOpenGroups((current) => ({ ...current, [group]: !current[group] }));
+  };
+
+  const renderGroupButton = ({ group, icon, label, isActive }) => {
+    const isExpanded = Boolean(openGroups[group]);
+
+    return (
+      <button
+        className={cn(style.navItem, style.navGroupButton, {
+          [style.activeNavItem]: isActive,
+        })}
+        type="button"
+        aria-expanded={isExpanded}
+        aria-controls={`${idPrefix}-${group}-navigation`}
+        onClick={() => toggleGroup(group)}
+      >
+        <i className={icon}></i>
+        <span>{label}</span>
+        <i
+          className={cn("fa-solid fa-chevron-down", style.navChevron, {
+            [style.navChevronExpanded]: isExpanded,
+          })}
+          aria-hidden="true"
+        ></i>
+      </button>
+    );
+  };
 
   return (
     <>
@@ -60,36 +118,49 @@ function SidebarContent({
       <nav className={style.sidebarNav} aria-label="Головна навігація">
         {!isPicker && activeBalancePages.length > 0 ? (
           <>
-            <Link
-              to={firstBalancePath}
-              className={cn(style.navItem, {
-                [style.activeNavItem]: Boolean(currentBalancePage),
-              })}
-              onClick={handleLinkClick}
-            >
-              <i className={NAV_ITEMS.balances.icon}></i>
-              <span>{NAV_ITEMS.balances.label}</span>
-            </Link>
-
             {activeBalancePages.length > 1 ? (
-              <div className={style.subNav}>
-                {activeBalancePages.map((page) => {
-                  const path = `/balance/${page.slug}`;
-                  return (
-                    <Link
-                      key={page.id}
-                      to={path}
-                      className={cn(style.subNavItem, {
-                        [style.activeSubNavItem]: location.pathname === path,
-                      })}
-                      onClick={handleLinkClick}
-                    >
-                      {page.menuTitle}
-                    </Link>
-                  );
+              <>
+                {renderGroupButton({
+                  group: "balances",
+                  icon: NAV_ITEMS.balances.icon,
+                  label: NAV_ITEMS.balances.label,
+                  isActive: Boolean(currentBalancePage),
                 })}
-              </div>
-            ) : null}
+                {openGroups.balances ? (
+                  <div
+                    id={`${idPrefix}-balances-navigation`}
+                    className={style.subNav}
+                  >
+                    {activeBalancePages.map((page) => {
+                      const path = `/balance/${page.slug}`;
+                      return (
+                        <Link
+                          key={page.id}
+                          to={path}
+                          className={cn(style.subNavItem, {
+                            [style.activeSubNavItem]: location.pathname === path,
+                          })}
+                          onClick={handleLinkClick}
+                        >
+                          {page.menuTitle}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <Link
+                to={firstBalancePath}
+                className={cn(style.navItem, {
+                  [style.activeNavItem]: Boolean(currentBalancePage),
+                })}
+                onClick={handleLinkClick}
+              >
+                <i className={NAV_ITEMS.balances.icon}></i>
+                <span>{NAV_ITEMS.balances.label}</span>
+              </Link>
+            )}
           </>
         ) : null}
 
@@ -107,26 +178,30 @@ function SidebarContent({
         ) : null}
 
         {accessibleStaticReports.length > 0 ? (
-          <label
-            className={cn(style.navItem, style.navSelectItem, {
-              [style.activeNavItem]: Boolean(currentStaticReport),
+          <>
+            {renderGroupButton({
+              group: "reports",
+              icon: NAV_ITEMS.reports.icon,
+              label: NAV_ITEMS.reports.label,
+              isActive: Boolean(currentStaticReport),
             })}
-          >
-            <i className={NAV_ITEMS.reports.icon}></i>
-            <FormSelect
-              variant="bare"
-              value={currentStaticReport?.route || ""}
-              onChange={handleNavigationSelect}
-              aria-label="Звіти"
-            >
-              <option value="">{NAV_ITEMS.reports.label}</option>
-              {accessibleStaticReports.map((report) => (
-                <option key={report.id} value={report.route}>
-                  {report.menuTitle}
-                </option>
-              ))}
-            </FormSelect>
-          </label>
+            {openGroups.reports ? (
+              <div id={`${idPrefix}-reports-navigation`} className={style.subNav}>
+                {accessibleStaticReports.map((report) => (
+                  <Link
+                    key={report.id}
+                    to={report.route}
+                    className={cn(style.subNavItem, {
+                      [style.activeSubNavItem]: location.pathname === report.route,
+                    })}
+                    onClick={handleLinkClick}
+                  >
+                    {report.menuTitle}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </>
         ) : null}
 
         {!isPicker ? (
@@ -156,47 +231,48 @@ function SidebarContent({
         ) : null}
 
         {canOpenSettings ? (
-          <label
-            className={cn(style.navItem, style.navSelectItem, {
-              [style.activeNavItem]: location.pathname.startsWith("/settings"),
+          <>
+            {renderGroupButton({
+              group: "settings",
+              icon: NAV_ITEMS.settings.icon,
+              label: NAV_ITEMS.settings.label,
+              isActive: location.pathname.startsWith("/settings"),
             })}
-          >
-            <i className={NAV_ITEMS.settings.icon}></i>
-            <FormSelect
-              variant="bare"
-              value={
-                location.pathname === "/settings/warehouses"
-                  ? "/settings/warehouses"
-                  : ""
-              }
-              onChange={handleNavigationSelect}
-              aria-label="Налаштування"
-            >
-              <option value="">{NAV_ITEMS.settings.label}</option>
-              <option value="/settings/warehouses">Налаштування складу</option>
-            </FormSelect>
-          </label>
+            {openGroups.settings ? (
+              <div id={`${idPrefix}-settings-navigation`} className={style.subNav}>
+                <Link
+                  to="/settings/warehouses"
+                  className={cn(style.subNavItem, {
+                    [style.activeSubNavItem]:
+                      location.pathname === "/settings/warehouses",
+                  })}
+                  onClick={handleLinkClick}
+                >
+                  Налаштування складу
+                </Link>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </nav>
 
       <div className={style.sidebarFooter}>
         {canSwitchBranches ? (
-          <label className={style.drawerBranchSelect}>
+          <div className={style.drawerBranchSelect}>
             <i className="fa-regular fa-building"></i>
-            <FormSelect
-              variant="bare"
+            <CompactSelect
+              className={style.drawerBranchDropdown}
               value={currentBranchId}
-              onChange={(event) => handleSwitchBranch(Number(event.target.value))}
+              options={(userInfo?.availableBranches || []).map((branch) => ({
+                value: branch.id,
+                label: branch.shortName || branch.name,
+              }))}
+              onChange={(value) => handleSwitchBranch(Number(value))}
               disabled={isSwitchingBranch}
-              aria-label="Філія"
-            >
-              {(userInfo?.availableBranches || []).map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.shortName || branch.name}
-                </option>
-              ))}
-            </FormSelect>
-          </label>
+              ariaLabel="Філія"
+              placement="top"
+            />
+          </div>
         ) : null}
 
         <button className={style.logoutButton} type="button" onClick={handleLogOut}>
@@ -210,7 +286,6 @@ function SidebarContent({
 
 const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const {
     isUserLogged,
     userInfo,
@@ -305,13 +380,6 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
     swipeGestureRef.current = null;
   };
   const handleLinkClick = () => closeMenu();
-  const handleNavigationSelect = (event) => {
-    const route = event.target.value;
-    if (!route) return;
-    navigate(route);
-    closeMenu();
-  };
-
   const currentBalancePage = activeBalancePages.find(
     (page) => location.pathname === `/balance/${page.slug}`,
   );
@@ -358,7 +426,6 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
     currentStaticReport,
     handleLinkClick,
     handleLogOut,
-    handleNavigationSelect,
     handleSwitchBranch,
     isPicker,
     isSwitchingBranch,
@@ -369,7 +436,12 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   return (
     <>
       <aside className={cn(style.sidebar, { [style.collapsed]: isCollapsed })}>
-        <SidebarContent {...sidebarProps} />
+        <SidebarContent
+          {...sidebarProps}
+          idPrefix="desktop"
+          isCompact={isCollapsed}
+          onRequestExpand={() => setIsCollapsed(false)}
+        />
       </aside>
 
       <header className={cn(style.topbar, { [style.expanded]: isCollapsed })}>
@@ -452,7 +524,7 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
         onPointerUp={finishSwipe}
         onPointerCancel={cancelSwipe}
       >
-        <SidebarContent {...sidebarProps} />
+        <SidebarContent {...sidebarProps} idPrefix="mobile" />
       </aside>
     </>
   );
