@@ -2076,3 +2076,14 @@ Frontend:
   - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
   - generated `client/dist` XLSX changes were restored
   - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged
+
+## 2026-08-27 - Login logo light-theme treatment
+
+- Removed the accent background from the login logo container and changed the container to a circular `50%` radius.
+- Added the shared runtime `login-brand-image-filter` token to all four theme contracts: dark themes keep the image unchanged, while Emerald Light and Cyan Light apply `invert(100%)`.
+- Kept the theme behavior CSS-only so changing the runtime theme updates the logo immediately without React branching.
+- Verification:
+  - `npm run lint` in `client` passed
+  - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
+  - generated `client/dist` XLSX changes were restored
+  - user-managed `client/public/Sorce/*` and `documentation/*` files were not changed or staged

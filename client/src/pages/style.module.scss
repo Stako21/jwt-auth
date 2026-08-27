@@ -19,13 +19,13 @@
   height: 64px;
   margin-bottom: $space-1;
   overflow: hidden;
-  border-radius: $radius-lg;
-  background: $primary-accent-dark;
+  border-radius: 50%;
   box-shadow: $shadow-primary;
 
   img {
     width: 44px;
     height: 44px;
+    filter: $login-brand-image-filter;
     object-fit: contain;
   }
 }

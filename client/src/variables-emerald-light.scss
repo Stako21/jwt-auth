@@ -6,6 +6,7 @@ $color-transparent: transparent;
 $calendar-indicator-filter: brightness(0) saturate(100%) invert(24%) sepia(13%) saturate(741%);
 $calendar-indicator-opacity: 0.78;
 $search-cancel-filter: invert(0.3);
+$login-brand-image-filter: invert(100%);
 
 /* Cool gray-green surfaces */
 $surface-main: #f8faf9;
@@ -263,6 +264,7 @@ $dropdown-border: $outline-dark;
   --theme-calendar-indicator-filter: #{$calendar-indicator-filter};
   --theme-calendar-indicator-opacity: #{$calendar-indicator-opacity};
   --theme-search-cancel-filter: #{$search-cancel-filter};
+  --theme-login-brand-image-filter: #{$login-brand-image-filter};
   --theme-surface-main: #{$surface-main};
   --theme-surface-container-lowest: #{$surface-container-lowest};
   --theme-surface-container-low: #{$surface-container-low};

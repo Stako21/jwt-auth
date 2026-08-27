@@ -6,6 +6,7 @@ $color-transparent: transparent;
 $calendar-indicator-filter: brightness(0) saturate(100%) invert(88%) sepia(8%) saturate(310%);
 $calendar-indicator-opacity: 0.82;
 $search-cancel-filter: invert(0.82);
+$login-brand-image-filter: none;
 
 /* Deep Clean Ocean Surfaces */
 $surface-main: #09121a;
@@ -268,6 +269,7 @@ $dropdown-border: $outline-dark;
   --theme-calendar-indicator-filter: #{$calendar-indicator-filter};
   --theme-calendar-indicator-opacity: #{$calendar-indicator-opacity};
   --theme-search-cancel-filter: #{$search-cancel-filter};
+  --theme-login-brand-image-filter: #{$login-brand-image-filter};
   --theme-surface-main: #{$surface-main};
   --theme-surface-container-lowest: #{$surface-container-lowest};
   --theme-surface-container-low: #{$surface-container-low};
