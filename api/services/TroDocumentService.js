@@ -187,13 +187,15 @@ export async function createTroDocumentService(user, payload) {
       [nextNumber, branchId, ta.city],
     );
     const documentNumber = `ТРО-${city.documentPrefix}-${String(nextNumber).padStart(6, "0")}`;
+    const reason = movementType === "INSTALL" ? "Установка ТРО" : "Повернення ТРО";
 
     const [result] = await conn.query(
       `INSERT INTO documents
         (document_type, document_number, document_sequence, city, branch_id,
          document_date, trade_point_id, contractor_id, author_user_id, status, reason, comment)
-       VALUES ('TRO', ?, ?, ?, ?, NOW(), ?, ?, ?, 'NEW', NULL, ?)`,
-      [documentNumber, nextNumber, ta.city, branchId, tradePoint.id, tradePoint.contractor_id, user.id, text(payload.comment, 250) || null],
+       VALUES ('TRO', ?, ?, ?, ?, NOW(), ?, ?, ?, 'NEW', ?, ?)`,
+      [documentNumber, nextNumber, ta.city, branchId, tradePoint.id, tradePoint.contractor_id,
+        user.id, reason, text(payload.comment, 250) || null],
     );
     await conn.query(
       `INSERT INTO tro_document_details (document_id, ta_user_id, movement_type)

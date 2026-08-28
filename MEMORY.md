@@ -2152,3 +2152,8 @@ Frontend:
 - Confirmed with the user that the database configured in `api/.env` is the development database and applied the normal migration set with `npm run migrate`.
 - Migration `017_tro_documents.js` was registered successfully; verified all four TRO tables, the `loadTroProducts` import source and active two-hour scheduler task, expanded document columns, and notification event metadata.
 - The migration only configured the TRO import. Population of `tro_products` remains the responsibility of the configured scheduler/manual task run.
+
+## 2026-08-28 - TRO required reason compatibility fix
+
+- Fixed TRO creation against the existing `documents.reason NOT NULL` schema by storing a movement-derived reason (`Установка ТРО` or `Повернення ТРО`) instead of `NULL`.
+- Verified the exact document-header insert against the development database inside an explicit transaction; the insert succeeded and the test row was rolled back.
