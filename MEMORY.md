@@ -2164,3 +2164,9 @@ Frontend:
 - Changed TRO item selectors to open upward so their option lists remain inside the scrollable modal body instead of being clipped behind the fixed footer.
 - Replaced the TRO modal and shared controlled-dropdown literal z-index values with the centralized layer tokens.
 - Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings.
+
+## 2026-08-28 - TRO history status migration
+
+- Added and applied migration `018_tro_document_history_statuses.js` because `document_history.old_status` and `new_status` still used the legacy five-value ENUM and rejected TRO status `NOT_COMPLETED` during signing.
+- Both history status columns now use nullable `VARCHAR(32)`, matching the expanded document workflow without changing existing history values.
+- Verified an exact `NEW -> NOT_COMPLETED` history insert against the development database inside an explicit transaction; it succeeded and the verification row was rolled back.
