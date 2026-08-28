@@ -194,11 +194,11 @@
 }
 
 .actionsHeader {
-  z-index: 12 !important;
+  z-index: 30 !important;
 }
 
 .actionsCell {
-  z-index: 4;
+  z-index: 20 !important;
   overflow: visible !important;
   background: $table-row-odd !important;
 }
@@ -208,7 +208,15 @@
 }
 
 .documentsTable tbody tr:hover .actionsCell {
-  background: $table-row-hover !important;
+  background:
+    linear-gradient($table-row-hover, $table-row-hover),
+    $table-row-odd !important;
+}
+
+.documentsTable tbody tr:nth-child(even):hover .actionsCell {
+  background:
+    linear-gradient($table-row-hover, $table-row-hover),
+    $table-row-even !important;
 }
 
 .mobileCards {
