@@ -3,6 +3,8 @@ import {
   generatePdfBuffer,
   sendEmailWithPdf,
   sendRocketMessage,
+  sendDocumentStatusEmail,
+  sendDocumentStatusRocket,
 } from "./notify.service.js";
 import { getDocumentByIdService } from "./DocumentService.js";
 import { createTaskLogger } from "./taskLogger.js";
@@ -14,11 +16,12 @@ export async function retryFailedNotifications() {
 
   const [rows] = await pool.query(
     `
-    SELECT *
-    FROM notification_log
-    WHERE status = 'ERROR'
-      AND attempt < 3
-    ORDER BY created_at
+    SELECT nl.*, d.branch_id
+    FROM notification_log nl
+    JOIN documents d ON d.id = nl.document_id
+    WHERE nl.status = 'ERROR'
+      AND nl.attempt < 3
+    ORDER BY nl.created_at
     LIMIT 10
     `
   );
@@ -38,21 +41,30 @@ export async function retryFailedNotifications() {
 
     try {
       const doc = await getDocumentByIdService(
-        { role: 1 },
+        { role: 1, branchId: row.branch_id },
         row.document_id
       );
       rowLog.info("document loaded");
 
-      const pdfBuffer = await generatePdfBuffer(doc);
-      rowLog.info("pdf generated", { sizeBytes: pdfBuffer.length });
+      const payload = row.event_payload ? JSON.parse(row.event_payload) : {};
+      const pdfBuffer = row.event_type === "STATUS_CHANGE" ? null : await generatePdfBuffer(doc);
+      if (pdfBuffer) rowLog.info("pdf generated", { sizeBytes: pdfBuffer.length });
 
       if (row.channel === "EMAIL") {
-        await sendEmailWithPdf(doc, pdfBuffer, [row.target]);
+        if (row.event_type === "STATUS_CHANGE") {
+          await sendDocumentStatusEmail(doc, payload.oldStatus, payload.newStatus, [row.target]);
+        } else {
+          await sendEmailWithPdf(doc, pdfBuffer, [row.target]);
+        }
         rowLog.info("email notification sent");
       }
 
       if (row.channel === "ROCKET") {
-        await sendRocketMessage(doc, row.target, pdfBuffer);
+        if (row.event_type === "STATUS_CHANGE") {
+          await sendDocumentStatusRocket(doc, payload.oldStatus, payload.newStatus, row.target);
+        } else {
+          await sendRocketMessage(doc, row.target, pdfBuffer);
+        }
         rowLog.info("rocket notification sent");
       }
 

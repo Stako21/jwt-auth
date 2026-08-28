@@ -4,6 +4,7 @@ import { loadOrdersByTimeReport } from "./ordersByTimeReport.service.js";
 import { loadBillOfLadingReport } from "./billOfLadingReport.service.js";
 import { loadScheduledXlsx1cSalesReports } from "./xlsx1cSalesReport.service.js";
 import { loadProducts } from "./loadProducts.js";
+import { loadTroProducts } from "./loadTroProducts.js";
 import { loadTradePoints } from "./loadTradePoints.js";
 import { retryFailedNotifications } from "./notify.retry.service.js";
 import { createTaskLogger } from "./taskLogger.js";
@@ -402,6 +403,17 @@ const schedulerTaskDefinitions = {
     systemBranch: null,
     lastRun: null,
   },
+  loadTroProducts: {
+    key: "loadTroProducts",
+    label: "Load TRO products",
+    intervalMs: 2 * 60 * 60 * 1000,
+    active: true,
+    run: null,
+    requiresSystemBranch: true,
+    blockedReason: null,
+    systemBranch: null,
+    lastRun: null,
+  },
   loadTradePoints: {
     key: "loadTradePoints",
     label: "Load trade points",
@@ -449,6 +461,10 @@ schedulerTaskDefinitions.loadScheduledXlsx1cSalesReports.run = withLock(
 schedulerTaskDefinitions.loadProducts.run = withLock(
   schedulerTaskDefinitions.loadProducts,
   loadProducts,
+);
+schedulerTaskDefinitions.loadTroProducts.run = withLock(
+  schedulerTaskDefinitions.loadTroProducts,
+  loadTroProducts,
 );
 schedulerTaskDefinitions.loadTradePoints.run = withLock(
   schedulerTaskDefinitions.loadTradePoints,

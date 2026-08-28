@@ -1,0 +1,54 @@
+@use "../theme.scss" as *;
+
+.modal { position: fixed; inset: 0; z-index: 1400; display: flex; align-items: center; justify-content: center; padding: $space-4 $space-4 $space-4 calc(var(--ui-sidebar-current-width, #{$sidebar-width}) + $space-4); }
+.backdrop { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: $surface-modal-overlay; backdrop-filter: blur(4px); }
+.card { position: relative; display: flex; flex-direction: column; width: min(100%, 920px); max-height: calc(100dvh - $modal-viewport-gap); overflow: hidden; border: 1px solid $outline-medium; border-radius: $radius-xl; background: $surface-modal; box-shadow: $shadow-modal; }
+.header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: $space-3; min-height: 54px; padding: $space-2 $space-4; border-bottom: 1px solid $outline-dark; background: $surface-modal-strong; }
+.header h2 { margin: 0; color: $text-high; font-size: 17px; }
+.header p { margin: 2px 0 0; color: $text-muted; font-size: 10px; }
+.close { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: 50%; background: $color-transparent; color: $text-medium; cursor: pointer; }
+.close:hover { border-color: $outline-medium; background: $select-option-hover-surface; color: $text-high; }
+.body { display: grid; gap: $space-3; min-height: 0; padding: $space-3; overflow-y: auto; }
+.generalSection { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $space-2 $space-3; }
+.field { display: grid; gap: $space-1; min-width: 0; }
+.field > label { color: $text-medium; font-size: 11px; font-weight: 700; }
+.field textarea { width: 100%; min-height: 56px; resize: vertical; padding: $space-2; border: 1px solid $form-control-border; border-radius: $radius-md; outline: 0; background: $form-control-surface; color: $form-control-text; font: inherit; }
+.field textarea:focus { border-color: $primary-accent; box-shadow: 0 0 0 2px $form-control-focus-ring; }
+.field textarea:disabled { opacity: 0.64; }
+.commentField { grid-column: 1 / -1; }
+.autocomplete { position: relative; }
+.options { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; left: 0; max-height: 220px; overflow-y: auto; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-input; box-shadow: $shadow-popover; }
+.options button { display: block; width: 100%; padding: $space-2; border: 0; border-bottom: 1px solid $outline-dark; background: $color-transparent; color: $text-high; text-align: left; cursor: pointer; }
+.options button:hover { background: $select-option-hover-surface; }
+.itemsSection,
+.accountingSection { padding: $space-3; border: 1px solid $outline-dark; border-radius: $radius-lg; background: $surface-modal-section; }
+.sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: $space-3; margin-bottom: $space-2; }
+.sectionTitle h3,
+.accountingSection h3 { margin: 0; color: $text-high; font-size: 13px; }
+.sectionTitle button { min-height: 30px; padding: 0 $space-3; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-control; color: $text-high; cursor: pointer; }
+.itemList { display: grid; gap: $space-2; }
+.itemRow { display: grid; grid-template-columns: minmax(240px, 1fr) 110px 32px; gap: $space-2; align-items: center; }
+.removeItem { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid $negative-border-soft; border-radius: $radius-md; background: $negative-surface-soft; color: $negative-muted; cursor: pointer; }
+.accountingSection { border-color: $primary-accent-border-soft; background: $primary-accent-surface-subtle; }
+.accountingGrid { display: grid; grid-template-columns: minmax(160px, 0.45fr) minmax(240px, 1fr); gap: $space-3; margin-top: $space-2; }
+.checks { display: flex; flex-wrap: wrap; gap: $space-2 $space-4; margin-top: $space-3; color: $text-medium; font-size: 12px; }
+.checks label { display: inline-flex; align-items: center; gap: $space-2; }
+.footer { display: flex; flex: 0 0 auto; justify-content: flex-end; gap: $space-2; padding: $space-3 $space-4; border-top: 1px solid $outline-dark; background: $surface-modal-strong; }
+.footer button { min-height: 34px; padding: 0 $space-4; border-radius: $radius-md; cursor: pointer; font-weight: 700; }
+.secondary { border: 1px solid $outline-medium; background: $surface-control; color: $text-high; }
+.primary { border: 1px solid $primary-accent; background: $primary-accent; color: $text-on-accent; }
+.footer button:disabled { cursor: wait; opacity: 0.6; }
+
+@media (max-width: $mobile-breakpoint) {
+  .modal { align-items: flex-end; padding: 0; }
+  .card { width: 100%; max-height: calc(100dvh - $space-3); border-right: 0; border-bottom: 0; border-left: 0; border-radius: $radius-xl $radius-xl 0 0; }
+  .body { padding: $space-2; }
+  .generalSection,
+  .accountingGrid { grid-template-columns: 1fr; }
+  .commentField { grid-column: auto; }
+  .itemsSection,
+  .accountingSection { padding: $space-2; }
+  .itemRow { grid-template-columns: minmax(0, 1fr) 82px 38px; }
+  .footer { flex-wrap: wrap; padding: $space-2; }
+  .footer button { flex: 1 1 140px; min-height: 42px; }
+}

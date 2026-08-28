@@ -5,6 +5,11 @@ import {
   getUserBranchId,
   getUserVisibleBranchIds,
 } from "./appConfig.service.js";
+import {
+  assertTroDocumentAccessService,
+  getTroDocumentExtension,
+  getTroGrantedBranchIds,
+} from "./TroDocumentService.js";
 
 const EXECUTOR_TYPE_DRIVER_PREFIX = "[[EXECUTOR_TYPE:DRIVER]]";
 const OPTIONAL_ITEM_DATE_SENTINEL = "1000-01-01";
@@ -777,6 +782,13 @@ export async function getDocumentsService(user, query) {
     const visibleBranchIds = await getUserVisibleBranchIds(user);
     where.push(`d.branch_id IN (${visibleBranchIds.map(() => "?").join(", ")})`);
     params.push(...visibleBranchIds);
+  } else if (user.role === 6) {
+    const visibleBranchIds = await getTroGrantedBranchIds(user);
+    where.push(
+      `((d.document_type = 'TRO' AND d.branch_id IN (${visibleBranchIds.map(() => "?").join(", ")}))
+        OR (d.document_type <> 'TRO' AND d.branch_id = ?))`,
+    );
+    params.push(...visibleBranchIds, branchId);
   } else {
     where.push("d.branch_id = ?");
     params.push(branchId);
@@ -793,8 +805,8 @@ export async function getDocumentsService(user, query) {
 
   // TA — только свои
   else if (user.role === 5) {
-    where.push("d.author_user_id = ?");
-    params.push(user.id);
+    where.push("(d.author_user_id = ? OR (d.document_type = 'TRO' AND td.ta_user_id = ?))");
+    params.push(user.id, user.id);
   }
 
   // SV — иерархия + регион
@@ -804,15 +816,17 @@ export async function getDocumentsService(user, query) {
 
     // SV видит только своих прямых TA (depth = 1)
     where.push(`
-      d.author_user_id IN (
+      (d.author_user_id IN (
         SELECT child_user_id
         FROM user_hierarchy
         WHERE parent_user_id = ?
         UNION ALL
         SELECT ?
-      )
+      ) OR (d.document_type = 'TRO' AND td.ta_user_id IN (
+        SELECT child_user_id FROM user_hierarchy WHERE parent_user_id = ?
+      )))
     `);
-    params.push(user.id, user.id);
+    params.push(user.id, user.id, user.id);
   }
 
   // NTO — иерархия + все TA без руководителя (без региона)
@@ -847,15 +861,35 @@ export async function getDocumentsService(user, query) {
               WHERE h.child_user_id = u.id
             )
         )
+        OR (d.document_type = 'TRO' AND td.ta_user_id IN (
+          SELECT u.id
+          FROM users u
+          WHERE u.role = 5
+            AND u.branch_id = d.branch_id
+            AND NOT EXISTS (
+              SELECT 1
+              FROM user_hierarchy h
+              WHERE h.child_user_id = u.id
+            )
+        ))
+        OR (d.document_type = 'TRO' AND td.ta_user_id IN (
+          WITH RECURSIVE tro_subordinates AS (
+            SELECT child_user_id FROM user_hierarchy WHERE parent_user_id = ?
+            UNION ALL
+            SELECT uh.child_user_id FROM user_hierarchy uh
+            JOIN tro_subordinates s ON s.child_user_id = uh.parent_user_id
+          )
+          SELECT child_user_id FROM tro_subordinates
+        ))
       )
     `);
-    params.push(user.id, user.id);
+    params.push(user.id, user.id, user.id);
   }
 
   // Accountant / Warehouse — регион, без иерархии
   else if ([6, 7].includes(user.role)) {
     const cityIds = await getUserVisibleCityIds(pool, user);
-    where.push(`d.city IN (${cityIds.map(() => "?").join(", ")})`);
+    where.push(`(d.document_type = 'TRO' OR d.city IN (${cityIds.map(() => "?").join(", ")}))`);
     params.push(...cityIds);
   }
 
@@ -900,12 +934,17 @@ export async function getDocumentsService(user, query) {
       c.name AS contractor,
       d.author_user_id,
       u.user_name AS author,
+      td.movement_type AS tro_movement_type,
+      td.ta_user_id AS tro_ta_user_id,
+      ta.user_name AS tro_ta_name,
       d.created_at
     FROM documents d
     JOIN branches b ON b.id = d.branch_id
     JOIN trade_points tp ON tp.id = d.trade_point_id
     JOIN contractors c ON c.id = d.contractor_id
     JOIN users u ON u.id = d.author_user_id
+    LEFT JOIN tro_document_details td ON td.document_id = d.id
+    LEFT JOIN users ta ON ta.id = td.ta_user_id
     ${whereSql}
     ORDER BY d.created_at DESC
   `;
@@ -920,7 +959,9 @@ export async function getDocumentByIdService(user, documentId) {
   const visibleBranchIds =
     user.role === 1 || user.role === 2
       ? await getUserVisibleBranchIds(user)
-      : [branchId];
+      : user.role === 6
+        ? await getTroGrantedBranchIds(user)
+        : [branchId];
   /** -----------------------------
    * 1️⃣ Заголовок + проверка доступа
    * ----------------------------- */
@@ -954,13 +995,17 @@ export async function getDocumentByIdService(user, documentId) {
 
   const doc = rows[0];
   const decodedComment = decodeDocumentComment(doc.comment);
+  const isTro = doc.document_type === "TRO";
 
   /** -----------------------------
    * 2️⃣ Проверка прав
    * ----------------------------- */
 
   // Admin / Director — всегда можно
-  if (user.role === 1 || user.role === 2) {
+  if (isTro) {
+    await assertTroDocumentAccessService(user, documentId);
+  }
+  else if (user.role === 1 || user.role === 2) {
     // ok
   }
 
@@ -1058,7 +1103,7 @@ export async function getDocumentByIdService(user, documentId) {
    * 3️⃣ Табличная часть
    * ----------------------------- */
 
-  const [items] = await pool.query(
+  const [items] = isTro ? [[]] : await pool.query(
     `
     SELECT
       product_id,
@@ -1108,6 +1153,8 @@ export async function getDocumentByIdService(user, documentId) {
    * 5️⃣ Финальный ответ
    * ----------------------------- */
 
+  const tro = isTro ? await getTroDocumentExtension(pool, documentId) : null;
+
   return {
     id: doc.id,
     branchId: doc.branch_id,
@@ -1117,17 +1164,20 @@ export async function getDocumentByIdService(user, documentId) {
     documentNumber: doc.document_number,
     documentType: doc.document_type,
     documentDate: doc.document_date,
+    createdAt: doc.created_at,
     status: doc.status,
     reason: doc.reason,
     comment: decodedComment.comment,
     executorType: decodedComment.executorType,
 
     tradePoint: {
+      id: doc.trade_point_id,
       name: doc.trade_point_name,
       address: doc.trade_point_address,
     },
 
     contractor: {
+      id: doc.contractor_id,
       name: doc.contractor_name,
     },
 
@@ -1136,7 +1186,8 @@ export async function getDocumentByIdService(user, documentId) {
     signedBy: doc.signed_by_user_id,
     signedAt: doc.signed_at,
 
-    items: normalizedItems,
+    items: isTro ? tro.items : normalizedItems,
+    tro,
     history,
   };
 }

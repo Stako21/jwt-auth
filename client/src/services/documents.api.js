@@ -61,3 +61,13 @@ export async function getDocumentNotificationHistory(id) {
   const { data } = await api.get(`/${id}/notification-history`);
   return data;
 }
+
+export async function getTroTaOptions() {
+  const { data } = await api.get("/tro/ta-options");
+  return data;
+}
+
+export async function updateTroAccounting(id, payload) {
+  const { data } = await api.put(`/${id}/tro-accounting`, payload);
+  return data;
+}

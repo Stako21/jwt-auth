@@ -2134,3 +2134,15 @@ Frontend:
 - Preserved the pending Admin display preferences before the next major work slice: the Users tab opens in hierarchy mode and the two Admin tab rows no longer force horizontal scrollbars.
 - Confirmed the preceding history/data-viewport checkpoint `89d359e` is readable and repository object verification reports no integrity errors.
 - Kept operational `client/public/Sorce/*` changes and untracked `documentation/*` files outside the checkpoint.
+
+## 2026-08-28 - TRO installation/return documents
+
+- Added migration `017_tro_documents.js` for the branch-scoped TRO directory, city sequences, TRO document details/items, expanded document statuses/types/history actions, status-notification metadata, and scheduler/import-source configuration.
+- Added `loadTroProducts`, which reads the configured `Product_TRO.json`, preserves rows whose source GUID is reused by hashing the complete source identity, and synchronizes separate directory rows to every active branch.
+- Added creation and editing for multi-position TRO documents with automatic `ТРО-{city prefix}-{six digits}` numbering, contractor/trade-point/TA selection, installation/return movement, 250-character comment, and compact responsive token-driven UI.
+- Enforced creator roles Admin, Director, SV, and TA; TA is fixed to self, SV can select a direct TA, and Admin/Director can select an active TA in the current branch.
+- Added assigned-TA-aware visibility and approval: a direct SV or eligible NTO signature is sufficient and moves `NEW`/`REVISION` directly to `NOT_COMPLETED`; TRO also supports `REVISION` and `REJECTED` without a `PREPARED` stage.
+- Added accountant-only UP number, executor snapshot/account, and movement-specific APPU/photo or APPV/warehouse-specification checkboxes. First UP-number entry plans the document; changing or removing an existing number returns it to `NOT_COMPLETED`; explicit confirmation with all required fields sets `COMPLETED` and locks further changes.
+- Extended accountant document access to TRO documents in every granted branch, retained branch isolation for all TRO data, added text-only email/Rocket.Chat status notifications with retry metadata, and kept all operations in common document history.
+- No TRO PDF was added; the UI hides PDF actions and the API reports that the print form is unavailable.
+- Verification: backend `node --check` passed for all touched modules, frontend lint and production build passed, and the source file was inspected as 211 valid rows (with intentionally repeated source GUIDs). Migration `017` was not executed because the target database was not approved.

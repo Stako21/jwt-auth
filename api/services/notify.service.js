@@ -54,14 +54,16 @@ async function logNotification({
   target,
   status,
   errorText = null,
+  eventType = "SIGNED_PDF",
+  eventPayload = null,
 }) {
   await pool.query(
     `
     INSERT INTO notification_log
-      (document_id, channel, target, status, error_text)
-    VALUES (?, ?, ?, ?, ?)
+      (document_id, channel, event_type, event_payload, target, status, error_text)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
-    [documentId, channel, target, status, errorText],
+    [documentId, channel, eventType, eventPayload ? JSON.stringify(eventPayload) : null, target, status, errorText],
   );
 }
 
@@ -364,4 +366,76 @@ export async function notifyDocumentSigned(user, documentId) {
   if (firstError) {
     throw firstError;
   }
+}
+
+function statusMessage(doc, oldStatus, newStatus) {
+  return [
+    `Документ ТРО ${doc.documentNumber}`,
+    `Статус: ${oldStatus} → ${newStatus}`,
+    `ТА: ${doc.tro?.taName || doc.author || "—"}`,
+  ].join("\n");
+}
+
+export async function sendDocumentStatusEmail(doc, oldStatus, newStatus, emails) {
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: 587,
+    secure: false,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+  await transporter.sendMail({
+    from: `"Documents" <${process.env.SMTP_USER}>`,
+    to: emails.join(","),
+    subject: `ТРО ${doc.documentNumber}: ${oldStatus} → ${newStatus}`,
+    text: statusMessage(doc, oldStatus, newStatus),
+  });
+}
+
+export async function sendDocumentStatusRocket(doc, oldStatus, newStatus, rocketChannel) {
+  const roomId = await getRoomIdByName(rocketChannel);
+  const response = await fetch(`${process.env.ROCKET_URL}/api/v1/chat.postMessage`, {
+    method: "POST",
+    headers: {
+      "X-Auth-Token": process.env.ROCKET_TOKEN,
+      "X-User-Id": process.env.ROCKET_USER_ID,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ roomId, text: statusMessage(doc, oldStatus, newStatus) }),
+  });
+  const result = await parseRocketApiResponse(response, "chat.postMessage");
+  if (!result.success) throw new Error("Rocket.Chat did not accept the message");
+}
+
+export async function notifyDocumentStatusChanged(user, documentId, oldStatus, newStatus) {
+  const doc = await getDocumentByIdService(user, documentId);
+  const { emails, rocketChannels } = await loadRegionNtification(doc.city, doc.branchId);
+  if (!emails.length && !rocketChannels.length) return;
+  const eventPayload = { oldStatus, newStatus };
+  let firstError = null;
+
+  if (emails.length) {
+    try {
+      await sendDocumentStatusEmail(doc, oldStatus, newStatus, emails);
+      for (const email of emails) {
+        await logNotification({ documentId, channel: "EMAIL", eventType: "STATUS_CHANGE", eventPayload, target: email, status: "SUCCESS" });
+      }
+    } catch (error) {
+      for (const email of emails) {
+        await logNotification({ documentId, channel: "EMAIL", eventType: "STATUS_CHANGE", eventPayload, target: email, status: "ERROR", errorText: error.message });
+      }
+      firstError = error;
+    }
+  }
+
+  for (const rocketChannel of rocketChannels) {
+    try {
+      await sendDocumentStatusRocket(doc, oldStatus, newStatus, rocketChannel);
+      await logNotification({ documentId, channel: "ROCKET", eventType: "STATUS_CHANGE", eventPayload, target: rocketChannel, status: "SUCCESS" });
+    } catch (error) {
+      await logNotification({ documentId, channel: "ROCKET", eventType: "STATUS_CHANGE", eventPayload, target: rocketChannel, status: "ERROR", errorText: error.message });
+      firstError ||= error;
+    }
+  }
+
+  if (firstError) throw firstError;
 }

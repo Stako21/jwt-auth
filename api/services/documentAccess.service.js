@@ -1,5 +1,9 @@
 import pool from "../db.cjs";
 import { getUserBranchId, getUserVisibleBranchIds } from "./appConfig.service.js";
+import {
+  assertTroDocumentAccessService,
+  getTroGrantedBranchIds,
+} from "./TroDocumentService.js";
 
 async function getUserVisibleCityIds(user) {
   const cityIds = new Set([Number(user.city)]);
@@ -28,14 +32,17 @@ export async function ensureDocumentAccess(user, documentId) {
   const branchIds =
     user.role === 1 || user.role === 2
       ? await getUserVisibleBranchIds(user)
-      : [getUserBranchId(user)];
+      : user.role === 6
+        ? await getTroGrantedBranchIds(user)
+        : [getUserBranchId(user)];
   const [rows] = await pool.query(
     `
     SELECT
       d.id,
       d.author_user_id,
       d.city,
-      d.branch_id
+      d.branch_id,
+      d.document_type
     FROM documents d
     WHERE d.id = ?
       AND d.branch_id IN (${branchIds.map(() => "?").join(", ")})
@@ -48,6 +55,10 @@ export async function ensureDocumentAccess(user, documentId) {
   }
 
   const doc = rows[0];
+
+  if (doc.document_type === "TRO") {
+    return assertTroDocumentAccessService(user, documentId);
+  }
 
   // 1️⃣ Admin / Director — всегда можно
   if (user.role === 1 || user.role === 2) {

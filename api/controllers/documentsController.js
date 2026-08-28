@@ -20,6 +20,16 @@ import UserRepository from "../repositories/User.js";
 import puppeteer from "puppeteer";
 import { getDocumentNotificationsService } from "../services/notification.service.js";
 import { retryDocumentNotifications } from "../services/notificationRetry.service.js";
+import {
+  createTroDocumentService,
+  getTroTaOptionsService,
+  isTroDocumentService,
+  rejectTroDocumentService,
+  revisionTroDocumentService,
+  signTroDocumentService,
+  updateTroAccountingService,
+  updateTroDocumentService,
+} from "../services/TroDocumentService.js";
 
 // Controller to handle document creation
 export async function createDocument(req, res) {
@@ -27,7 +37,9 @@ export async function createDocument(req, res) {
     const user = req.user; // из JWT
     const payload = req.body;
 
-    const result = await createDocumentService(user, payload);
+    const result = payload.documentType === "TRO"
+      ? await createTroDocumentService(user, payload)
+      : await createDocumentService(user, payload);
 
     res.status(201).json(result);
   } catch (err) {
@@ -40,7 +52,9 @@ export async function createDocument(req, res) {
 
 export async function signDocument(req, res) {
   try {
-    const result = await signDocumentService(
+    const result = await (await isTroDocumentService(req.params.id)
+      ? signTroDocumentService
+      : signDocumentService)(
       req.user,
       req.params.id,
       req.body?.comment,
@@ -53,6 +67,11 @@ export async function signDocument(req, res) {
 
 export async function prepareDocument(req, res) {
   try {
+    if (await isTroDocumentService(req.params.id)) {
+      return res.status(400).json({
+        message: "Документ ТРО не використовує проміжний статус «Погоджено»",
+      });
+    }
     const result = await prepareDocumentService(
       req.user,
       req.params.id,
@@ -66,7 +85,9 @@ export async function prepareDocument(req, res) {
 
 export async function revisionDocument(req, res) {
   try {
-    const result = await revisionDocumentService(
+    const result = await (await isTroDocumentService(req.params.id)
+      ? revisionTroDocumentService
+      : revisionDocumentService)(
       req.user,
       req.params.id,
       req.body?.comment,
@@ -79,7 +100,9 @@ export async function revisionDocument(req, res) {
 
 export async function rejectDocument(req, res) {
   try {
-    const result = await rejectDocumentService(
+    const result = await (await isTroDocumentService(req.params.id)
+      ? rejectTroDocumentService
+      : rejectDocumentService)(
       req.user,
       req.params.id,
       req.body?.comment,
@@ -117,6 +140,10 @@ export async function getDocumentById(req, res) {
 export async function getDocumentPdf(req, res) {
   try {
     const doc = await getDocumentByIdService(req.user, req.params.id);
+
+    if (doc.documentType === "TRO") {
+      return res.status(404).json({ message: "Друкована форма ТРО ще не налаштована" });
+    }
 
     if (doc.signedBy) {
       const signer = await UserRepository.getUserById(doc.signedBy);
@@ -264,12 +291,30 @@ export async function updateDocument(req, res) {
     const { id } = req.params;
     const payload = req.body;
 
-    const result = await updateDocumentService(req.user, Number(id), payload);
+    const result = await (await isTroDocumentService(id)
+      ? updateTroDocumentService
+      : updateDocumentService)(req.user, Number(id), payload);
 
     res.json(result);
   } catch (e) {
     console.error("updateDocument error:", e.message);
     res.status(400).json({ message: e.message });
+  }
+}
+
+export async function getTroTaOptions(req, res) {
+  try {
+    res.json(await getTroTaOptionsService(req.user));
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+}
+
+export async function updateTroAccounting(req, res) {
+  try {
+    res.json(await updateTroAccountingService(req.user, Number(req.params.id), req.body));
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 }
 

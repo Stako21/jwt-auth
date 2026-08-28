@@ -5,6 +5,8 @@ import {
   generatePdfBuffer,
   sendEmailWithPdf,
   sendRocketMessage,
+  sendDocumentStatusEmail,
+  sendDocumentStatusRocket,
 } from "./notify.service.js";
 
 export async function retryDocumentNotifications(user, documentId) {
@@ -32,18 +34,28 @@ export async function retryDocumentNotifications(user, documentId) {
   const doc = await getDocumentByIdService(user, documentId);
 
   // Генеруємо PDF один раз
-  const pdfBuffer = await generatePdfBuffer(doc);
+  const needsPdf = logs.some((log) => log.event_type !== "STATUS_CHANGE");
+  const pdfBuffer = needsPdf ? await generatePdfBuffer(doc) : null;
 
   let successCount = 0;
 
   for (const log of logs) {
     try {
+      const payload = log.event_payload ? JSON.parse(log.event_payload) : {};
       if (log.channel === "EMAIL") {
-        await sendEmailWithPdf(doc, pdfBuffer, [log.target]);
+        if (log.event_type === "STATUS_CHANGE") {
+          await sendDocumentStatusEmail(doc, payload.oldStatus, payload.newStatus, [log.target]);
+        } else {
+          await sendEmailWithPdf(doc, pdfBuffer, [log.target]);
+        }
       }
 
       if (log.channel === "ROCKET") {
-        await sendRocketMessage(doc, log.target, pdfBuffer);
+        if (log.event_type === "STATUS_CHANGE") {
+          await sendDocumentStatusRocket(doc, payload.oldStatus, payload.newStatus, log.target);
+        } else {
+          await sendRocketMessage(doc, log.target, pdfBuffer);
+        }
       }
 
       // Успіх

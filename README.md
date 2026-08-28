@@ -26,6 +26,7 @@ Implemented in the current workspace:
 - user branch/city access management
 - scheduler task settings and persisted `lastRun`
 - import path resolution through `IMPORT_DIR` with legacy fallback to `client/public/Sorce`
+- installation/return TRO documents with an imported branch-scoped TRO directory, multi-position name/quantity rows, TA/SV/NTO approval rules, accountant planning/completion fields, status notifications, and document history
 
 ## Run
 

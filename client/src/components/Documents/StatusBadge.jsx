@@ -24,6 +24,21 @@ const STATUS_CONFIG = {
     icon: "fa-file-circle-check",
     className: style.signed,
   },
+  NOT_COMPLETED: {
+    label: "Не виконано",
+    icon: "fa-clock",
+    className: style.revision,
+  },
+  PLANNED: {
+    label: "Заплановано",
+    icon: "fa-calendar-check",
+    className: style.prepared,
+  },
+  COMPLETED: {
+    label: "Виконано",
+    icon: "fa-circle-check",
+    className: style.signed,
+  },
 };
 
 export default function StatusBadge({ status, showLabel = false }) {

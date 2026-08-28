@@ -15,7 +15,15 @@ function formatDocumentDate(value) {
 }
 
 function documentTypeLabel(type) {
-  return type === "RETURN" ? "ПОВЕРНЕННЯ" : "ОБМІН";
+  if (type === "RETURN") return "ПОВЕРНЕННЯ";
+  if (type === "TRO") return "ТРО";
+  return "ОБМІН";
+}
+
+function troMovementLabel(value) {
+  if (value === "INSTALL") return "Установка";
+  if (value === "RETURN") return "Повернення";
+  return "";
 }
 
 export default function DocumentTable({
@@ -44,9 +52,14 @@ export default function DocumentTable({
   const handleDocumentOpen = (event, doc) => {
     if (event.target.closest("button, a, input, select, summary")) return;
 
-    const canEdit =
-      ["NEW", "REVISION"].includes(doc.status) &&
-      (doc.author_user_id === currentUser.id || currentUser.role === ROLE_IDS.SV);
+    const canEditTroAccounting =
+      doc.document_type === "TRO" &&
+      Number(currentUser.role) === ROLE_IDS.Accountant &&
+      ["NOT_COMPLETED", "PLANNED"].includes(doc.status);
+    const canEdit = canEditTroAccounting ||
+      (["NEW", "REVISION"].includes(doc.status) &&
+        (Number(doc.author_user_id) === Number(currentUser.id) ||
+          Number(currentUser.role) === ROLE_IDS.SV));
 
     if (canEdit) {
       onEditDocument?.(doc);
@@ -117,7 +130,10 @@ export default function DocumentTable({
                     {doc.branch_short_name || doc.branch_name || "—"}
                   </td>
                 ) : null}
-                <td className={style.documentType}>{documentTypeLabel(doc.document_type)}</td>
+                <td className={style.documentType}>
+                  {documentTypeLabel(doc.document_type)}
+                  {doc.tro_movement_type ? ` · ${troMovementLabel(doc.tro_movement_type)}` : ""}
+                </td>
                 <td title={doc.trade_point}>{doc.trade_point}</td>
                 <td title={doc.contractor}>{doc.contractor}</td>
                 <td title={doc.author}>{doc.author}</td>
@@ -145,7 +161,10 @@ export default function DocumentTable({
             </div>
 
             <div className={style.cardMeta}>
-              <span>{documentTypeLabel(doc.document_type)}</span>
+              <span>
+                {documentTypeLabel(doc.document_type)}
+                {doc.tro_movement_type ? ` · ${troMovementLabel(doc.tro_movement_type)}` : ""}
+              </span>
               <time>{formatDocumentDate(doc.document_date)}</time>
             </div>
 
@@ -162,6 +181,12 @@ export default function DocumentTable({
                 <i className="fa-regular fa-user" aria-hidden="true"></i>
                 <span>{doc.author}</span>
               </p>
+              {doc.tro_ta_name ? (
+                <p title={doc.tro_ta_name}>
+                  <i className="fa-solid fa-user-tag" aria-hidden="true"></i>
+                  <span>ТА: {doc.tro_ta_name}</span>
+                </p>
+              ) : null}
               {showBranchColumn ? (
                 <p>
                   <i className="fa-regular fa-building" aria-hidden="true"></i>

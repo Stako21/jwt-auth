@@ -14,6 +14,8 @@ const ACTION_LABELS = {
   SIGN: { label: "Підписано", tone: "positive" },
   REVISION: { label: "На доопрацювання", tone: "warning" },
   REJECT: { label: "Відхилено", tone: "negative" },
+  UPDATE: { label: "Оновлено", tone: "info" },
+  ACCOUNTING_UPDATE: { label: "Дані бухгалтера", tone: "info" },
 };
 
 const STATUS_LABELS = {
@@ -22,6 +24,9 @@ const STATUS_LABELS = {
   REVISION: { label: "На доопрацювання", tone: "warning" },
   REJECTED: { label: "Відхилено", tone: "negative" },
   SIGNED: { label: "Підписано", tone: "positive" },
+  NOT_COMPLETED: { label: "Не виконано", tone: "warning" },
+  PLANNED: { label: "Заплановано", tone: "info" },
+  COMPLETED: { label: "Виконано", tone: "positive" },
 };
 
 function formatDateTime(value) {

@@ -10,6 +10,7 @@ import {
   fetchProductGroups,
   fetchProducts,
   fetchTradePoints,
+  fetchTroProducts,
 } from "../services/directories.api.js";
 import CreateExchangeDocumentModal from "../modals/CreateExchangeDocumentModal.jsx";
 import { DataLoader } from "../components/DataLoader/DataLoader.jsx";
@@ -19,6 +20,9 @@ import {
   getDocumentAuthorOptions,
 } from "../utils/documentFilters.js";
 import { UI_TIMING } from "../uiTokens.js";
+import { getTroTaOptions } from "../services/documents.api.js";
+import CreateTroDocumentModal from "../modals/CreateTroDocumentModal.jsx";
+import { ROLE_IDS } from "../utils/roles.js";
 import style from "./DocumentsPage.module.scss";
 
 const DOCUMENT_STATUSES = [
@@ -27,6 +31,9 @@ const DOCUMENT_STATUSES = [
   { value: "REVISION", label: "На доопрацювання" },
   { value: "REJECTED", label: "Відхилено" },
   { value: "SIGNED", label: "Підписано" },
+  { value: "NOT_COMPLETED", label: "Не виконано" },
+  { value: "PLANNED", label: "Заплановано" },
+  { value: "COMPLETED", label: "Виконано" },
 ];
 
 function dateKey(date) {
@@ -58,9 +65,12 @@ export default function DocumentsPage() {
   const [products, setProducts] = useState([]);
   const [contractors, setContractors] = useState([]);
   const [productGroups, setProductGroups] = useState([]);
+  const [troProducts, setTroProducts] = useState([]);
+  const [troTaOptions, setTroTaOptions] = useState([]);
   const { userInfo } = useContext(AuthContext);
   const [showCreateReturn, setShowCreateReturn] = useState(false);
   const [showCreateExchange, setShowCreateExchange] = useState(false);
+  const [showCreateTro, setShowCreateTro] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [period, setPeriod] = useState(initialPeriod);
@@ -80,12 +90,16 @@ export default function DocumentsPage() {
       fetchProducts(),
       fetchContractors(),
       fetchProductGroups(),
+      fetchTroProducts(),
+      getTroTaOptions(),
     ])
-      .then(([nextTradePoints, nextProducts, nextContractors, nextProductGroups]) => {
+      .then(([nextTradePoints, nextProducts, nextContractors, nextProductGroups, nextTroProducts, nextTroTaOptions]) => {
         setTradePoints(nextTradePoints);
         setProducts(nextProducts);
         setContractors(nextContractors);
         setProductGroups(nextProductGroups);
+        setTroProducts(nextTroProducts);
+        setTroTaOptions(nextTroTaOptions);
       })
       .catch((directoryError) => {
         console.error("Помилка завантаження довідників:", directoryError);
@@ -184,6 +198,7 @@ export default function DocumentsPage() {
         setEditingDocument(fullDoc);
         if (fullDoc.documentType === "RETURN") setShowCreateReturn(true);
         if (fullDoc.documentType === "EXCHANGE") setShowCreateExchange(true);
+        if (fullDoc.documentType === "TRO") setShowCreateTro(true);
       })
       .catch((loadError) => {
         console.error("Помилка завантаження документа:", loadError);
@@ -194,6 +209,7 @@ export default function DocumentsPage() {
   const closeDocumentModal = (type) => {
     if (type === "RETURN") setShowCreateReturn(false);
     if (type === "EXCHANGE") setShowCreateExchange(false);
+    if (type === "TRO") setShowCreateTro(false);
     setEditingDocument(null);
     setIsViewOnly(false);
   };
@@ -216,6 +232,12 @@ export default function DocumentsPage() {
             <i className="fa-solid fa-right-left" aria-hidden="true"></i>
             Обмін
           </button>
+          {[ROLE_IDS.Admin, ROLE_IDS.Director, ROLE_IDS.SV, ROLE_IDS.TA].includes(Number(userInfo?.role)) ? (
+            <button type="button" onClick={() => setShowCreateTro(true)}>
+              <i className="fa-solid fa-shop" aria-hidden="true"></i>
+              ТРО
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -434,6 +456,21 @@ export default function DocumentsPage() {
           products={products}
           contractors={contractors}
           productGroups={productGroups}
+          editingDocument={editingDocument}
+          isViewOnly={isViewOnly}
+        />
+      ) : null}
+
+      {showCreateTro ? (
+        <CreateTroDocumentModal
+          isOpen={showCreateTro}
+          onClose={() => closeDocumentModal("TRO")}
+          onCreated={loadDocuments}
+          contractors={contractors}
+          tradePoints={tradePoints}
+          troProducts={troProducts}
+          taOptions={troTaOptions}
+          currentUser={userInfo}
           editingDocument={editingDocument}
           isViewOnly={isViewOnly}
         />

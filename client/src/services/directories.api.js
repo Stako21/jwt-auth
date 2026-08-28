@@ -21,3 +21,8 @@ export async function fetchProductGroups() {
   const { data } = await api.get("/product-groups");
   return data;
 }
+
+export async function fetchTroProducts() {
+  const { data } = await api.get("/tro-products");
+  return data;
+}

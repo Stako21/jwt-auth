@@ -11,6 +11,8 @@ import {
   getDocumentHistory,
   updateDocument,
   getDocumentNotificationHistory,
+  getTroTaOptions,
+  updateTroAccounting,
 } from "../controllers/documentsController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import { getDocumentPdf } from "../controllers/documentsController.js";
@@ -20,7 +22,9 @@ const router = Router();
 
 // Route to create a new document (protected)
 router.post("/", authMiddleware, createDocument);
+router.get("/tro/ta-options", authMiddleware, getTroTaOptions);
 router.put("/:id", authMiddleware, updateDocument);
+router.put("/:id/tro-accounting", authMiddleware, updateTroAccounting);
 router.post("/:id/sign", authMiddleware, signDocument);
 router.post("/:id/prepare", authMiddleware, prepareDocument);
 router.post("/:id/revision", authMiddleware, revisionDocument);

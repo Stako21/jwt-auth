@@ -101,3 +101,20 @@ export async function getProductGroups(req, res) {
     res.status(500).json({ message: "Failed to load product groups" });
   }
 }
+
+export async function getTroProducts(req, res) {
+  try {
+    const branchId = getUserBranchId(req.user);
+    const [rows] = await pool.query(
+      `SELECT id, name, group_name
+       FROM tro_products
+       WHERE branch_id = ? AND is_active = 1
+       ORDER BY group_name, name`,
+      [branchId],
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("getTroProducts error:", error);
+    res.status(500).json({ message: "Failed to load TRO products" });
+  }
+}

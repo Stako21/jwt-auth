@@ -46,19 +46,26 @@ export default function DocumentRowActions({
   const { enqueueSnackbar } = useSnackbar();
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
-  const isAuthor = doc.author_user_id === currentUser.id;
+  const role = Number(currentUser.role);
+  const isAuthor = Number(doc.author_user_id) === Number(currentUser.id);
   const isTopRole = [ROLE_IDS.Director, ROLE_IDS.Admin, ROLE_IDS.NTO].includes(
-    currentUser.role,
+    role,
   );
-  const isSv = currentUser.role === ROLE_IDS.SV;
+  const isSv = role === ROLE_IDS.SV;
+  const isTro = doc.document_type === "TRO";
   const isSameBranch =
     Number(doc.branch_id || currentUser.branchId) === Number(currentUser.branchId);
 
-  const canPrepare =
+  const canPrepare = !isTro && (
     (isSv && ["NEW", "REVISION"].includes(doc.status)) ||
-    (isTopRole && isSameBranch && ["NEW", "REVISION"].includes(doc.status));
-  const canSign = isTopRole && isSameBranch && doc.status === "PREPARED";
-  const canRevision =
+    (isTopRole && isSameBranch && ["NEW", "REVISION"].includes(doc.status))
+  );
+  const canSign = isTro
+    ? [ROLE_IDS.SV, ROLE_IDS.NTO].includes(role) && ["NEW", "REVISION"].includes(doc.status)
+    : isTopRole && isSameBranch && doc.status === "PREPARED";
+  const canRevision = isTro
+    ? [ROLE_IDS.SV, ROLE_IDS.NTO].includes(role) && ["NEW", "REVISION"].includes(doc.status)
+    :
     (isSv && ["NEW", "REVISION"].includes(doc.status)) ||
     (isTopRole && isSameBranch && doc.status === "PREPARED");
   const canRejectAsReviewer = canRevision;
@@ -72,7 +79,7 @@ export default function DocumentRowActions({
     Number(canSign) +
     Number(canRevision) +
     Number(canRejectAsReviewer || canRejectAsAuthor) +
-    2;
+    1 + Number(!isTro);
 
   async function handle(action) {
     const actionsText = {
@@ -154,13 +161,15 @@ export default function DocumentRowActions({
           onClick={() => setHistoryModalOpen(true)}
         />
 
-        <ActionButton
-          label="PDF"
-          icon={loadingId === doc.id ? "fa-spinner" : "fa-file-pdf"}
-          disabled={loadingId === doc.id}
-          loading={loadingId === doc.id}
-          onClick={() => onOpenPdf?.(doc.id)}
-        />
+        {!isTro ? (
+          <ActionButton
+            label="PDF"
+            icon={loadingId === doc.id ? "fa-spinner" : "fa-file-pdf"}
+            disabled={loadingId === doc.id}
+            loading={loadingId === doc.id}
+            onClick={() => onOpenPdf?.(doc.id)}
+          />
+        ) : null}
       </div>
 
       {historyModalOpen ? (
