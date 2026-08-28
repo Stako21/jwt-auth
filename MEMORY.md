@@ -2146,3 +2146,9 @@ Frontend:
 - Extended accountant document access to TRO documents in every granted branch, retained branch isolation for all TRO data, added text-only email/Rocket.Chat status notifications with retry metadata, and kept all operations in common document history.
 - No TRO PDF was added; the UI hides PDF actions and the API reports that the print form is unavailable.
 - Verification: backend `node --check` passed for all touched modules, frontend lint and production build passed, and the source file was inspected as 211 valid rows (with intentionally repeated source GUIDs). Migration `017` was not executed because the target database was not approved.
+
+## 2026-08-28 - TRO development database migration
+
+- Confirmed with the user that the database configured in `api/.env` is the development database and applied the normal migration set with `npm run migrate`.
+- Migration `017_tro_documents.js` was registered successfully; verified all four TRO tables, the `loadTroProducts` import source and active two-hour scheduler task, expanded document columns, and notification event metadata.
+- The migration only configured the TRO import. Population of `tro_products` remains the responsibility of the configured scheduler/manual task run.
