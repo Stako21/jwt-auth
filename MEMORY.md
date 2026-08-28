@@ -2179,3 +2179,9 @@ Frontend:
 - Added backend `category` filtering so the two tables receive disjoint datasets rather than hiding rows only in the browser; also removed TRO list visibility from the Warehouse role to match TRO access rules.
 - Tailored the TRO table to show movement and a compact Author/TA cell while preserving its mobile assigned-TA detail.
 - Verified against development data that the TRO category returned only TRO rows and return/exchange returned only legacy rows, and that full-document loading still succeeds for both. Frontend lint and production build passed with existing warnings.
+
+## 2026-08-28 - TRO accountant executor identity
+
+- Extended `/api/auth/me` with the explicit `users.user_name` value and retained it in the frontend auth context without changing the existing login-oriented `userName` token field.
+- TRO creation now initializes the accountant-only `Виконавець` field strictly from `user_name`; it no longer falls back to `users.NAME`, and remains empty/editable when no full name is configured.
+- Backend syntax check, frontend lint, and production build passed with the existing Sass legacy API and bundle-size warnings.

@@ -157,6 +157,7 @@ class AuthController {
       return res.status(200).json({
         id: user.id,
         login: user.NAME,
+        user_name: user.user_name || "",
         displayName: user.user_name || user.NAME,
         userGuid: user.user_guid || null,
         role: user.role,

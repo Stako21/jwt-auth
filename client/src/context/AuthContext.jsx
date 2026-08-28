@@ -69,6 +69,7 @@ const AuthProvider = ({ children }) => {
         prev.branchId === next.branchId &&
         prev.userID === next.userID &&
         prev.id === next.id &&
+        prev.user_name === next.user_name &&
         prev.displayName === next.displayName &&
         serializeState(prev.currentBranch) === serializeState(next.currentBranch) &&
         serializeState(prev.availableBranches) ===
@@ -121,6 +122,7 @@ const AuthProvider = ({ children }) => {
       const res = await AuthClient.get("/me");
 
       mergeUserInfo((prev) => ({
+        user_name: res.data.user_name ?? "",
         displayName: res.data.displayName,
         branchId:
           res.data.currentBranchId ?? res.data.branchId ?? prev?.branchId ?? null,

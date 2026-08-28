@@ -11,7 +11,7 @@ import styles from "./CreateTroDocumentModal.module.scss";
 const EMPTY_ITEM = { troProductId: "", productName: "", quantity: 1 };
 
 function accountName(user) {
-  return user?.user_name || user?.userName || user?.fullName || user?.name || "";
+  return user?.user_name || "";
 }
 
 export default function CreateTroDocumentModal({
