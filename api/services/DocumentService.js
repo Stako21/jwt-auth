@@ -950,6 +950,10 @@ export async function getDocumentsService(user, query) {
       td.movement_type AS tro_movement_type,
       td.ta_user_id AS tro_ta_user_id,
       ta.user_name AS tro_ta_name,
+      td.app_install AS tro_app_install,
+      td.photo_install AS tro_photo_install,
+      td.app_return AS tro_app_return,
+      td.warehouse_spec_return AS tro_warehouse_spec_return,
       d.created_at
     FROM documents d
     JOIN branches b ON b.id = d.branch_id

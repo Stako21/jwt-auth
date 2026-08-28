@@ -75,6 +75,10 @@
   min-width: 980px;
 }
 
+.troTable {
+  min-width: 1040px;
+}
+
 .statusColumn {
   width: 44px;
 }
@@ -102,6 +106,28 @@
 
 .troAuthorColumn {
   width: 140px;
+}
+
+.troDocumentsColumn {
+  width: 104px;
+}
+
+.troRequiredDocuments {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.troDocumentReady {
+  color: $status-signed;
+}
+
+.troDocumentMissing {
+  color: $status-rejected;
 }
 
 .personCell {
@@ -281,6 +307,22 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+  }
+
+  .cardRequiredDocuments {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    min-width: 0;
+    margin-top: $space-3;
+    color: $text-muted;
+    font-size: 12px;
+    font-weight: 600;
+
+    .troRequiredDocuments {
+      gap: $space-3;
+      font-size: 12px;
     }
   }
 

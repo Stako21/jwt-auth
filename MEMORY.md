@@ -2185,3 +2185,10 @@ Frontend:
 - Extended `/api/auth/me` with the explicit `users.user_name` value and retained it in the frontend auth context without changing the existing login-oriented `userName` token field.
 - TRO creation now initializes the accountant-only `Виконавець` field strictly from `user_name`; it no longer falls back to `users.NAME`, and remains empty/editable when no full name is configured.
 - Backend syntax check, frontend lint, and production build passed with the existing Sass legacy API and bundle-size warnings.
+
+## 2026-08-28 - TRO required-document indicators
+
+- Extended the document-list query with the four TRO accountant checkbox states.
+- Added a compact `Документи` column to the desktop TRO table and the corresponding block to mobile cards. Installation shows `АППУ` and `ФУ`; return shows `АППВ` and `ССВ`.
+- Missing items use the shared rejected/error color and checked items use the shared signed/success color, so the indicators remain compatible with all runtime themes.
+- Backend syntax check, frontend lint, and production build passed with the existing Sass legacy API and bundle-size warnings.

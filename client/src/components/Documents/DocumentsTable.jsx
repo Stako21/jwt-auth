@@ -26,6 +26,64 @@ function troMovementLabel(value) {
   return "";
 }
 
+function troRequiredDocuments(doc) {
+  if (doc.tro_movement_type === "INSTALL") {
+    return [
+      {
+        code: "АППУ",
+        label: "Акт приймання-передачі",
+        checked: Number(doc.tro_app_install) === 1,
+      },
+      {
+        code: "ФУ",
+        label: "Фото",
+        checked: Number(doc.tro_photo_install) === 1,
+      },
+    ];
+  }
+
+  if (doc.tro_movement_type === "RETURN") {
+    return [
+      {
+        code: "АППВ",
+        label: "Акт приймання-передачі",
+        checked: Number(doc.tro_app_return) === 1,
+      },
+      {
+        code: "ССВ",
+        label: "Складська специфікація",
+        checked: Number(doc.tro_warehouse_spec_return) === 1,
+      },
+    ];
+  }
+
+  return [];
+}
+
+function TroRequiredDocuments({ doc }) {
+  const requiredDocuments = troRequiredDocuments(doc);
+
+  return (
+    <div
+      className={style.troRequiredDocuments}
+      aria-label="Документи для підтвердження"
+    >
+      {requiredDocuments.map((item) => (
+        <span
+          className={
+            item.checked ? style.troDocumentReady : style.troDocumentMissing
+          }
+          key={item.code}
+          title={`${item.label}: ${item.checked ? "є" : "немає"}`}
+          aria-label={`${item.label}: ${item.checked ? "є" : "немає"}`}
+        >
+          {item.code}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function DocumentTable({
   documents,
   category = "return-exchange",
@@ -90,8 +148,8 @@ export default function DocumentTable({
       <div className={style.desktopTableContainer}>
         <table
           className={`${style.documentsTable} ${
-            showBranchColumn ? style.withBranch : ""
-          }`}
+            isTroTable ? style.troTable : ""
+          } ${showBranchColumn ? style.withBranch : ""}`}
         >
           <colgroup>
             <col className={style.statusColumn} />
@@ -105,6 +163,7 @@ export default function DocumentTable({
                 isTroTable ? style.troAuthorColumn : ""
               }`}
             />
+            {isTroTable ? <col className={style.troDocumentsColumn} /> : null}
             <col className={style.dateColumn} />
             <col className={style.actionsColumn} />
           </colgroup>
@@ -119,6 +178,7 @@ export default function DocumentTable({
               <th>Торгова точка</th>
               <th>Контрагент</th>
               <th>{isTroTable ? "Автор / ТА" : "Автор"}</th>
+              {isTroTable ? <th>Документи</th> : null}
               <th>Дата</th>
               <th className={style.actionsHeader}>Дії</th>
             </tr>
@@ -147,6 +207,11 @@ export default function DocumentTable({
                   <span>{doc.author}</span>
                   {isTroTable && doc.tro_ta_name ? <small>ТА: {doc.tro_ta_name}</small> : null}
                 </td>
+                {isTroTable ? (
+                  <td>
+                    <TroRequiredDocuments doc={doc} />
+                  </td>
+                ) : null}
                 <td className={style.documentDate}>
                   {formatDocumentDate(doc.document_date)}
                 </td>
@@ -197,6 +262,12 @@ export default function DocumentTable({
                   <i className="fa-solid fa-user-tag" aria-hidden="true"></i>
                   <span>ТА: {doc.tro_ta_name}</span>
                 </p>
+              ) : null}
+              {isTroTable ? (
+                <div className={style.cardRequiredDocuments}>
+                  <span>Документи:</span>
+                  <TroRequiredDocuments doc={doc} />
+                </div>
               ) : null}
               {showBranchColumn ? (
                 <p>
