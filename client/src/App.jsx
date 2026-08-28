@@ -55,6 +55,25 @@ function renderStaticReportRoutes(activeReports, setLastUpdateTime) {
   });
 }
 
+function renderDocumentRoutes() {
+  return (
+    <>
+      <Route
+        path="/documents"
+        element={<Navigate to="/documents/return-exchange" replace />}
+      />
+      <Route
+        path="/documents/return-exchange"
+        element={<DocumentsPage key="return-exchange" category="return-exchange" />}
+      />
+      <Route
+        path="/documents/tro"
+        element={<DocumentsPage key="tro" category="tro" />}
+      />
+    </>
+  );
+}
+
 const AppContent = () => {
   const { userInfo, isUserLogged } = useContext(AuthContext);
   const { activeBalancePages, activeReports, loading: configLoading } =
@@ -101,7 +120,7 @@ const AppContent = () => {
           {isUserLogged ? (
             isAdmin ? (
               <>
-                <Route path="/documents" element={<DocumentsPage />} />
+                {renderDocumentRoutes()}
                 <Route
                   path="/sales-report"
                   element={<SalesReport setLastUpdateTime={setLastUpdateTime} />}
@@ -126,7 +145,7 @@ const AppContent = () => {
                   }
                 />
                 {renderBalanceRoutes(activeBalancePages, setLastUpdateTime)}
-                <Route path="/documents" element={<DocumentsPage />} />
+                {renderDocumentRoutes()}
                 {isDirector ? (
                   <Route path="/settings/*" element={<SettingsPage />} />
                 ) : null}

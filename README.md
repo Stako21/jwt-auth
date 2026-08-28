@@ -27,6 +27,7 @@ Implemented in the current workspace:
 - scheduler task settings and persisted `lastRun`
 - import path resolution through `IMPORT_DIR` with legacy fallback to `client/public/Sorce`
 - installation/return TRO documents with an imported branch-scoped TRO directory, multi-position name/quantity rows, TA/SV/NTO approval rules, accountant planning/completion fields, status notifications, and document history
+- separate return/exchange and TRO document workspaces with dedicated menu entries, routes, server-filtered tables, creation actions, and status filter sets
 
 ## Run
 

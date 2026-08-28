@@ -25,12 +25,18 @@ import CreateTroDocumentModal from "../modals/CreateTroDocumentModal.jsx";
 import { ROLE_IDS } from "../utils/roles.js";
 import style from "./DocumentsPage.module.scss";
 
-const DOCUMENT_STATUSES = [
+const RETURN_EXCHANGE_STATUSES = [
   { value: "NEW", label: "Новий" },
   { value: "PREPARED", label: "Погоджено" },
   { value: "REVISION", label: "На доопрацювання" },
   { value: "REJECTED", label: "Відхилено" },
   { value: "SIGNED", label: "Підписано" },
+];
+
+const TRO_STATUSES = [
+  { value: "NEW", label: "Новий" },
+  { value: "REVISION", label: "На доопрацювання" },
+  { value: "REJECTED", label: "Відхилено" },
   { value: "NOT_COMPLETED", label: "Не виконано" },
   { value: "PLANNED", label: "Заплановано" },
   { value: "COMPLETED", label: "Виконано" },
@@ -57,7 +63,9 @@ const EMPTY_FILTERS = Object.freeze({
   authorId: "",
 });
 
-export default function DocumentsPage() {
+export default function DocumentsPage({ category = "return-exchange" }) {
+  const isTroPage = category === "tro";
+  const documentStatuses = isTroPage ? TRO_STATUSES : RETURN_EXCHANGE_STATUSES;
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,32 +93,45 @@ export default function DocumentsPage() {
     userInfo?.currentBranch?.shortName || userInfo?.currentBranch?.name || null;
 
   useEffect(() => {
-    Promise.all([
-      fetchTradePoints(),
-      fetchProducts(),
-      fetchContractors(),
-      fetchProductGroups(),
-      fetchTroProducts(),
-      getTroTaOptions(),
-    ])
-      .then(([nextTradePoints, nextProducts, nextContractors, nextProductGroups, nextTroProducts, nextTroTaOptions]) => {
+    const directoryRequests = isTroPage
+      ? [
+          fetchTradePoints(),
+          fetchContractors(),
+          fetchTroProducts(),
+          getTroTaOptions(),
+        ]
+      : [
+          fetchTradePoints(),
+          fetchContractors(),
+          fetchProducts(),
+          fetchProductGroups(),
+        ];
+
+    Promise.all(directoryRequests)
+      .then((results) => {
+        const [nextTradePoints, nextContractors] = results;
         setTradePoints(nextTradePoints);
-        setProducts(nextProducts);
         setContractors(nextContractors);
-        setProductGroups(nextProductGroups);
-        setTroProducts(nextTroProducts);
-        setTroTaOptions(nextTroTaOptions);
+
+        if (isTroPage) {
+          setTroProducts(results[2]);
+          setTroTaOptions(results[3]);
+        } else {
+          setProducts(results[2]);
+          setProductGroups(results[3]);
+        }
       })
       .catch((directoryError) => {
         console.error("Помилка завантаження довідників:", directoryError);
       });
-  }, []);
+  }, [isTroPage]);
 
   const loadDocuments = useCallback(async ({ silent = false } = {}) => {
     try {
       if (!silent) setLoading(true);
       setError(null);
       const data = await fetchDocuments({
+        category,
         ...(appliedPeriod.withoutFrom ? {} : { from: appliedPeriod.from }),
         ...(appliedPeriod.withoutTo ? {} : { to: appliedPeriod.to }),
       });
@@ -121,7 +142,7 @@ export default function DocumentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [appliedPeriod]);
+  }, [appliedPeriod, category]);
 
   useEffect(() => {
     loadDocuments();
@@ -218,21 +239,25 @@ export default function DocumentsPage() {
     <section className={style.documentsPage}>
       <div className={style.pageHeader}>
         <div className={style.pageHeading}>
-          <h1>Документи</h1>
+          <h1>{isTroPage ? "Документи ТРО" : "Повернення / Обмін"}</h1>
           {currentBranchName ? (
             <span className={style.branchBadge}>{currentBranchName}</span>
           ) : null}
         </div>
         <div className={style.createActions}>
-          <button type="button" onClick={() => setShowCreateReturn(true)}>
-            <i className="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
-            Повернення
-          </button>
-          <button type="button" onClick={() => setShowCreateExchange(true)}>
-            <i className="fa-solid fa-right-left" aria-hidden="true"></i>
-            Обмін
-          </button>
-          {[ROLE_IDS.Admin, ROLE_IDS.Director, ROLE_IDS.SV, ROLE_IDS.TA].includes(Number(userInfo?.role)) ? (
+          {!isTroPage ? (
+            <>
+              <button type="button" onClick={() => setShowCreateReturn(true)}>
+                <i className="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
+                Повернення
+              </button>
+              <button type="button" onClick={() => setShowCreateExchange(true)}>
+                <i className="fa-solid fa-right-left" aria-hidden="true"></i>
+                Обмін
+              </button>
+            </>
+          ) : null}
+          {isTroPage && [ROLE_IDS.Admin, ROLE_IDS.Director, ROLE_IDS.SV, ROLE_IDS.TA].includes(Number(userInfo?.role)) ? (
             <button type="button" onClick={() => setShowCreateTro(true)}>
               <i className="fa-solid fa-shop" aria-hidden="true"></i>
               ТРО
@@ -327,7 +352,7 @@ export default function DocumentsPage() {
         <div className={`${style.filterControl} ${style.statusFilter}`}>
           <span className={style.filterLabel}>Статус</span>
           <div className={style.statusChecklist}>
-            {DOCUMENT_STATUSES.map((status) => (
+            {documentStatuses.map((status) => (
               <label key={status.value}>
                 <FormInput
                   type="checkbox"
@@ -433,7 +458,7 @@ export default function DocumentsPage() {
         </div>
       </form>
 
-      {showCreateReturn ? (
+      {!isTroPage && showCreateReturn ? (
         <CreateReturnDocumentModal
           isOpen={showCreateReturn}
           onClose={() => closeDocumentModal("RETURN")}
@@ -447,7 +472,7 @@ export default function DocumentsPage() {
         />
       ) : null}
 
-      {showCreateExchange ? (
+      {!isTroPage && showCreateExchange ? (
         <CreateExchangeDocumentModal
           isOpen={showCreateExchange}
           onClose={() => closeDocumentModal("EXCHANGE")}
@@ -461,7 +486,7 @@ export default function DocumentsPage() {
         />
       ) : null}
 
-      {showCreateTro ? (
+      {isTroPage && showCreateTro ? (
         <CreateTroDocumentModal
           isOpen={showCreateTro}
           onClose={() => closeDocumentModal("TRO")}
@@ -483,6 +508,7 @@ export default function DocumentsPage() {
         <div className={style.resultsViewport}>
           <DocumentTable
             documents={filteredDocuments}
+            category={category}
             currentUser={userInfo}
             reloadDocuments={loadDocuments}
             onEditDocument={(doc) => openDocumentModal(doc, false)}

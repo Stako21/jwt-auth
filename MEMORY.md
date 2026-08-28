@@ -2170,3 +2170,12 @@ Frontend:
 - Added and applied migration `018_tro_document_history_statuses.js` because `document_history.old_status` and `new_status` still used the legacy five-value ENUM and rejected TRO status `NOT_COMPLETED` during signing.
 - Both history status columns now use nullable `VARCHAR(32)`, matching the expanded document workflow without changing existing history values.
 - Verified an exact `NEW -> NOT_COMPLETED` history insert against the development database inside an explicit transaction; it succeeded and the verification row was rolled back.
+
+## 2026-08-28 - Split return/exchange and TRO workspaces
+
+- Replaced the single mixed Documents screen with `/documents/return-exchange` and `/documents/tro`; the legacy `/documents` URL redirects to return/exchange.
+- Converted the Documents sidebar item into an expandable group that works in full, compact desktop, and mobile drawer modes, with role-appropriate TRO visibility.
+- Each page now loads only the directories and creation modals it needs and exposes only its own status checklist: legacy five-state return/exchange workflow versus the six TRO workflow states.
+- Added backend `category` filtering so the two tables receive disjoint datasets rather than hiding rows only in the browser; also removed TRO list visibility from the Warehouse role to match TRO access rules.
+- Tailored the TRO table to show movement and a compact Author/TA cell while preserving its mobile assigned-TA detail.
+- Verified against development data that the TRO category returned only TRO rows and return/exchange returned only legacy rows, and that full-document loading still succeeds for both. Frontend lint and production build passed with existing warnings.

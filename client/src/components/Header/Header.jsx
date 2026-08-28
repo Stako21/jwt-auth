@@ -42,6 +42,7 @@ function SidebarContent({
   const [openGroups, setOpenGroups] = useState(() => ({
     balances: Boolean(currentBalancePage),
     reports: Boolean(currentStaticReport),
+    documents: location.pathname.startsWith("/documents"),
     settings: location.pathname.startsWith("/settings"),
   }));
   const currentBranchId = userInfo?.currentBranch?.id || userInfo?.branchId || "";
@@ -59,6 +60,8 @@ function SidebarContent({
       ? "balances"
       : currentStaticReport
         ? "reports"
+        : location.pathname.startsWith("/documents")
+          ? "documents"
         : location.pathname.startsWith("/settings")
           ? "settings"
           : null;
@@ -206,16 +209,47 @@ function SidebarContent({
         ) : null}
 
         {!isPicker ? (
-          <Link
-            to="/documents"
-            className={cn(style.navItem, {
-              [style.activeNavItem]: location.pathname === "/documents",
+          <>
+            {renderGroupButton({
+              group: "documents",
+              icon: NAV_ITEMS.documents.icon,
+              label: NAV_ITEMS.documents.label,
+              isActive: location.pathname.startsWith("/documents"),
             })}
-            onClick={handleLinkClick}
-          >
-            <i className={NAV_ITEMS.documents.icon}></i>
-            <span>{NAV_ITEMS.documents.label}</span>
-          </Link>
+            {openGroups.documents ? (
+              <div id={`${idPrefix}-documents-navigation`} className={style.subNav}>
+                <Link
+                  to="/documents/return-exchange"
+                  className={cn(style.subNavItem, {
+                    [style.activeSubNavItem]:
+                      location.pathname === "/documents/return-exchange" ||
+                      location.pathname === "/documents",
+                  })}
+                  onClick={handleLinkClick}
+                >
+                  Повернення / Обмін
+                </Link>
+                {[
+                  ROLE_IDS.Admin,
+                  ROLE_IDS.Director,
+                  ROLE_IDS.NTO,
+                  ROLE_IDS.SV,
+                  ROLE_IDS.TA,
+                  ROLE_IDS.Accountant,
+                ].includes(Number(userInfo?.role)) ? (
+                  <Link
+                    to="/documents/tro"
+                    className={cn(style.subNavItem, {
+                      [style.activeSubNavItem]: location.pathname === "/documents/tro",
+                    })}
+                    onClick={handleLinkClick}
+                  >
+                    ТРО
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
+          </>
         ) : null}
 
         {Number(userInfo?.role) === ROLE_IDS.Admin ? (
@@ -405,7 +439,9 @@ const Header = ({ lastUpdateTime, isOpen, setIsOpen }) => {
   const titleByPath = {
     "/admin-page": "Адміністрування",
     "/sales-report": "Продажі",
-    "/documents": "Документи",
+    "/documents": "Повернення / Обмін",
+    "/documents/return-exchange": "Повернення / Обмін",
+    "/documents/tro": "Документи ТРО",
     "/settings/warehouses": "Налаштування складу",
   };
   const headerTitle =

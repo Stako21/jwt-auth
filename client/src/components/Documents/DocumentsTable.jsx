@@ -28,12 +28,14 @@ function troMovementLabel(value) {
 
 export default function DocumentTable({
   documents,
+  category = "return-exchange",
   currentUser,
   reloadDocuments,
   onEditDocument,
   onViewDocument,
 }) {
   const [loadingId, setLoadingId] = useState(null);
+  const isTroTable = category === "tro";
   const showBranchColumn = documents.some(
     (doc) => Number(doc.branch_id) !== Number(currentUser.branchId),
   );
@@ -98,7 +100,11 @@ export default function DocumentTable({
             <col className={style.typeColumn} />
             <col className={style.tradePointColumn} />
             <col className={style.contractorColumn} />
-            <col className={style.authorColumn} />
+            <col
+              className={`${style.authorColumn} ${
+                isTroTable ? style.troAuthorColumn : ""
+              }`}
+            />
             <col className={style.dateColumn} />
             <col className={style.actionsColumn} />
           </colgroup>
@@ -109,10 +115,10 @@ export default function DocumentTable({
               </th>
               <th>№</th>
               {showBranchColumn ? <th>Філія</th> : null}
-              <th>Тип</th>
+              <th>{isTroTable ? "Рух" : "Тип"}</th>
               <th>Торгова точка</th>
               <th>Контрагент</th>
-              <th>Автор</th>
+              <th>{isTroTable ? "Автор / ТА" : "Автор"}</th>
               <th>Дата</th>
               <th className={style.actionsHeader}>Дії</th>
             </tr>
@@ -131,12 +137,16 @@ export default function DocumentTable({
                   </td>
                 ) : null}
                 <td className={style.documentType}>
-                  {documentTypeLabel(doc.document_type)}
-                  {doc.tro_movement_type ? ` · ${troMovementLabel(doc.tro_movement_type)}` : ""}
+                  {isTroTable
+                    ? troMovementLabel(doc.tro_movement_type)
+                    : documentTypeLabel(doc.document_type)}
                 </td>
                 <td title={doc.trade_point}>{doc.trade_point}</td>
                 <td title={doc.contractor}>{doc.contractor}</td>
-                <td title={doc.author}>{doc.author}</td>
+                <td className={isTroTable ? style.personCell : ""} title={doc.author}>
+                  <span>{doc.author}</span>
+                  {isTroTable && doc.tro_ta_name ? <small>ТА: {doc.tro_ta_name}</small> : null}
+                </td>
                 <td className={style.documentDate}>
                   {formatDocumentDate(doc.document_date)}
                 </td>
@@ -162,8 +172,9 @@ export default function DocumentTable({
 
             <div className={style.cardMeta}>
               <span>
-                {documentTypeLabel(doc.document_type)}
-                {doc.tro_movement_type ? ` · ${troMovementLabel(doc.tro_movement_type)}` : ""}
+                {isTroTable
+                  ? troMovementLabel(doc.tro_movement_type)
+                  : documentTypeLabel(doc.document_type)}
               </span>
               <time>{formatDocumentDate(doc.document_date)}</time>
             </div>

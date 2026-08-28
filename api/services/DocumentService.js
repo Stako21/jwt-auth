@@ -773,7 +773,7 @@ export async function rejectDocumentService(user, documentId, comment) {
 }
 
 export async function getDocumentsService(user, query) {
-  const { status, from, to } = query;
+  const { status, from, to, category } = query;
   const branchId = getUserBranchId(user);
   const params = [];
   const where = [];
@@ -887,9 +887,16 @@ export async function getDocumentsService(user, query) {
   }
 
   // Accountant / Warehouse — регион, без иерархии
-  else if ([6, 7].includes(user.role)) {
+  else if (user.role === 6) {
     const cityIds = await getUserVisibleCityIds(pool, user);
     where.push(`(d.document_type = 'TRO' OR d.city IN (${cityIds.map(() => "?").join(", ")}))`);
+    params.push(...cityIds);
+  }
+
+  // Warehouse works only with return/exchange documents.
+  else if (user.role === 7) {
+    const cityIds = await getUserVisibleCityIds(pool, user);
+    where.push(`(d.document_type <> 'TRO' AND d.city IN (${cityIds.map(() => "?").join(", ")}))`);
     params.push(...cityIds);
   }
 
@@ -906,6 +913,12 @@ export async function getDocumentsService(user, query) {
   if (status) {
     where.push("d.status = ?");
     params.push(status);
+  }
+
+  if (category === "tro") {
+    where.push("d.document_type = 'TRO'");
+  } else if (category === "return-exchange") {
+    where.push("d.document_type IN ('RETURN', 'EXCHANGE')");
   }
 
   if (from) {
