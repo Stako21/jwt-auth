@@ -2128,3 +2128,9 @@ Frontend:
   - `npm run build` in `client` passed with the existing Sass legacy API and chunk-size warnings
   - generated `client/dist` XLSX changes were restored
   - user-managed `client/public/Sorce/*`, the pre-existing UsersList default-view edit, and `documentation/*` files were not changed or staged
+
+## 2026-08-28 - Pre-change admin UI checkpoint
+
+- Preserved the pending Admin display preferences before the next major work slice: the Users tab opens in hierarchy mode and the two Admin tab rows no longer force horizontal scrollbars.
+- Confirmed the preceding history/data-viewport checkpoint `89d359e` is readable and repository object verification reports no integrity errors.
+- Kept operational `client/public/Sorce/*` changes and untracked `documentation/*` files outside the checkpoint.

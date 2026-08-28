@@ -21,7 +21,7 @@
   max-width: 760px;
   margin: 0 auto $space-3;
   padding: $space-1;
-  overflow-x: auto;
+  // overflow-x: auto;
   border: 1px solid $outline-dark;
   border-radius: $radius-lg;
   background: $surface-glass-strong;
@@ -102,7 +102,7 @@
   display: flex;
   gap: $space-1;
   padding: $space-2 $space-3;
-  overflow-x: auto;
+  // overflow-x: auto;
   border-bottom: 1px solid $outline-dark;
   background: $surface-container-low;
 
