@@ -1,6 +1,6 @@
 @use "../theme.scss" as *;
 
-.modal { position: fixed; inset: 0; z-index: 1400; display: flex; align-items: center; justify-content: center; padding: $space-4 $space-4 $space-4 calc(var(--ui-sidebar-current-width, #{$sidebar-width}) + $space-4); }
+.modal { position: fixed; inset: 0; z-index: $z-modal; display: flex; align-items: center; justify-content: center; padding: $space-4 $space-4 $space-4 calc(var(--ui-sidebar-current-width, #{$sidebar-width}) + $space-4); }
 .backdrop { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: $surface-modal-overlay; backdrop-filter: blur(4px); }
 .card { position: relative; display: flex; flex-direction: column; width: min(100%, 920px); max-height: calc(100dvh - $modal-viewport-gap); overflow: hidden; border: 1px solid $outline-medium; border-radius: $radius-xl; background: $surface-modal; box-shadow: $shadow-modal; }
 .header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: $space-3; min-height: 54px; padding: $space-2 $space-4; border-bottom: 1px solid $outline-dark; background: $surface-modal-strong; }

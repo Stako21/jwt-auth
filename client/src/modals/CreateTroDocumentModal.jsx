@@ -240,7 +240,7 @@ export default function CreateTroDocumentModal({
               <div className={styles.itemRow} key={`${index}-${item.troProductId}`}>
                 <CompactSelect value={item.troProductId} disabled={!generalEditable} options={productOptions}
                   onChange={(value) => updateItem(index, { troProductId: value, productName: troProducts.find((product) => String(product.id) === String(value))?.name || "" })}
-                  ariaLabel={`ТРО ${index + 1}`} />
+                  ariaLabel={`ТРО ${index + 1}`} placement="top" />
                 <FormInput type="number" min="0.001" step="0.001" value={item.quantity} disabled={!generalEditable}
                   onChange={(event) => updateItem(index, { quantity: event.target.value })} aria-label="Кількість" />
                 {generalEditable ? <button className={styles.removeItem} type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label="Видалити позицію"><i className="fa-solid fa-trash" /></button> : null}

@@ -80,6 +80,10 @@ body::before {
   background-repeat: no-repeat;
 }
 
+.notistack-SnackbarContainer {
+  z-index: $z-snackbar !important;
+}
+
 button,
 input,
 select,

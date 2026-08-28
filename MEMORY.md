@@ -2157,3 +2157,10 @@ Frontend:
 
 - Fixed TRO creation against the existing `documents.reason NOT NULL` schema by storing a movement-derived reason (`Установка ТРО` or `Повернення ТРО`) instead of `NULL`.
 - Verified the exact document-header insert against the development database inside an explicit transaction; the insert succeeded and the test row was rolled back.
+
+## 2026-08-28 - Modal snackbar and TRO dropdown layering
+
+- Added shared modal/popover/snackbar layer tokens to all four theme contracts and the runtime facade; Notistack containers now render above modal overlays.
+- Changed TRO item selectors to open upward so their option lists remain inside the scrollable modal body instead of being clipped behind the fixed footer.
+- Replaced the TRO modal and shared controlled-dropdown literal z-index values with the centralized layer tokens.
+- Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings.

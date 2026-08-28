@@ -222,6 +222,11 @@ $document-action-size-mobile: 40px;
 $document-table-row-height: 40px;
 $document-card-padding: 12px;
 
+/* ===== LAYERS ===== */
+$z-modal: 1400;
+$z-popover: 1500;
+$z-snackbar: 1600;
+
 /* ===== MOTION ===== */
 $motion-fast: 160ms;
 $motion-normal: 200ms;
