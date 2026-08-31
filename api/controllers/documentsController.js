@@ -30,6 +30,12 @@ import {
   updateTroAccountingService,
   updateTroDocumentService,
 } from "../services/TroDocumentService.js";
+import {
+  buildSelectedDocumentRegistry,
+  createDocumentRegistryWorkbook,
+  getDocumentRegistryFileName,
+} from "../services/documentRegistry.service.js";
+import ErrorsUtils from "../utils/Errors.js";
 
 // Controller to handle document creation
 export async function createDocument(req, res) {
@@ -119,6 +125,36 @@ export async function getDocuments(req, res) {
     res.json(result);
   } catch (e) {
     res.status(400).json({ message: e.message });
+  }
+}
+
+export async function getSelectedDocumentRegistry(req, res) {
+  try {
+    const registry = await buildSelectedDocumentRegistry(req.user, req.body);
+    return res.json(registry);
+  } catch (error) {
+    return ErrorsUtils.catchError(res, error);
+  }
+}
+
+export async function exportSelectedDocumentsXlsx(req, res) {
+  try {
+    const registry = await buildSelectedDocumentRegistry(req.user, req.body);
+    const workbook = createDocumentRegistryWorkbook(registry);
+    const fileName = getDocumentRegistryFileName(registry);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Length", workbook.length);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    );
+    return res.end(workbook);
+  } catch (error) {
+    return ErrorsUtils.catchError(res, error);
   }
 }
 

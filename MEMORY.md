@@ -2209,3 +2209,11 @@ Frontend:
 - Replaced the internal accounting abbreviations in TRO list indicators and modal checkbox labels with user-facing `Акт`, `Фото`, and `Специфікація` text while preserving the underlying database fields and workflow.
 - Existing TRO documents now show non-editable product names in selectable read-only fields and provide a copy action for every product row at every workflow stage; editable rows retain their selector plus the same copy action.
 - Added a clipboard fallback for browsers where the modern Clipboard API is unavailable or denied. Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings.
+
+## 2026-08-31 - Selected-document print and XLSX registries
+
+- Added multi-selection checkboxes to both document tables and mobile cards, including select-all for the currently filtered result, selected-row highlighting, a selected count, and clear-selection action. Selection is pruned when documents leave the active filtered result.
+- Added an adaptive registry toolbar outside the bounded results scroller. `Друк` opens a compact A4-landscape browser print registry, while `Зберегти XLSX` downloads the same normalized registry as a workbook.
+- Added protected `POST /api/documents/export/registry` and `POST /api/documents/export/xlsx` endpoints. They accept explicit selected document IDs, revalidate existing branch/role/hierarchy access for every document in controlled batches, reject mixed workspace categories, and cap one request at 250 documents.
+- TRO registries include movement, TA, TRO quantities, UP/accounting fields, and Act/Photo/Specification states. Return/exchange registries include their type, products, reason, executor, and comment.
+- Verified both registry variants against the development database and read the generated XLSX buffers back successfully (16 TRO columns and 12 return/exchange columns). Backend syntax checks, frontend lint, and production build passed with existing warnings.

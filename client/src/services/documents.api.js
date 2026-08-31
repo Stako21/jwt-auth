@@ -12,6 +12,64 @@ export async function fetchDocuments(params = {}) {
   return data;
 }
 
+export async function fetchSelectedDocumentRegistry(documentIds, category) {
+  const { data } = await api.post("/export/registry", {
+    documentIds,
+    category,
+  });
+  return data;
+}
+
+function getDownloadFileName(contentDisposition, fallback) {
+  const encodedMatch = String(contentDisposition || "").match(
+    /filename\*=UTF-8''([^;]+)/i,
+  );
+  if (encodedMatch) {
+    try {
+      return decodeURIComponent(encodedMatch[1]);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+export async function downloadSelectedDocumentsXlsx(documentIds, category) {
+  let response;
+  try {
+    response = await api.post(
+      "/export/xlsx",
+      { documentIds, category },
+      { responseType: "blob" },
+    );
+  } catch (error) {
+    if (error?.response?.data instanceof Blob) {
+      try {
+        error.response.data = JSON.parse(await error.response.data.text());
+      } catch {
+        // Keep the original response when it is not a JSON error payload.
+      }
+    }
+    throw error;
+  }
+  const fallback = category === "tro"
+    ? "tro-documents.xlsx"
+    : "return-exchange-documents.xlsx";
+  const fileName = getDownloadFileName(
+    response.headers["content-disposition"],
+    fallback,
+  );
+  const url = URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return fileName;
+}
+
 export async function openDocumentPdf(id) {
   try {
     const res = await api.get(`/${id}/pdf`, { responseType: "blob" });

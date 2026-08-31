@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { openDocumentPdf } from "../../services/documents.api";
 import { ROLE_IDS } from "../../utils/roles.js";
+import FormInput from "../FormControl/FormInput.jsx";
 import DocumentRowActions from "./DocumentRowAction";
 import StatusBadge from "./StatusBadge";
 import style from "./DocumentsTable.module.scss";
@@ -88,6 +89,24 @@ function TroRequiredDocuments({ doc }) {
   );
 }
 
+function SelectionCheckbox({ checked, indeterminate = false, onChange, label }) {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+
+  return (
+    <FormInput
+      ref={inputRef}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      aria-label={label}
+    />
+  );
+}
+
 export default function DocumentTable({
   documents,
   category = "return-exchange",
@@ -95,12 +114,21 @@ export default function DocumentTable({
   reloadDocuments,
   onEditDocument,
   onViewDocument,
+  selectedIds,
+  onToggleSelection,
+  onToggleAll,
 }) {
   const [loadingId, setLoadingId] = useState(null);
   const isTroTable = category === "tro";
   const showBranchColumn = documents.some(
     (doc) => Number(doc.branch_id) !== Number(currentUser.branchId),
   );
+  const selectedCount = documents.reduce(
+    (count, doc) => count + Number(selectedIds.has(Number(doc.id))),
+    0,
+  );
+  const allSelected = documents.length > 0 && selectedCount === documents.length;
+  const partiallySelected = selectedCount > 0 && !allSelected;
 
   const handleOpenPdf = async (id) => {
     try {
@@ -156,6 +184,7 @@ export default function DocumentTable({
           } ${showBranchColumn ? style.withBranch : ""}`}
         >
           <colgroup>
+            <col className={style.selectionColumn} />
             <col className={style.statusColumn} />
             <col className={style.numberColumn} />
             {showBranchColumn ? <col className={style.branchColumn} /> : null}
@@ -173,6 +202,14 @@ export default function DocumentTable({
           </colgroup>
           <thead>
             <tr>
+              <th className={style.selectionCell}>
+                <SelectionCheckbox
+                  checked={allSelected}
+                  indeterminate={partiallySelected}
+                  onChange={onToggleAll}
+                  label="Вибрати всі показані документи"
+                />
+              </th>
               <th aria-label="Статус">
                 <i className="fa-regular fa-flag" aria-hidden="true"></i>
               </th>
@@ -190,7 +227,18 @@ export default function DocumentTable({
 
           <tbody>
             {documents.map((doc) => (
-              <tr key={doc.id} onClick={(event) => handleDocumentOpen(event, doc)}>
+              <tr
+                data-selected={selectedIds.has(Number(doc.id)) || undefined}
+                key={doc.id}
+                onClick={(event) => handleDocumentOpen(event, doc)}
+              >
+                <td className={style.selectionCell}>
+                  <SelectionCheckbox
+                    checked={selectedIds.has(Number(doc.id))}
+                    onChange={() => onToggleSelection(doc.id)}
+                    label={`Вибрати документ ${doc.document_number}`}
+                  />
+                </td>
                 <td className={style.statusCell}>
                   <StatusBadge status={doc.status} />
                 </td>
@@ -231,11 +279,19 @@ export default function DocumentTable({
           <article
             className={style.documentCard}
             data-status={doc.status}
+            data-selected={selectedIds.has(Number(doc.id)) || undefined}
             key={doc.id}
             onClick={(event) => handleDocumentOpen(event, doc)}
           >
             <div className={style.cardHeader}>
-              <StatusBadge status={doc.status} showLabel />
+              <div className={style.cardHeaderStatus}>
+                <SelectionCheckbox
+                  checked={selectedIds.has(Number(doc.id))}
+                  onChange={() => onToggleSelection(doc.id)}
+                  label={`Вибрати документ ${doc.document_number}`}
+                />
+                <StatusBadge status={doc.status} showLabel />
+              </div>
               <strong>№ {doc.document_number}</strong>
             </div>
 

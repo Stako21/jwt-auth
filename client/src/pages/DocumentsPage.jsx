@@ -1,8 +1,14 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useSnackbar } from "notistack";
 import FormInput from "../components/FormControl/FormInput.jsx";
 import FormSelect from "../components/FormControl/FormSelect.jsx";
 import DocumentTable from "../components/Documents/DocumentsTable.jsx";
-import { fetchDocuments, getDocumentById } from "../services/documents.api.js";
+import {
+  downloadSelectedDocumentsXlsx,
+  fetchDocuments,
+  fetchSelectedDocumentRegistry,
+  getDocumentById,
+} from "../services/documents.api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
 import CreateReturnDocumentModal from "../modals/CreateReturnDocumentModal.jsx";
 import {
@@ -23,6 +29,10 @@ import { UI_TIMING } from "../uiTokens.js";
 import { getTroTaOptions } from "../services/documents.api.js";
 import CreateTroDocumentModal from "../modals/CreateTroDocumentModal.jsx";
 import { ROLE_IDS } from "../utils/roles.js";
+import {
+  openDocumentRegistryPrintWindow,
+  renderDocumentRegistryForPrint,
+} from "../utils/printDocumentRegistry.js";
 import style from "./DocumentsPage.module.scss";
 
 const RETURN_EXCHANGE_STATUSES = [
@@ -64,6 +74,7 @@ const EMPTY_FILTERS = Object.freeze({
 });
 
 export default function DocumentsPage({ category = "return-exchange" }) {
+  const { enqueueSnackbar } = useSnackbar();
   const isTroPage = category === "tro";
   const documentStatuses = isTroPage ? TRO_STATUSES : RETURN_EXCHANGE_STATUSES;
   const [documents, setDocuments] = useState([]);
@@ -88,6 +99,8 @@ export default function DocumentsPage({ category = "return-exchange" }) {
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [contractorSearch, setContractorSearch] = useState("");
   const [showContractorDropdown, setShowContractorDropdown] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [registryAction, setRegistryAction] = useState("");
 
   const currentBranchName =
     userInfo?.currentBranch?.shortName || userInfo?.currentBranch?.name || null;
@@ -175,6 +188,89 @@ export default function DocumentsPage({ category = "return-exchange" }) {
     () => filterDocuments(documents, appliedFilters),
     [appliedFilters, documents],
   );
+
+  useEffect(() => {
+    const visibleIds = new Set(filteredDocuments.map((doc) => Number(doc.id)));
+    setSelectedIds((current) => {
+      const next = new Set(
+        Array.from(current).filter((documentId) => visibleIds.has(documentId)),
+      );
+      return next.size === current.size ? current : next;
+    });
+  }, [category, filteredDocuments]);
+
+  const selectedDocumentIds = useMemo(
+    () => filteredDocuments
+      .filter((doc) => selectedIds.has(Number(doc.id)))
+      .map((doc) => Number(doc.id)),
+    [filteredDocuments, selectedIds],
+  );
+  const allFilteredSelected =
+    filteredDocuments.length > 0 &&
+    selectedDocumentIds.length === filteredDocuments.length;
+
+  const toggleDocumentSelection = (documentId) => {
+    const normalizedId = Number(documentId);
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(normalizedId)) next.delete(normalizedId);
+      else next.add(normalizedId);
+      return next;
+    });
+  };
+
+  const toggleAllDocuments = () => {
+    setSelectedIds(
+      allFilteredSelected
+        ? new Set()
+        : new Set(filteredDocuments.map((doc) => Number(doc.id))),
+    );
+  };
+
+  const printSelectedDocuments = async () => {
+    if (!selectedDocumentIds.length) return;
+
+    const printWindow = openDocumentRegistryPrintWindow();
+    if (!printWindow) {
+      enqueueSnackbar("Дозвольте спливаюче вікно для друку реєстру", {
+        variant: "warning",
+      });
+      return;
+    }
+
+    setRegistryAction("print");
+    try {
+      const registry = await fetchSelectedDocumentRegistry(
+        selectedDocumentIds,
+        category,
+      );
+      renderDocumentRegistryForPrint(printWindow, registry);
+    } catch (actionError) {
+      printWindow.close();
+      enqueueSnackbar(
+        actionError?.response?.data?.error || "Не вдалося сформувати реєстр",
+        { variant: "error" },
+      );
+    } finally {
+      setRegistryAction("");
+    }
+  };
+
+  const exportSelectedDocuments = async () => {
+    if (!selectedDocumentIds.length) return;
+    setRegistryAction("xlsx");
+    try {
+      await downloadSelectedDocumentsXlsx(selectedDocumentIds, category);
+      enqueueSnackbar("Реєстр XLSX збережено", { variant: "success" });
+    } catch (actionError) {
+      enqueueSnackbar(
+        actionError?.response?.data?.error || "Не вдалося зберегти XLSX",
+        { variant: "error" },
+      );
+    } finally {
+      setRegistryAction("");
+    }
+  };
 
   const activeFilterCount =
     Number(filters.statuses.length > 0) +
@@ -458,6 +554,48 @@ export default function DocumentsPage({ category = "return-exchange" }) {
         </div>
       </form>
 
+      <div className={style.registryToolbar} aria-label="Дії з вибраними документами">
+        <div className={style.registrySelection}>
+          <label>
+            <FormInput
+              type="checkbox"
+              checked={allFilteredSelected}
+              disabled={!filteredDocuments.length}
+              onChange={toggleAllDocuments}
+            />
+            <span>Вибрати всі показані</span>
+          </label>
+          <strong>Вибрано: {selectedDocumentIds.length}</strong>
+        </div>
+        <div className={style.registryActions}>
+          <button
+            type="button"
+            disabled={!selectedDocumentIds.length || Boolean(registryAction)}
+            onClick={printSelectedDocuments}
+          >
+            <i className="fa-solid fa-print" aria-hidden="true"></i>
+            {registryAction === "print" ? "Формування…" : "Друк"}
+          </button>
+          <button
+            type="button"
+            disabled={!selectedDocumentIds.length || Boolean(registryAction)}
+            onClick={exportSelectedDocuments}
+          >
+            <i className="fa-regular fa-file-excel" aria-hidden="true"></i>
+            {registryAction === "xlsx" ? "Збереження…" : "Зберегти XLSX"}
+          </button>
+          <button
+            className={style.clearSelection}
+            type="button"
+            disabled={!selectedDocumentIds.length || Boolean(registryAction)}
+            onClick={() => setSelectedIds(new Set())}
+          >
+            <i className="fa-solid fa-xmark" aria-hidden="true"></i>
+            Зняти вибір
+          </button>
+        </div>
+      </div>
+
       {!isTroPage && showCreateReturn ? (
         <CreateReturnDocumentModal
           isOpen={showCreateReturn}
@@ -513,6 +651,9 @@ export default function DocumentsPage({ category = "return-exchange" }) {
             reloadDocuments={loadDocuments}
             onEditDocument={(doc) => openDocumentModal(doc, false)}
             onViewDocument={(doc) => openDocumentModal(doc, true)}
+            selectedIds={selectedIds}
+            onToggleSelection={toggleDocumentSelection}
+            onToggleAll={toggleAllDocuments}
           />
         </div>
       ) : null}

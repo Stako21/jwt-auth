@@ -319,6 +319,88 @@
   font-size: 13px;
 }
 
+.registryToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  min-height: 48px;
+  margin-bottom: $space-3;
+  padding: $space-2 $space-3;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-lg;
+  background: $surface-container-low;
+}
+
+.registrySelection,
+.registryActions,
+.registrySelection label {
+  display: flex;
+  align-items: center;
+}
+
+.registrySelection {
+  gap: $space-4;
+  min-width: 0;
+
+  label {
+    gap: $space-2;
+    color: $text-medium;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  input {
+    margin: 0;
+  }
+
+  strong {
+    color: $text-high;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+}
+
+.registryActions {
+  justify-content: flex-end;
+  gap: $space-2;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-2;
+    min-height: 32px;
+    padding: 0 $space-3;
+    border: 1px solid $outline-medium;
+    border-radius: $radius-md;
+    background: $surface-control;
+    color: $text-high;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
+      border-color: $primary-accent;
+      background: $primary-accent-surface-soft;
+      color: $primary-accent-light;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
+  }
+
+  .clearSelection {
+    color: $text-medium;
+  }
+}
+
 @media (max-width: 1550px) and (min-width: 901px) {
   .filterPanel {
     grid-template-columns: 160px 160px minmax(130px, 1fr) minmax(150px, 1fr);
@@ -416,6 +498,32 @@
 
   .applyButton {
     flex: 1;
+  }
+
+  .registryToolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: $space-3;
+  }
+
+  .registrySelection {
+    justify-content: space-between;
+    gap: $space-2;
+  }
+
+  .registryActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    button {
+      min-height: $control-height-lg;
+      padding: 0 $space-2;
+      font-size: 12px;
+    }
+
+    .clearSelection {
+      grid-column: 1 / -1;
+    }
   }
 }
 
