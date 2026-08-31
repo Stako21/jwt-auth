@@ -35,7 +35,8 @@ const TRO_COLUMNS = Object.freeze([
   { key: "tradePoint", label: "Торгова точка", width: 34 },
   { key: "author", label: "Автор", width: 24 },
   { key: "ta", label: "ТА", width: 24 },
-  { key: "items", label: "ТРО та кількість", width: 48 },
+  { key: "troItems", label: "ТРО", width: 42 },
+  { key: "troQuantities", label: "Кількість", width: 14 },
   { key: "status", label: "Статус", width: 20 },
   { key: "upNumber", label: "№ документа з УП", width: 20 },
   { key: "executor", label: "Виконавець", width: 26 },
@@ -116,6 +117,19 @@ function formatItems(items = []) {
     .join("; ");
 }
 
+function formatTroItems(items = []) {
+  return items
+    .map((item) => item.productName || item.product_name || "")
+    .filter(Boolean)
+    .join("\n");
+}
+
+function formatTroQuantities(items = []) {
+  return items
+    .map((item) => formatQuantity(item.quantity))
+    .join("\n");
+}
+
 function yesNo(value) {
   return value ? "Так" : "Ні";
 }
@@ -146,6 +160,8 @@ function troRow(doc) {
     ...commonRow(doc),
     type: TRO_MOVEMENT_LABELS[tro.movementType] || tro.movementType || "",
     ta: tro.taName || "",
+    troItems: formatTroItems(doc.items),
+    troQuantities: formatTroQuantities(doc.items),
     upNumber: tro.upDocumentNumber || "",
     executor: tro.executorName || "",
     act: yesNo(isInstall ? tro.appInstall : tro.appReturn),
@@ -217,6 +233,16 @@ export function createDocumentRegistryWorkbook(registry) {
   ];
   const worksheet = XLSX.utils.aoa_to_sheet(values);
   worksheet["!cols"] = registry.columns.map((column) => ({ wch: column.width }));
+  worksheet["!rows"] = [
+    { hpt: 20 },
+    ...registry.rows.map((row) => {
+      const lineCount = Math.max(
+        String(row.troItems || "").split("\n").length,
+        String(row.troQuantities || "").split("\n").length,
+      );
+      return { hpt: Math.max(18, lineCount * 15) };
+    }),
+  ];
   worksheet["!autofilter"] = {
     ref: XLSX.utils.encode_range({ r: 0, c: 0 }, { r: values.length - 1, c: registry.columns.length - 1 }),
   };

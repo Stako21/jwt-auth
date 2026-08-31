@@ -46,7 +46,7 @@ export function renderDocumentRegistryForPrint(printWindow, registry) {
       h1 { margin: 0 0 3mm; font-size: 14pt; }
       .meta { display: flex; justify-content: space-between; gap: 8mm; margin-bottom: 3mm; font-size: 8pt; }
       table { width: 100%; border-collapse: collapse; table-layout: auto; }
-      th, td { padding: 1.5mm; border: 1px solid currentColor; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+      th, td { padding: 1.5mm; border: 1px solid currentColor; text-align: left; vertical-align: top; overflow-wrap: anywhere; white-space: pre-line; }
       th { font-weight: 700; }
       tr { break-inside: avoid; }
       @media print { .no-print { display: none; } }
