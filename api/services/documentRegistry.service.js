@@ -26,6 +26,18 @@ const TRO_MOVEMENT_LABELS = Object.freeze({
   RETURN: "Повернення",
 });
 
+const UNIT_LABELS = Object.freeze({
+  PCS: "шт",
+  KG: "кг",
+  BOX: "ящ",
+  BLOCK: "блок",
+});
+
+const ITEM_OPERATION_LABELS = Object.freeze({
+  TAKE: "Забрати",
+  GIVE: "Видати",
+});
+
 const TRO_COLUMNS = Object.freeze([
   { key: "branch", label: "Філія", width: 16 },
   { key: "number", label: "№ документа", width: 20 },
@@ -54,7 +66,8 @@ const RETURN_EXCHANGE_COLUMNS = Object.freeze([
   { key: "contractor", label: "Контрагент", width: 30 },
   { key: "tradePoint", label: "Торгова точка", width: 34 },
   { key: "author", label: "Автор", width: 24 },
-  { key: "items", label: "Товари та кількість", width: 52 },
+  { key: "products", label: "Товар", width: 44 },
+  { key: "productQuantities", label: "Кількість", width: 16 },
   { key: "status", label: "Статус", width: 20 },
   { key: "reason", label: "Причина", width: 28 },
   { key: "executor", label: "Виконавець", width: 16 },
@@ -106,22 +119,30 @@ function formatQuantity(value) {
   return quantity.toLocaleString("uk-UA", { maximumFractionDigits: 3 });
 }
 
-function formatItems(items = []) {
+function formatProductNames(items = [], includeOperation = false) {
   return items
     .map((item) => {
       const name = item.productName || item.product_name || "";
-      const unit = item.unit ? ` ${item.unit}` : "";
-      return `${name} — ${formatQuantity(item.quantity)}${unit}`.trim();
+      const operation = includeOperation
+        ? ITEM_OPERATION_LABELS[item.operation]
+        : "";
+      return operation ? `${operation}: ${name}` : name;
     })
     .filter(Boolean)
-    .join("; ");
+    .join("\n");
+}
+
+function formatProductQuantities(items = []) {
+  return items
+    .map((item) => {
+      const unit = item.unit ? ` ${UNIT_LABELS[item.unit] || item.unit}` : "";
+      return `${formatQuantity(item.quantity)}${unit}`.trim();
+    })
+    .join("\n");
 }
 
 function formatTroItems(items = []) {
-  return items
-    .map((item) => item.productName || item.product_name || "")
-    .filter(Boolean)
-    .join("\n");
+  return formatProductNames(items);
 }
 
 function formatTroQuantities(items = []) {
@@ -146,7 +167,6 @@ function commonRow(doc) {
     contractor: doc.contractor?.name || "",
     tradePoint,
     author: doc.author || "",
-    items: formatItems(doc.items),
     status: STATUS_LABELS[doc.status] || doc.status || "",
     comment: doc.comment || "",
   };
@@ -174,6 +194,8 @@ function returnExchangeRow(doc) {
   return {
     ...commonRow(doc),
     type: DOCUMENT_TYPE_LABELS[doc.documentType] || doc.documentType || "",
+    products: formatProductNames(doc.items, doc.documentType === "EXCHANGE"),
+    productQuantities: formatProductQuantities(doc.items),
     reason: doc.reason || "",
     executor: doc.executorType === "DRIVER" ? "Водій" : "ТА",
   };
@@ -239,6 +261,8 @@ export function createDocumentRegistryWorkbook(registry) {
       const lineCount = Math.max(
         String(row.troItems || "").split("\n").length,
         String(row.troQuantities || "").split("\n").length,
+        String(row.products || "").split("\n").length,
+        String(row.productQuantities || "").split("\n").length,
       );
       return { hpt: Math.max(18, lineCount * 15) };
     }),

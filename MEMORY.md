@@ -2216,10 +2216,16 @@ Frontend:
 - Added an adaptive registry toolbar outside the bounded results scroller. `Друк` opens a compact A4-landscape browser print registry, while `Зберегти XLSX` downloads the same normalized registry as a workbook.
 - Added protected `POST /api/documents/export/registry` and `POST /api/documents/export/xlsx` endpoints. They accept explicit selected document IDs, revalidate existing branch/role/hierarchy access for every document in controlled batches, reject mixed workspace categories, and cap one request at 250 documents.
 - TRO registries include movement, TA, TRO quantities, UP/accounting fields, and Act/Photo/Specification states. Return/exchange registries include their type, products, reason, executor, and comment.
-- Verified both registry variants against the development database and read the generated XLSX buffers back successfully (17 TRO columns and 12 return/exchange columns). Backend syntax checks, frontend lint, and production build passed with existing warnings.
+- Verified both registry variants against the development database and read the generated XLSX buffers back successfully (17 TRO columns and 13 return/exchange columns). Backend syntax checks, frontend lint, and production build passed with existing warnings.
 
 ## 2026-08-31 - Separate TRO and quantity registry cells
 
 - Split the combined `ТРО та кількість` registry column into adjacent `ТРО` and `Кількість` cells for both browser printing and XLSX downloads.
 - Multi-item documents keep names and quantities in matching line order; generated XLSX row height grows with the item count, and the print table preserves line breaks.
 - Verified the two headers and their separate values by reading a generated TRO workbook back against the development database. Backend syntax check, frontend lint, and production build passed with existing warnings.
+
+## 2026-08-31 - Separate return/exchange product and quantity cells
+
+- Split the combined return/exchange registry product summary into adjacent `Товар` and `Кількість` cells for both browser printing and XLSX downloads.
+- Multi-item product names and quantities remain aligned line by line; quantity values retain their localized units, and exchange products retain `Забрати`/`Видати` operation context.
+- Verified the separate headers and values by reading a generated return/exchange workbook back against the development database. Backend syntax check, frontend lint, and production build passed with existing warnings.
