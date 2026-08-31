@@ -140,6 +140,44 @@ export default function CreateTroDocumentModal({
       itemIndex === index ? { ...item, ...patch } : item));
   };
 
+  const getProductLabel = (item) =>
+    productOptions.find(
+      (option) => String(option.value) === String(item.troProductId),
+    )?.label || item.productName || "";
+
+  const copyProductLabel = async (item) => {
+    const label = getProductLabel(item);
+    if (!label) return;
+
+    try {
+      let copied = false;
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(label);
+          copied = true;
+        } catch {
+          copied = false;
+        }
+      }
+
+      if (!copied) {
+        const copyField = document.createElement("textarea");
+        copyField.value = label;
+        copyField.style.position = "fixed";
+        copyField.style.opacity = "0";
+        document.body.appendChild(copyField);
+        copyField.select();
+        copied = document.execCommand("copy");
+        copyField.remove();
+        if (!copied) throw new Error("Copy command failed");
+      }
+      enqueueSnackbar("Назву ТРО скопійовано", { variant: "success" });
+    } catch (error) {
+      console.error("Failed to copy TRO product name:", error);
+      enqueueSnackbar("Не вдалося скопіювати назву ТРО", { variant: "error" });
+    }
+  };
+
   const generalPayload = () => ({
     documentType: "TRO",
     contractorId: Number(contractorId),
@@ -238,9 +276,32 @@ export default function CreateTroDocumentModal({
             <div className={styles.sectionTitle}><h3>ТРО</h3>{generalEditable ? <button type="button" onClick={() => setItems((current) => [...current, { ...EMPTY_ITEM }])}><i className="fa-solid fa-plus" /> Додати</button> : null}</div>
             <div className={styles.itemList}>{items.map((item, index) => (
               <div className={styles.itemRow} key={`${index}-${item.troProductId}`}>
-                <CompactSelect value={item.troProductId} disabled={!generalEditable} options={productOptions}
-                  onChange={(value) => updateItem(index, { troProductId: value, productName: troProducts.find((product) => String(product.id) === String(value))?.name || "" })}
-                  ariaLabel={`ТРО ${index + 1}`} placement="top" />
+                <div className={styles.productField}>
+                  {generalEditable ? (
+                    <CompactSelect value={item.troProductId} options={productOptions}
+                      onChange={(value) => updateItem(index, { troProductId: value, productName: troProducts.find((product) => String(product.id) === String(value))?.name || "" })}
+                      ariaLabel={`ТРО ${index + 1}`} placement="top" />
+                  ) : (
+                    <FormInput
+                      className={styles.copyableProductName}
+                      value={getProductLabel(item)}
+                      readOnly
+                      aria-label={`ТРО ${index + 1}`}
+                      onFocus={(event) => event.currentTarget.select()}
+                    />
+                  )}
+                  {editingDocument ? (
+                    <button
+                      className={styles.copyProduct}
+                      type="button"
+                      title="Копіювати назву ТРО"
+                      aria-label={`Копіювати назву ТРО ${index + 1}`}
+                      onClick={() => copyProductLabel(item)}
+                    >
+                      <i className="fa-regular fa-copy" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
                 <FormInput type="number" min="0.001" step="0.001" value={item.quantity} disabled={!generalEditable}
                   onChange={(event) => updateItem(index, { quantity: event.target.value })} aria-label="Кількість" />
                 {generalEditable ? <button className={styles.removeItem} type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label="Видалити позицію"><i className="fa-solid fa-trash" /></button> : null}
@@ -255,7 +316,7 @@ export default function CreateTroDocumentModal({
               <div className={styles.field}><label>Виконавець</label><FormInput maxLength={150} value={executorName} disabled={!accountingEditable} onChange={(event) => setExecutorName(event.target.value)} /></div>
             </div>
             <div className={styles.checks}>
-              {movementType === "INSTALL" ? <><label><FormInput type="checkbox" checked={appInstall} disabled={!accountingEditable} onChange={(event) => setAppInstall(event.target.checked)} /> АППУ · Акт приймання-передачі</label><label><FormInput type="checkbox" checked={photoInstall} disabled={!accountingEditable} onChange={(event) => setPhotoInstall(event.target.checked)} /> ФУ · Фото</label></> : <><label><FormInput type="checkbox" checked={appReturn} disabled={!accountingEditable} onChange={(event) => setAppReturn(event.target.checked)} /> АППВ · Акт приймання-передачі</label><label><FormInput type="checkbox" checked={warehouseSpecReturn} disabled={!accountingEditable} onChange={(event) => setWarehouseSpecReturn(event.target.checked)} /> ССВ · Складська специфікація</label></>}
+              {movementType === "INSTALL" ? <><label><FormInput type="checkbox" checked={appInstall} disabled={!accountingEditable} onChange={(event) => setAppInstall(event.target.checked)} /> Акт</label><label><FormInput type="checkbox" checked={photoInstall} disabled={!accountingEditable} onChange={(event) => setPhotoInstall(event.target.checked)} /> Фото</label></> : <><label><FormInput type="checkbox" checked={appReturn} disabled={!accountingEditable} onChange={(event) => setAppReturn(event.target.checked)} /> Акт</label><label><FormInput type="checkbox" checked={warehouseSpecReturn} disabled={!accountingEditable} onChange={(event) => setWarehouseSpecReturn(event.target.checked)} /> Специфікація</label></>}
             </div>
           </section> : null}
         </div>

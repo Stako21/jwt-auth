@@ -31,11 +31,13 @@ function troRequiredDocuments(doc) {
     return [
       {
         code: "АППУ",
+        text: "Акт",
         label: "Акт приймання-передачі",
         checked: Number(doc.tro_app_install) === 1,
       },
       {
         code: "ФУ",
+        text: "Фото",
         label: "Фото",
         checked: Number(doc.tro_photo_install) === 1,
       },
@@ -46,11 +48,13 @@ function troRequiredDocuments(doc) {
     return [
       {
         code: "АППВ",
+        text: "Акт",
         label: "Акт приймання-передачі",
         checked: Number(doc.tro_app_return) === 1,
       },
       {
         code: "ССВ",
+        text: "Специфікація",
         label: "Складська специфікація",
         checked: Number(doc.tro_warehouse_spec_return) === 1,
       },
@@ -77,7 +81,7 @@ function TroRequiredDocuments({ doc }) {
           title={`${item.label}: ${item.checked ? "є" : "немає"}`}
           aria-label={`${item.label}: ${item.checked ? "є" : "немає"}`}
         >
-          {item.code}
+          {item.text}
         </span>
       ))}
     </div>

@@ -2203,3 +2203,9 @@ Frontend:
 
 - Fixed the default next-day period in `ReportXlsx1CSales`: it now advances the `Date` before formatting instead of producing invalid values such as `2026-08-32` on the last day of a month.
 - Verified month, leap-year February, and year transitions. Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings.
+
+## 2026-08-31 - TRO accounting labels and copyable product names
+
+- Replaced the internal accounting abbreviations in TRO list indicators and modal checkbox labels with user-facing `Акт`, `Фото`, and `Специфікація` text while preserving the underlying database fields and workflow.
+- Existing TRO documents now show non-editable product names in selectable read-only fields and provide a copy action for every product row at every workflow stage; editable rows retain their selector plus the same copy action.
+- Added a clipboard fallback for browsers where the modern Clipboard API is unavailable or denied. Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings.
