@@ -2198,3 +2198,8 @@ Frontend:
 - Raised the stacking level of the sticky `Дії` header and body cells in both document workspaces.
 - Kept an opaque odd/even row surface beneath the translucent hover overlay, preventing horizontally scrolled row content from showing through or covering the fixed actions column.
 - Frontend production build passed with the existing Sass legacy API and bundle-size warnings.
+
+## 2026-08-31 - XLSX 1C sales month-boundary period fix
+
+- Fixed the default next-day period in `ReportXlsx1CSales`: it now advances the `Date` before formatting instead of producing invalid values such as `2026-08-32` on the last day of a month.
+- Verified month, leap-year February, and year transitions. Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings.

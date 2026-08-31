@@ -8,9 +8,10 @@ function pad(value) {
   return String(value).padStart(2, "0");
 }
 
-function todayKey() {
+function tomorrowKey() {
   const date = new Date();
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate() + 1)}`;
+  date.setDate(date.getDate() + 1);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function formatDateLabel(value) {
@@ -92,7 +93,7 @@ function ReportRow({ item, metrics, type }) {
 }
 
 export function ReportXlsx1CSales({ report, setLastUpdateTime }) {
-  const defaultDate = todayKey();
+  const defaultDate = tomorrowKey();
   const [dateFrom, setDateFrom] = useState(defaultDate);
   const [dateTo, setDateTo] = useState(defaultDate);
   const [data, setData] = useState(null);
