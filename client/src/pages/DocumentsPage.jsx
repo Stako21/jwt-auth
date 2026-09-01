@@ -6,6 +6,7 @@ import DocumentTable from "../components/Documents/DocumentsTable.jsx";
 import {
   downloadSelectedDocumentsXlsx,
   fetchDocuments,
+  fetchDocumentRegistryColumns,
   fetchSelectedDocumentRegistry,
   getDocumentById,
 } from "../services/documents.api.js";
@@ -33,6 +34,7 @@ import {
   openDocumentRegistryPrintWindow,
   renderDocumentRegistryForPrint,
 } from "../utils/printDocumentRegistry.js";
+import DocumentRegistryOptionsModal from "../components/Documents/DocumentRegistryOptionsModal.jsx";
 import style from "./DocumentsPage.module.scss";
 
 const RETURN_EXCHANGE_STATUSES = [
@@ -101,6 +103,8 @@ export default function DocumentsPage({ category = "return-exchange" }) {
   const [showContractorDropdown, setShowContractorDropdown] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [registryAction, setRegistryAction] = useState("");
+  const [registryOptions, setRegistryOptions] = useState(null);
+  const [registryOptionsLoading, setRegistryOptionsLoading] = useState(false);
 
   const currentBranchName =
     userInfo?.currentBranch?.shortName || userInfo?.currentBranch?.name || null;
@@ -227,7 +231,23 @@ export default function DocumentsPage({ category = "return-exchange" }) {
     );
   };
 
-  const printSelectedDocuments = async () => {
+  const openRegistryOptions = async (action) => {
+    if (!selectedDocumentIds.length) return;
+    setRegistryOptionsLoading(true);
+    try {
+      const options = await fetchDocumentRegistryColumns(category);
+      setRegistryOptions({ action, columns: options.columns });
+    } catch (actionError) {
+      enqueueSnackbar(
+        actionError?.response?.data?.error || "Не вдалося завантажити список колонок",
+        { variant: "error" },
+      );
+    } finally {
+      setRegistryOptionsLoading(false);
+    }
+  };
+
+  const printSelectedDocuments = async (columnKeys) => {
     if (!selectedDocumentIds.length) return;
 
     const printWindow = openDocumentRegistryPrintWindow();
@@ -243,6 +263,7 @@ export default function DocumentsPage({ category = "return-exchange" }) {
       const registry = await fetchSelectedDocumentRegistry(
         selectedDocumentIds,
         category,
+        columnKeys,
       );
       renderDocumentRegistryForPrint(printWindow, registry);
     } catch (actionError) {
@@ -256,11 +277,11 @@ export default function DocumentsPage({ category = "return-exchange" }) {
     }
   };
 
-  const exportSelectedDocuments = async () => {
+  const exportSelectedDocuments = async (columnKeys) => {
     if (!selectedDocumentIds.length) return;
     setRegistryAction("xlsx");
     try {
-      await downloadSelectedDocumentsXlsx(selectedDocumentIds, category);
+      await downloadSelectedDocumentsXlsx(selectedDocumentIds, category, columnKeys);
       enqueueSnackbar("Реєстр XLSX збережено", { variant: "success" });
     } catch (actionError) {
       enqueueSnackbar(
@@ -270,6 +291,14 @@ export default function DocumentsPage({ category = "return-exchange" }) {
     } finally {
       setRegistryAction("");
     }
+  };
+
+  const confirmRegistryOptions = async (columnKeys) => {
+    const action = registryOptions?.action;
+    if (!action) return;
+    if (action === "print") await printSelectedDocuments(columnKeys);
+    else await exportSelectedDocuments(columnKeys);
+    setRegistryOptions(null);
   };
 
   const activeFilterCount =
@@ -570,16 +599,16 @@ export default function DocumentsPage({ category = "return-exchange" }) {
         <div className={style.registryActions}>
           <button
             type="button"
-            disabled={!selectedDocumentIds.length || Boolean(registryAction)}
-            onClick={printSelectedDocuments}
+            disabled={!selectedDocumentIds.length || Boolean(registryAction) || registryOptionsLoading}
+            onClick={() => openRegistryOptions("print")}
           >
             <i className="fa-solid fa-print" aria-hidden="true"></i>
             {registryAction === "print" ? "Формування…" : "Друк"}
           </button>
           <button
             type="button"
-            disabled={!selectedDocumentIds.length || Boolean(registryAction)}
-            onClick={exportSelectedDocuments}
+            disabled={!selectedDocumentIds.length || Boolean(registryAction) || registryOptionsLoading}
+            onClick={() => openRegistryOptions("xlsx")}
           >
             <i className="fa-regular fa-file-excel" aria-hidden="true"></i>
             {registryAction === "xlsx" ? "Збереження…" : "Зберегти XLSX"}
@@ -595,6 +624,16 @@ export default function DocumentsPage({ category = "return-exchange" }) {
           </button>
         </div>
       </div>
+
+      {registryOptions ? (
+        <DocumentRegistryOptionsModal
+          action={registryOptions.action}
+          columns={registryOptions.columns}
+          busy={Boolean(registryAction)}
+          onClose={() => !registryAction && setRegistryOptions(null)}
+          onConfirm={confirmRegistryOptions}
+        />
+      ) : null}
 
       {!isTroPage && showCreateReturn ? (
         <CreateReturnDocumentModal

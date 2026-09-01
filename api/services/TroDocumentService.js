@@ -86,6 +86,18 @@ async function resolveTa(conn, user, requestedTaId, branchId) {
   return ta;
 }
 
+export function mergeTroItemsByName(items) {
+  const normalizedByName = new Map();
+  items.forEach((item) => {
+    const name = String(item.name || "").trim();
+    const nameKey = name.toLocaleLowerCase("uk-UA");
+    const existing = normalizedByName.get(nameKey);
+    if (existing) existing.quantity += item.quantity;
+    else normalizedByName.set(nameKey, { ...item, name });
+  });
+  return Array.from(normalizedByName.values());
+}
+
 async function validateItems(conn, items, branchId) {
   if (!Array.isArray(items) || !items.length) throw new Error("Додайте хоча б одну позицію ТРО");
   const normalized = [];
@@ -102,7 +114,7 @@ async function validateItems(conn, items, branchId) {
     if (!product) throw new Error("Позицію ТРО не знайдено або деактивовано");
     normalized.push({ productId, quantity, name: product.name });
   }
-  return normalized;
+  return mergeTroItemsByName(normalized);
 }
 
 async function insertItems(conn, documentId, items) {

@@ -12,10 +12,16 @@ export async function fetchDocuments(params = {}) {
   return data;
 }
 
-export async function fetchSelectedDocumentRegistry(documentIds, category) {
+export async function fetchDocumentRegistryColumns(category) {
+  const { data } = await api.get("/export/columns", { params: { category } });
+  return data;
+}
+
+export async function fetchSelectedDocumentRegistry(documentIds, category, columnKeys) {
   const { data } = await api.post("/export/registry", {
     documentIds,
     category,
+    columnKeys,
   });
   return data;
 }
@@ -34,12 +40,12 @@ function getDownloadFileName(contentDisposition, fallback) {
   return fallback;
 }
 
-export async function downloadSelectedDocumentsXlsx(documentIds, category) {
+export async function downloadSelectedDocumentsXlsx(documentIds, category, columnKeys) {
   let response;
   try {
     response = await api.post(
       "/export/xlsx",
-      { documentIds, category },
+      { documentIds, category, columnKeys },
       { responseType: "blob" },
     );
   } catch (error) {

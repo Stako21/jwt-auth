@@ -33,6 +33,7 @@ import {
 import {
   buildSelectedDocumentRegistry,
   createDocumentRegistryWorkbook,
+  getDocumentRegistryColumnOptions,
   getDocumentRegistryFileName,
 } from "../services/documentRegistry.service.js";
 import ErrorsUtils from "../utils/Errors.js";
@@ -132,6 +133,14 @@ export async function getSelectedDocumentRegistry(req, res) {
   try {
     const registry = await buildSelectedDocumentRegistry(req.user, req.body);
     return res.json(registry);
+  } catch (error) {
+    return ErrorsUtils.catchError(res, error);
+  }
+}
+
+export function getDocumentRegistryColumns(req, res) {
+  try {
+    return res.json(getDocumentRegistryColumnOptions(req.query.category));
   } catch (error) {
     return ErrorsUtils.catchError(res, error);
   }

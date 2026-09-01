@@ -26,11 +26,17 @@ export function renderDocumentRegistryForPrint(printWindow, registry) {
     .map((column) => `<th>${escapeHtml(column.label)}</th>`)
     .join("");
   const rows = registry.rows
-    .map(
-      (row) => `<tr>${registry.columns
-        .map((column) => `<td>${escapeHtml(row[column.key])}</td>`)
-        .join("")}</tr>`,
-    )
+    .map((row) => {
+      const cells = registry.columns.map((column) => {
+        const isItemColumn = registry.itemColumnKeys.includes(column.key);
+        if (!isItemColumn && row._groupIndex > 0) return "";
+        const rowSpan = !isItemColumn && row._groupSize > 1
+          ? ` rowspan="${row._groupSize}"`
+          : "";
+        return `<td${rowSpan}>${escapeHtml(row[column.key])}</td>`;
+      }).join("");
+      return `<tr>${cells}</tr>`;
+    })
     .join("");
 
   printWindow.document.open();

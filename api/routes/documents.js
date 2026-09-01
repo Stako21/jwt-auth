@@ -14,6 +14,7 @@ import {
   getTroTaOptions,
   updateTroAccounting,
   getSelectedDocumentRegistry,
+  getDocumentRegistryColumns,
   exportSelectedDocumentsXlsx,
 } from "../controllers/documentsController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
@@ -25,6 +26,7 @@ const router = Router();
 // Route to create a new document (protected)
 router.post("/", authMiddleware, createDocument);
 router.get("/tro/ta-options", authMiddleware, getTroTaOptions);
+router.get("/export/columns", authMiddleware, getDocumentRegistryColumns);
 router.post("/export/registry", authMiddleware, getSelectedDocumentRegistry);
 router.post("/export/xlsx", authMiddleware, exportSelectedDocumentsXlsx);
 router.put("/:id", authMiddleware, updateDocument);

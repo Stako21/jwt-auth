@@ -38,6 +38,16 @@ const ITEM_OPERATION_LABELS = Object.freeze({
   GIVE: "Видати",
 });
 
+const TRO_DEFAULT_COLUMN_KEYS = new Set([
+  "date",
+  "contractor",
+  "tradePoint",
+  "ta",
+  "troItem",
+  "troQuantity",
+  "status",
+]);
+
 const TRO_COLUMNS = Object.freeze([
   { key: "branch", label: "Філія", width: 16 },
   { key: "number", label: "№ документа", width: 20 },
@@ -47,8 +57,8 @@ const TRO_COLUMNS = Object.freeze([
   { key: "tradePoint", label: "Торгова точка", width: 34 },
   { key: "author", label: "Автор", width: 24 },
   { key: "ta", label: "ТА", width: 24 },
-  { key: "troItems", label: "ТРО", width: 42 },
-  { key: "troQuantities", label: "Кількість", width: 14 },
+  { key: "troItem", label: "ТРО", width: 42 },
+  { key: "troQuantity", label: "Кількість", width: 14 },
   { key: "status", label: "Статус", width: 20 },
   { key: "upNumber", label: "№ документа з УП", width: 20 },
   { key: "executor", label: "Виконавець", width: 26 },
@@ -73,6 +83,26 @@ const RETURN_EXCHANGE_COLUMNS = Object.freeze([
   { key: "executor", label: "Виконавець", width: 16 },
   { key: "comment", label: "Коментар", width: 36 },
 ]);
+
+function getCategoryColumns(category) {
+  if (category === "tro") return TRO_COLUMNS;
+  if (category === "return-exchange") return RETURN_EXCHANGE_COLUMNS;
+  throw new BadRequest("Невідома категорія документів");
+}
+
+export function getDocumentRegistryColumnOptions(category) {
+  const columns = getCategoryColumns(category);
+  return {
+    category,
+    columns: columns.map((column) => ({
+      key: column.key,
+      label: column.label,
+      defaultSelected: category === "tro"
+        ? TRO_DEFAULT_COLUMN_KEYS.has(column.key)
+        : true,
+    })),
+  };
+}
 
 function normalizeSelection(payload = {}) {
   const category = payload.category;
@@ -99,7 +129,17 @@ function normalizeSelection(payload = {}) {
     throw new BadRequest(`За один раз можна експортувати до ${MAX_DOCUMENTS} документів`);
   }
 
-  return { category, documentIds };
+  const availableColumns = getCategoryColumns(category);
+  let columns = availableColumns;
+  if (Array.isArray(payload.columnKeys)) {
+    const requestedKeys = new Set(payload.columnKeys.map(String));
+    columns = availableColumns.filter((column) => requestedKeys.has(column.key));
+    if (!columns.length) {
+      throw new BadRequest("Оберіть хоча б одну колонку реєстру");
+    }
+  }
+
+  return { category, documentIds, columns };
 }
 
 function formatDate(value) {
@@ -119,36 +159,15 @@ function formatQuantity(value) {
   return quantity.toLocaleString("uk-UA", { maximumFractionDigits: 3 });
 }
 
-function formatProductNames(items = [], includeOperation = false) {
-  return items
-    .map((item) => {
-      const name = item.productName || item.product_name || "";
-      const operation = includeOperation
-        ? ITEM_OPERATION_LABELS[item.operation]
-        : "";
-      return operation ? `${operation}: ${name}` : name;
-    })
-    .filter(Boolean)
-    .join("\n");
+function productName(item, includeOperation = false) {
+  const name = item.productName || item.product_name || "";
+  const operation = includeOperation ? ITEM_OPERATION_LABELS[item.operation] : "";
+  return operation ? `${operation}: ${name}` : name;
 }
 
-function formatProductQuantities(items = []) {
-  return items
-    .map((item) => {
-      const unit = item.unit ? ` ${UNIT_LABELS[item.unit] || item.unit}` : "";
-      return `${formatQuantity(item.quantity)}${unit}`.trim();
-    })
-    .join("\n");
-}
-
-function formatTroItems(items = []) {
-  return formatProductNames(items);
-}
-
-function formatTroQuantities(items = []) {
-  return items
-    .map((item) => formatQuantity(item.quantity))
-    .join("\n");
+function productQuantity(item) {
+  const unit = item.unit ? ` ${UNIT_LABELS[item.unit] || item.unit}` : "";
+  return `${formatQuantity(item.quantity)}${unit}`.trim();
 }
 
 function yesNo(value) {
@@ -172,33 +191,45 @@ function commonRow(doc) {
   };
 }
 
-function troRow(doc) {
+function troRows(doc) {
   const tro = doc.tro || {};
   const isInstall = tro.movementType === "INSTALL";
 
-  return {
+  const base = {
     ...commonRow(doc),
     type: TRO_MOVEMENT_LABELS[tro.movementType] || tro.movementType || "",
     ta: tro.taName || "",
-    troItems: formatTroItems(doc.items),
-    troQuantities: formatTroQuantities(doc.items),
     upNumber: tro.upDocumentNumber || "",
     executor: tro.executorName || "",
     act: yesNo(isInstall ? tro.appInstall : tro.appReturn),
     photo: isInstall ? yesNo(tro.photoInstall) : "",
     specification: isInstall ? "" : yesNo(tro.warehouseSpecReturn),
   };
+  const items = doc.items?.length ? doc.items : [{}];
+  return items.map((item, groupIndex) => ({
+    ...base,
+    troItem: productName(item),
+    troQuantity: formatQuantity(item.quantity),
+    _groupIndex: groupIndex,
+    _groupSize: items.length,
+  }));
 }
 
-function returnExchangeRow(doc) {
-  return {
+function returnExchangeRows(doc) {
+  const base = {
     ...commonRow(doc),
     type: DOCUMENT_TYPE_LABELS[doc.documentType] || doc.documentType || "",
-    products: formatProductNames(doc.items, doc.documentType === "EXCHANGE"),
-    productQuantities: formatProductQuantities(doc.items),
     reason: doc.reason || "",
     executor: doc.executorType === "DRIVER" ? "Водій" : "ТА",
   };
+  const items = doc.items?.length ? doc.items : [{}];
+  return items.map((item, groupIndex) => ({
+    ...base,
+    products: productName(item, doc.documentType === "EXCHANGE"),
+    productQuantities: productQuantity(item),
+    _groupIndex: groupIndex,
+    _groupSize: items.length,
+  }));
 }
 
 async function loadAuthorizedDocument(user, documentId) {
@@ -216,7 +247,7 @@ async function loadAuthorizedDocument(user, documentId) {
 }
 
 export async function buildSelectedDocumentRegistry(user, payload) {
-  const { category, documentIds } = normalizeSelection(payload);
+  const { category, documentIds, columns } = normalizeSelection(payload);
   const documents = [];
 
   for (let offset = 0; offset < documentIds.length; offset += ACCESS_CHECK_BATCH_SIZE) {
@@ -233,15 +264,25 @@ export async function buildSelectedDocumentRegistry(user, payload) {
     throw new BadRequest("Вибрані документи належать до різних розділів");
   }
 
-  const columns = expectedTro ? TRO_COLUMNS : RETURN_EXCHANGE_COLUMNS;
-  const rows = documents.map(expectedTro ? troRow : returnExchangeRow);
+  const itemColumnKeys = expectedTro
+    ? ["troItem", "troQuantity"]
+    : ["products", "productQuantities"];
+  const includeItemRows = columns.some((column) => itemColumnKeys.includes(column.key));
+  const rows = documents.flatMap((document) => {
+    const documentRows = (expectedTro ? troRows : returnExchangeRows)(document);
+    return includeItemRows
+      ? documentRows
+      : [{ ...documentRows[0], _groupIndex: 0, _groupSize: 1 }];
+  });
 
   return {
     category,
     title: expectedTro ? "Реєстр документів ТРО" : "Реєстр документів повернення / обміну",
     generatedAt: new Date().toISOString(),
-    count: rows.length,
+    count: documents.length,
+    rowCount: rows.length,
     columns,
+    itemColumnKeys,
     rows,
   };
 }
@@ -250,23 +291,27 @@ export function createDocumentRegistryWorkbook(registry) {
   const values = [
     registry.columns.map((column) => column.label),
     ...registry.rows.map((row) =>
-      registry.columns.map((column) => row[column.key] ?? ""),
+      registry.columns.map((column) =>
+        row._groupIndex > 0 && !registry.itemColumnKeys.includes(column.key)
+          ? ""
+          : row[column.key] ?? "",
+      ),
     ),
   ];
   const worksheet = XLSX.utils.aoa_to_sheet(values);
   worksheet["!cols"] = registry.columns.map((column) => ({ wch: column.width }));
-  worksheet["!rows"] = [
-    { hpt: 20 },
-    ...registry.rows.map((row) => {
-      const lineCount = Math.max(
-        String(row.troItems || "").split("\n").length,
-        String(row.troQuantities || "").split("\n").length,
-        String(row.products || "").split("\n").length,
-        String(row.productQuantities || "").split("\n").length,
-      );
-      return { hpt: Math.max(18, lineCount * 15) };
-    }),
-  ];
+  worksheet["!rows"] = [{ hpt: 20 }, ...registry.rows.map(() => ({ hpt: 18 }))];
+  worksheet["!merges"] = [];
+  registry.rows.forEach((row, rowIndex) => {
+    if (row._groupIndex !== 0 || row._groupSize < 2) return;
+    registry.columns.forEach((column, columnIndex) => {
+      if (registry.itemColumnKeys.includes(column.key)) return;
+      worksheet["!merges"].push({
+        s: { r: rowIndex + 1, c: columnIndex },
+        e: { r: rowIndex + row._groupSize, c: columnIndex },
+      });
+    });
+  });
   worksheet["!autofilter"] = {
     ref: XLSX.utils.encode_range({ r: 0, c: 0 }, { r: values.length - 1, c: registry.columns.length - 1 }),
   };

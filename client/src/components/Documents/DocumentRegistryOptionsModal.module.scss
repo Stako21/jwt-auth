@@ -1,0 +1,147 @@
+@use "../../theme.scss" as *;
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-4 $space-4 $space-4 calc(var(--ui-sidebar-current-width, #{$sidebar-width}) + $space-4);
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: $surface-modal-overlay;
+  backdrop-filter: blur(4px);
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 560px);
+  max-height: calc(100dvh - $modal-viewport-gap);
+  overflow: hidden;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-xl;
+  background: $surface-modal;
+  box-shadow: $shadow-modal;
+}
+
+.header,
+.footer {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: $space-3 $space-4;
+  background: $surface-modal-strong;
+}
+
+.header {
+  justify-content: space-between;
+  gap: $space-3;
+  border-bottom: 1px solid $outline-dark;
+
+  h2 { margin: 0; color: $text-high; font-size: 17px; }
+  p { margin: $space-1 0 0; color: $text-muted; font-size: 12px; }
+}
+
+.closeButton {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: $color-transparent;
+  color: $text-medium;
+  cursor: pointer;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) { border-color: $outline-medium; background: $select-option-hover-surface; color: $text-high; }
+}
+
+.body {
+  min-height: 0;
+  padding: $space-3;
+  overflow-y: auto;
+}
+
+.quickActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2;
+  margin-bottom: $space-2;
+
+  button {
+    padding: $space-1 $space-2;
+    border: 0;
+    background: $color-transparent;
+    color: $primary-accent-light;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+  }
+}
+
+.columnGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.columnChoice {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  min-width: 0;
+  min-height: 36px;
+  padding: $space-2 $space-3;
+  border: 1px solid $outline-dark;
+  border-radius: $radius-md;
+  background: $surface-modal-section;
+  color: $text-medium;
+  cursor: pointer;
+  font-size: 12px;
+
+  &:hover { border-color: $primary-accent-border-soft; color: $text-high; }
+  span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+.footer {
+  justify-content: space-between;
+  gap: $space-3;
+  border-top: 1px solid $outline-dark;
+  color: $text-muted;
+  font-size: 11px;
+
+  > div { display: flex; gap: $space-2; }
+  button {
+    min-height: 34px;
+    padding: 0 $space-4;
+    border-radius: $radius-md;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    &:disabled { cursor: not-allowed; opacity: 0.48; }
+  }
+}
+
+.cancelButton { border: 1px solid $outline-medium; background: $surface-control; color: $text-medium; }
+.confirmButton { border: 1px solid $primary-accent; background: $primary-accent; color: $text-on-accent; }
+
+@media (max-width: $mobile-breakpoint) {
+  .modal { align-items: flex-end; padding: $space-3; }
+  .card { width: 100%; max-height: calc(100dvh - $space-6); border-radius: $radius-xl $radius-xl $radius-md $radius-md; }
+  .columnGrid { grid-template-columns: 1fr; }
+  .footer { align-items: stretch; flex-direction: column; }
+  .footer > div { display: grid; grid-template-columns: 1fr 1fr; }
+}
