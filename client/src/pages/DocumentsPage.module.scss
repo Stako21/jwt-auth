@@ -75,10 +75,11 @@
     gap: $space-2;
     height: 38px;
     padding: 0 $space-4;
-    border: 1px solid $outline-medium;
+    border: 1px solid $primary-accent;
     border-radius: $radius-md;
-    background: $surface-container-high;
-    color: $text-high;
+    background: $primary-accent;
+    box-shadow: $shadow-primary;
+    color: $text-on-accent;
     cursor: pointer;
     font-size: 13px;
     font-weight: 700;
@@ -86,13 +87,25 @@
     transition:
       border-color $motion-fast $motion-ease,
       background-color $motion-fast $motion-ease,
-      color $motion-fast $motion-ease;
+      box-shadow $motion-fast $motion-ease,
+      color $motion-fast $motion-ease,
+      transform $motion-fast $motion-ease;
 
     &:hover,
     &:focus-visible {
-      border-color: $primary-accent;
-      background: $primary-accent-surface-soft;
-      color: $primary-accent-light;
+      border-color: $primary-accent-hover;
+      background: $primary-accent-hover;
+      color: $text-on-accent;
+      transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+      outline: 0;
+      box-shadow: 0 0 0 3px $primary-accent-focus-ring-emphasized;
+    }
+
+    &:active {
+      transform: translateY(0);
     }
   }
 }

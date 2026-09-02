@@ -2237,3 +2237,7 @@ Frontend:
 - Added a compact adaptive column-selection modal shared by print and XLSX. TRO defaults to `Дата`, `Контрагент`, `Торгова точка`, `ТА`, `ТРО`, `Кількість`, and `Статус`; return/exchange defaults to all available columns.
 - Column metadata and selection validation are server-defined. Unknown columns are ignored, an empty valid selection is rejected, and exports without item columns collapse back to one row per document.
 - Verified a five-item TRO registry and a two-item return/exchange registry against the approved development database, including default column sets, separate item cells, and XLSX vertical merges. Backend syntax checks, frontend lint, and production build passed; build output retains the existing Sass legacy API and bundle-size warnings.
+
+## 2026-09-02 - Brighter document creation actions
+
+- Promoted document creation buttons from subdued container controls to the shared solid accent treatment across all four runtime themes, with accent shadow, high-contrast text, stronger hover, visible keyboard focus, and restrained press/hover movement.
