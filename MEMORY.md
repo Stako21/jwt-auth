@@ -2241,3 +2241,8 @@ Frontend:
 ## 2026-09-02 - Brighter document creation actions
 
 - Promoted document creation buttons from subdued container controls to the shared solid accent treatment across all four runtime themes, with accent shadow, high-contrast text, stronger hover, visible keyboard focus, and restrained press/hover movement.
+
+## 2026-09-05 - Development TRO data reset
+
+- At the user's explicit request, cleared all TRO operational data from the local development database `auth` on `Stako_PC` before replacement directory data is supplied.
+- Deleted 7 TRO documents, 12 cascading item rows, 7 cascading detail rows, their cascading history, 10 notification-log rows, 697 TRO directory rows, and the single TRO numbering-sequence row. Verified all TRO document, item, detail, product, sequence, and notification counts are zero; return/exchange documents were not touched.
