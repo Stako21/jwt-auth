@@ -384,8 +384,9 @@ export async function updateTroAccountingService(user, documentId, payload) {
     await ensureAccess(conn, user, doc);
     if (!ACCOUNTING_STATUSES.has(doc.status)) throw new Error("Бухгалтерські поля вже недоступні");
 
-    const upNumber = text(payload.upDocumentNumber, 20);
-    const executorName = text(payload.executorName, 150);
+    // Integration-owned values are read-only for the ordinary portal endpoint.
+    const upNumber = text(doc.up_document_number, 20);
+    const executorName = text(doc.executor_name, 150);
     const appInstall = doc.movement_type === "INSTALL" && Boolean(payload.appInstall);
     const photoInstall = doc.movement_type === "INSTALL" && Boolean(payload.photoInstall);
     const appReturn = doc.movement_type === "RETURN" && Boolean(payload.appReturn);
@@ -397,13 +398,9 @@ export async function updateTroAccountingService(user, documentId, payload) {
     if (confirmed && (!upNumber || !executorName || !requiredChecks)) {
       throw new Error("Для виконання заповніть номер УП, виконавця та обидві відмітки");
     }
-    const previousUpNumber = text(doc.up_document_number, 20);
-    const upNumberChanged = previousUpNumber && previousUpNumber !== upNumber;
     const nextStatus = confirmed
       ? "COMPLETED"
-      : !upNumber || upNumberChanged
-        ? "NOT_COMPLETED"
-        : "PLANNED";
+      : doc.status;
     await conn.query(
       `UPDATE tro_document_details SET up_document_number = ?, executor_name = ?,
        accountant_user_id = ?, app_install = ?, photo_install = ?, app_return = ?,
@@ -437,6 +434,11 @@ export async function getTroDocumentExtension(executor, documentId) {
   const [[details]] = await executor.query(
     `SELECT t.ta_user_id AS taUserId, ta.user_name AS taName, t.movement_type AS movementType,
        t.up_document_number AS upDocumentNumber, t.executor_name AS executorName,
+       t.document_1c_guid AS document1cGuid, t.document_1c_date AS document1cDate,
+       t.source_system AS sourceSystem, t.executor_sales_agent_id AS executorSalesAgentId,
+       t.executor_agent_guid AS executorAgentGuid, t.warehouse_guid AS warehouseGuid,
+       t.one_c_stage AS oneCStage, t.one_c_stage_updated_at AS oneCStageUpdatedAt,
+       t.last_synced_at AS lastSyncedAt, t.last_sync_error AS lastSyncError,
        t.accountant_user_id AS accountantUserId, t.app_install AS appInstall,
        t.photo_install AS photoInstall, t.app_return AS appReturn,
        t.warehouse_spec_return AS warehouseSpecReturn, t.completed_at AS completedAt

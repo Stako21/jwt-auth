@@ -10,10 +10,6 @@ import styles from "./CreateTroDocumentModal.module.scss";
 
 const EMPTY_ITEM = { troProductId: "", productName: "", quantity: 1 };
 
-function accountName(user) {
-  return user?.user_name || "";
-}
-
 export default function CreateTroDocumentModal({
   isOpen,
   onClose,
@@ -35,8 +31,6 @@ export default function CreateTroDocumentModal({
   const [movementType, setMovementType] = useState("INSTALL");
   const [comment, setComment] = useState("");
   const [items, setItems] = useState([{ ...EMPTY_ITEM }]);
-  const [upDocumentNumber, setUpDocumentNumber] = useState("");
-  const [executorName, setExecutorName] = useState("");
   const [appInstall, setAppInstall] = useState(false);
   const [photoInstall, setPhotoInstall] = useState(false);
   const [appReturn, setAppReturn] = useState(false);
@@ -58,8 +52,6 @@ export default function CreateTroDocumentModal({
       setMovementType("INSTALL");
       setComment("");
       setItems([{ ...EMPTY_ITEM }]);
-      setUpDocumentNumber("");
-      setExecutorName(isAccountant ? accountName(currentUser) : "");
       setAppInstall(false);
       setPhotoInstall(false);
       setAppReturn(false);
@@ -82,13 +74,11 @@ export default function CreateTroDocumentModal({
       productName: item.productName,
       quantity: Number(item.quantity),
     })));
-    setUpDocumentNumber(tro.upDocumentNumber || "");
-    setExecutorName(tro.executorName || (isAccountant ? accountName(currentUser) : ""));
     setAppInstall(Boolean(tro.appInstall));
     setPhotoInstall(Boolean(tro.photoInstall));
     setAppReturn(Boolean(tro.appReturn));
     setWarehouseSpecReturn(Boolean(tro.warehouseSpecReturn));
-  }, [contractors, currentUser, editingDocument, isAccountant, isOpen, taOptions]);
+  }, [contractors, editingDocument, isOpen, taOptions]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -214,8 +204,6 @@ export default function CreateTroDocumentModal({
     setSaving(true);
     try {
       await updateTroAccounting(editingDocument.id, {
-        upDocumentNumber,
-        executorName,
         appInstall,
         photoInstall,
         appReturn,
@@ -312,8 +300,10 @@ export default function CreateTroDocumentModal({
           {editingDocument ? <section className={styles.accountingSection}>
             <h3>Заповнює бухгалтер</h3>
             <div className={styles.accountingGrid}>
-              <div className={styles.field}><label>№ документа з УП</label><FormInput maxLength={20} value={upDocumentNumber} disabled={!accountingEditable} onChange={(event) => setUpDocumentNumber(event.target.value)} /></div>
-              <div className={styles.field}><label>Виконавець</label><FormInput maxLength={150} value={executorName} disabled={!accountingEditable} onChange={(event) => setExecutorName(event.target.value)} /></div>
+              <div className={styles.field}><label>№ документа з УП</label><FormInput value={editingDocument.tro?.upDocumentNumber || "—"} readOnly /></div>
+              <div className={styles.field}><label>Виконавець / ТА</label><FormInput value={editingDocument.tro?.executorName || "—"} readOnly /></div>
+              <div className={styles.field}><label>Дата документа УП</label><FormInput value={editingDocument.tro?.document1cDate ? new Date(editingDocument.tro.document1cDate).toLocaleString("uk-UA") : "—"} readOnly /></div>
+              <div className={styles.field}><label>Стан в УП</label><FormInput value={({ NEW: "Новий", IN_PROGRESS: "Виконується", COMPLETED: "Завершено", CANCELLED: "Скасовано" })[editingDocument.tro?.oneCStage] || "—"} readOnly /></div>
             </div>
             <div className={styles.checks}>
               {movementType === "INSTALL" ? <><label><FormInput type="checkbox" checked={appInstall} disabled={!accountingEditable} onChange={(event) => setAppInstall(event.target.checked)} /> Акт</label><label><FormInput type="checkbox" checked={photoInstall} disabled={!accountingEditable} onChange={(event) => setPhotoInstall(event.target.checked)} /> Фото</label></> : <><label><FormInput type="checkbox" checked={appReturn} disabled={!accountingEditable} onChange={(event) => setAppReturn(event.target.checked)} /> Акт</label><label><FormInput type="checkbox" checked={warehouseSpecReturn} disabled={!accountingEditable} onChange={(event) => setWarehouseSpecReturn(event.target.checked)} /> Специфікація</label></>}

@@ -7,6 +7,7 @@ import * as DebugController from "../controllers/DebugController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import * as SchedulerController from "../controllers/SchedulerController.js";
 import { ensureRole } from "../utils/roles.js";
+import { denyOneCIntegrationAccount } from "../middlewares/oneCIntegrationAccount.js";
 
 const router = Router();
 const adminOnly = ensureRole([1]);
@@ -15,13 +16,15 @@ router.post("/sign-in", AuthValidator.signIn, AuthController.signIn);
 router.post(
   "/sign-up",
   authMiddleware,
+  denyOneCIntegrationAccount,
   adminOnly,
   AuthValidator.signUp,
   AuthController.signUp,
 );
 router.post("/logout", AuthValidator.logOut, AuthController.logOut);
 router.post("/refresh", AuthValidator.refresh, AuthController.refresh);
-router.get("/me", authMiddleware, AuthController.me);
+router.use(authMiddleware, denyOneCIntegrationAccount);
+router.get("/me", AuthController.me);
 router.get("/branches", authMiddleware, AuthController.getBranches);
 router.post(
   "/switch-branch",

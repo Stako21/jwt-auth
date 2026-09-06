@@ -144,7 +144,14 @@ Backend syntax checks:
 node --check api/server.js
 ```
 
-The backend `npm test` script is currently a placeholder and exits with an error.
+Backend integration tests:
+
+```bash
+cd api
+npm test
+```
+
+The current suite covers the portal side of the TRO/1C integration.
 
 ## Structure
 
@@ -173,6 +180,9 @@ client/
 - The root `package.json` still has no project-level scripts.
 - Some legacy routes/code still exist while the branch-config refactor is being finished.
 - Do not assume migrations have been applied just because migration files exist.
+- TRO/1C integration endpoints require a dedicated portal account whose login is
+  listed in `ONE_C_INTEGRATION_LOGINS`. When this setting is empty, `/api/1c/*`
+  is closed. See `docs/1c-tro-integration.md` for the protocol.
 - Important deployment limitation: the repository still does not contain a full migration history for the legacy schema. `bootstrap:env` can create the DB, run current branch-config migrations, and seed the admin user, but a truly clean production bootstrap still requires either:
   - importing the legacy base schema first
   - or continuing the project until all remaining legacy tables are migrated into code

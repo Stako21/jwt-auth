@@ -14,7 +14,7 @@
     "bootstrap:doctor": "node scripts/bootstrapDoctor.js",
     "seed:user-access": "node scripts/seedUserAccess.js",
     "sync:bootstrap-branch": "node scripts/syncBootstrapBranchConfig.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/*.test.js"
   },
   "keywords": [],
   "author": "",

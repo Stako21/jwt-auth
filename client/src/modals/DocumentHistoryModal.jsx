@@ -10,6 +10,9 @@ import styles from "./DocumentHistoryModal.module.scss";
 const ACTION_LABELS = {
   CREATE: { label: "Створено", tone: "info" },
   STATUS_CHANGE: { label: "Зміна статусу", tone: "info" },
+  ONE_C_CREATED: { label: "Створено в УП", tone: "info" },
+  ONE_C_REJECTED: { label: "Відхилено в УП", tone: "negative" },
+  ONE_C_STAGE: { label: "Зміна стану в УП", tone: "info" },
   PREPARE: { label: "Погоджено до підпису", tone: "info" },
   SIGN: { label: "Підписано", tone: "positive" },
   REVISION: { label: "На доопрацювання", tone: "warning" },

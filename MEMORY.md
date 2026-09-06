@@ -2246,3 +2246,12 @@ Frontend:
 
 - At the user's explicit request, cleared all TRO operational data from the local development database `auth` on `Stako_PC` before replacement directory data is supplied.
 - Deleted 7 TRO documents, 12 cascading item rows, 7 cascading detail rows, their cascading history, 10 notification-log rows, 697 TRO directory rows, and the single TRO numbering-sequence row. Verified all TRO document, item, detail, product, sequence, and notification counts are zero; return/exchange documents were not touched.
+
+## 2026-09-06 - Portal-side TRO/1C integration stage 1
+
+- Added and applied development migration `019_tro_1c_integration.js`. Nullable one-to-one 1C link, executor snapshot/reference, optional warehouse GUID, independent 1C stage, and sync diagnostics now live in `tro_document_details`; `(source_system, document_1c_guid)` is unique and the optional sales-agent FK uses `ON DELETE SET NULL`.
+- Added isolated `/api/1c/tro-requests` endpoints for ready `NOT_COMPLETED` requests, idempotent document-created/rejected callbacks, pending-status polling, and idempotent independent 1C-stage updates. `author_user_id` and workflow `ta_user_id` are never changed.
+- Reused JWT Bearer authentication with `ONE_C_INTEGRATION_LOGINS`. Integration accounts are closed out of ordinary protected APIs, and an empty allow-list keeps the integration API closed by default.
+- Made UP number and executor integration-owned/read-only in the regular TRO modal and backend accounting endpoint while preserving accountant checkbox updates and explicit portal completion. TRO desktop/mobile views now show Author, actual 1C executor (with request-TA fallback before linking), UP number/date, and a separate 1C stage.
+- Added protocol documentation and a Node test suite covering status selection, preservation of author/TA, linking, GUID conflicts, missing/ambiguous sales agents, idempotency, stage independence, rejection without deletion, and account isolation. Backend tests, frontend lint/build, backend syntax checks, and live read-only repository queries passed.
+- Created recovery tag `checkpoint-before-1c-tro-stage1-20260906` at commit `faa970de7e30d371cfd1d5bd641284c13561417b`; pre-existing uncommitted business-data/document-registry changes were preserved.

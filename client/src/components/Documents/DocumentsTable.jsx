@@ -27,6 +27,19 @@ function troMovementLabel(value) {
   return "";
 }
 
+function oneCStageLabel(value) {
+  return ({
+    NEW: "Новий",
+    IN_PROGRESS: "Виконується",
+    COMPLETED: "Завершено",
+    CANCELLED: "Скасовано",
+  })[value] || "—";
+}
+
+function formatDocumentDateTime(value) {
+  return value ? new Date(value).toLocaleString("uk-UA") : "—";
+}
+
 function troRequiredDocuments(doc) {
   if (doc.tro_movement_type === "INSTALL") {
     return [
@@ -196,6 +209,9 @@ export default function DocumentTable({
                 isTroTable ? style.troAuthorColumn : ""
               }`}
             />
+            {isTroTable ? <col className={style.troExecutorColumn} /> : null}
+            {isTroTable ? <col className={style.troUpColumn} /> : null}
+            {isTroTable ? <col className={style.troStageColumn} /> : null}
             {isTroTable ? <col className={style.troDocumentsColumn} /> : null}
             <col className={style.dateColumn} />
             <col className={style.actionsColumn} />
@@ -218,7 +234,10 @@ export default function DocumentTable({
               <th>{isTroTable ? "Рух" : "Тип"}</th>
               <th>Торгова точка</th>
               <th>Контрагент</th>
-              <th>{isTroTable ? "Автор / ТА" : "Автор"}</th>
+              <th>Автор</th>
+              {isTroTable ? <th>Виконавець / ТА</th> : null}
+              {isTroTable ? <th>Документ УП</th> : null}
+              {isTroTable ? <th>Стан в УП</th> : null}
               {isTroTable ? <th>Документи</th> : null}
               <th>Дата</th>
               <th className={style.actionsHeader}>Дії</th>
@@ -257,8 +276,20 @@ export default function DocumentTable({
                 <td title={doc.contractor}>{doc.contractor}</td>
                 <td className={isTroTable ? style.personCell : ""} title={doc.author}>
                   <span>{doc.author}</span>
-                  {isTroTable && doc.tro_ta_name ? <small>ТА: {doc.tro_ta_name}</small> : null}
                 </td>
+                {isTroTable ? (
+                  <td className={style.personCell} title={doc.tro_executor_name || ""}>
+                    <span>{doc.tro_executor_name || "—"}</span>
+                    {!doc.tro_executor_name && doc.tro_ta_name ? <small>ТА заявки: {doc.tro_ta_name}</small> : null}
+                  </td>
+                ) : null}
+                {isTroTable ? (
+                  <td className={style.personCell}>
+                    <span>{doc.tro_up_document_number || "—"}</span>
+                    {doc.tro_document_1c_date ? <small>{formatDocumentDateTime(doc.tro_document_1c_date)}</small> : null}
+                  </td>
+                ) : null}
+                {isTroTable ? <td>{oneCStageLabel(doc.tro_one_c_stage)}</td> : null}
                 {isTroTable ? (
                   <td>
                     <TroRequiredDocuments doc={doc} />
@@ -317,10 +348,22 @@ export default function DocumentTable({
                 <i className="fa-regular fa-user" aria-hidden="true"></i>
                 <span>{doc.author}</span>
               </p>
-              {doc.tro_ta_name ? (
-                <p title={doc.tro_ta_name}>
+              {isTroTable ? (
+                <p title={doc.tro_executor_name || doc.tro_ta_name || ""}>
                   <i className="fa-solid fa-user-tag" aria-hidden="true"></i>
-                  <span>ТА: {doc.tro_ta_name}</span>
+                  <span>Виконавець / ТА: {doc.tro_executor_name || (doc.tro_ta_name ? `${doc.tro_ta_name} (ТА заявки)` : "—")}</span>
+                </p>
+              ) : null}
+              {isTroTable ? (
+                <p>
+                  <i className="fa-regular fa-file-lines" aria-hidden="true"></i>
+                  <span>Документ УП: {doc.tro_up_document_number || "—"}{doc.tro_document_1c_date ? ` · ${formatDocumentDateTime(doc.tro_document_1c_date)}` : ""}</span>
+                </p>
+              ) : null}
+              {isTroTable ? (
+                <p>
+                  <i className="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+                  <span>Стан в УП: {oneCStageLabel(doc.tro_one_c_stage)}</span>
                 </p>
               ) : null}
               {isTroTable ? (

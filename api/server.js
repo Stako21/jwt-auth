@@ -10,9 +10,14 @@ import reportRoutes from "./routes/reports.js";
 import regionNotificationsRoutes from "./routes/regionNotifications.js";
 import configRoutes from "./routes/config.js";
 import balanceRoutes from "./routes/balances.js";
+import oneCTroRequestRoutes from "./routes/oneCTroRequests.js";
 import securityHeaders from "./middlewares/securityHeaders.js";
 import { createRateLimit } from "./middlewares/rateLimit.js";
 import authMiddleware from "./middlewares/authMiddleware.js";
+import {
+  denyOneCIntegrationAccount,
+  ensureOneCIntegrationAccount,
+} from "./middlewares/oneCIntegrationAccount.js";
 import { startScheduler } from "./services/scheduler.js";
 import { denyRole, ROLE_IDS } from "./utils/roles.js";
 
@@ -93,13 +98,27 @@ const documentsRateLimit = createRateLimit({
   keyPrefix: "documents",
 });
 
+const oneCRateLimit = createRateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  keyPrefix: "one-c",
+});
+
 app.use("/api/auth", authRateLimit, AuthRootRouter);
-app.use("/api/config", authMiddleware, configRoutes);
-app.use("/api/balances", authMiddleware, pickerRestricted, balanceRoutes);
-app.use("/api/reports", authMiddleware, reportRoutes);
+app.use(
+  "/api/1c",
+  oneCRateLimit,
+  authMiddleware,
+  ensureOneCIntegrationAccount,
+  oneCTroRequestRoutes,
+);
+app.use("/api/config", authMiddleware, denyOneCIntegrationAccount, configRoutes);
+app.use("/api/balances", authMiddleware, denyOneCIntegrationAccount, pickerRestricted, balanceRoutes);
+app.use("/api/reports", authMiddleware, denyOneCIntegrationAccount, reportRoutes);
 app.use(
   "/api/region-notifications",
   authMiddleware,
+  denyOneCIntegrationAccount,
   pickerRestricted,
   regionNotificationsRoutes,
 );
@@ -107,10 +126,11 @@ app.use(
   "/api/documents",
   documentsRateLimit,
   authMiddleware,
+  denyOneCIntegrationAccount,
   pickerRestricted,
   documentRoutes,
 );
-app.use("/api/directories", authMiddleware, pickerRestricted, directoryRoutes);
+app.use("/api/directories", authMiddleware, denyOneCIntegrationAccount, pickerRestricted, directoryRoutes);
 
 const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server started successfully on port ${PORT}`);
