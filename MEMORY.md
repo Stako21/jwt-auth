@@ -2255,3 +2255,11 @@ Frontend:
 - Made UP number and executor integration-owned/read-only in the regular TRO modal and backend accounting endpoint while preserving accountant checkbox updates and explicit portal completion. TRO desktop/mobile views now show Author, actual 1C executor (with request-TA fallback before linking), UP number/date, and a separate 1C stage.
 - Added protocol documentation and a Node test suite covering status selection, preservation of author/TA, linking, GUID conflicts, missing/ambiguous sales agents, idempotency, stage independence, rejection without deletion, and account isolation. Backend tests, frontend lint/build, backend syntax checks, and live read-only repository queries passed.
 - Created recovery tag `checkpoint-before-1c-tro-stage1-20260906` at commit `faa970de7e30d371cfd1d5bd641284c13561417b`; pre-existing uncommitted business-data/document-registry changes were preserved.
+
+## 2026-09-06 - Stable cursor pagination for TRO/1C reads
+
+- Added signed opaque cursor pagination to `GET /api/1c/tro-requests` and `GET /api/1c/tro-requests/status-pending` while preserving their filters and DTO arrays. Both endpoints default to 100 records and cap `limit` at 500.
+- Both traversals now use deterministic keyset ordering by immutable `documents.created_at` and `documents.id`. The first request records a ceiling in the cursor, so documents created later are deferred to the next full 1C synchronization cycle instead of extending the active traversal.
+- Cursors are bound to the endpoint, accessible branches, and movement filter. Invalid, modified, or cross-scope cursors return controlled `422 INVALID_CURSOR` responses.
+- Added coverage for first, next, and final pages; duplicate prevention; equal timestamps; invalid cursors; cursor-less backward compatibility; and insertion during traversal for both read endpoints. Backend tests and syntax checks passed.
+- Created the pre-change recovery tag `checkpoint-before-1c-tro-pagination-20260906` at commit `93b4c30fb86627c2d7be2a72e1871edf313a541c`.

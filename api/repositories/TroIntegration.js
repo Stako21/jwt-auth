@@ -10,7 +10,7 @@ export default class TroIntegrationRepository {
       .filter((value) => Number.isInteger(value) && value > 0);
   }
 
-  static async listReady({ branchIds, movementType, limit }) {
+  static buildReadyWhere({ branchIds, movementType, after, ceiling }) {
     const params = [...branchIds];
     const where = [
       "d.document_type = 'TRO'",
@@ -21,6 +21,41 @@ export default class TroIntegrationRepository {
       where.push("td.movement_type = ?");
       params.push(movementType);
     }
+
+    if (ceiling) {
+      where.push("(d.created_at < ? OR (d.created_at = ? AND d.id <= ?))");
+      params.push(ceiling.createdAt, ceiling.createdAt, ceiling.id);
+    }
+
+    if (after) {
+      where.push("(d.created_at > ? OR (d.created_at = ? AND d.id > ?))");
+      params.push(after.createdAt, after.createdAt, after.id);
+    }
+
+    return { where, params };
+  }
+
+  static async getReadyCeiling({ branchIds, movementType }) {
+    const { where, params } = this.buildReadyWhere({ branchIds, movementType });
+    const [[row]] = await pool.query(
+      `SELECT d.created_at, d.id
+       FROM documents d
+       JOIN tro_document_details td ON td.document_id = d.id
+       WHERE ${where.join(" AND ")}
+       ORDER BY d.created_at DESC, d.id DESC
+       LIMIT 1`,
+      params,
+    );
+    return row ? { createdAt: row.created_at, id: Number(row.id) } : null;
+  }
+
+  static async listReady({ branchIds, movementType, after, ceiling, limit }) {
+    const { where, params } = this.buildReadyWhere({
+      branchIds,
+      movementType,
+      after,
+      ceiling,
+    });
     params.push(limit);
     const [rows] = await pool.query(
       `SELECT d.id, d.document_number, d.created_at, d.updated_at, d.status, d.comment,
@@ -57,20 +92,56 @@ export default class TroIntegrationRepository {
     return rows;
   }
 
-  static async listPending({ branchIds, limit }) {
-    const [rows] = await pool.query(
-      `SELECT d.id, d.document_number, td.movement_type, td.document_1c_guid,
-              td.source_system, td.one_c_stage, td.one_c_stage_updated_at
+  static buildPendingWhere({ branchIds, after, ceiling }) {
+    const where = [
+      "d.document_type = 'TRO'",
+      `d.branch_id IN (${branchIds.map(() => "?").join(", ")})`,
+      "d.status <> 'REJECTED'",
+      "td.document_1c_guid IS NOT NULL",
+      "(td.one_c_stage IS NULL OR td.one_c_stage IN ('NEW', 'IN_PROGRESS'))",
+    ];
+    const params = [...branchIds];
+
+    if (ceiling) {
+      where.push("(d.created_at < ? OR (d.created_at = ? AND d.id <= ?))");
+      params.push(ceiling.createdAt, ceiling.createdAt, ceiling.id);
+    }
+
+    if (after) {
+      where.push("(d.created_at > ? OR (d.created_at = ? AND d.id > ?))");
+      params.push(after.createdAt, after.createdAt, after.id);
+    }
+
+    return { where, params };
+  }
+
+  static async getPendingCeiling({ branchIds }) {
+    const { where, params } = this.buildPendingWhere({ branchIds });
+    const [[row]] = await pool.query(
+      `SELECT d.created_at, d.id
        FROM documents d
        JOIN tro_document_details td ON td.document_id = d.id
-       WHERE d.document_type = 'TRO'
-         AND d.branch_id IN (${branchIds.map(() => "?").join(", ")})
-         AND d.status <> 'REJECTED'
-         AND td.document_1c_guid IS NOT NULL
-         AND (td.one_c_stage IS NULL OR td.one_c_stage IN ('NEW', 'IN_PROGRESS'))
-       ORDER BY COALESCE(td.last_synced_at, d.updated_at), d.id
+       WHERE ${where.join(" AND ")}
+       ORDER BY d.created_at DESC, d.id DESC
+       LIMIT 1`,
+      params,
+    );
+    return row ? { createdAt: row.created_at, id: Number(row.id) } : null;
+  }
+
+  static async listPending({ branchIds, after, ceiling, limit }) {
+    const { where, params } = this.buildPendingWhere({ branchIds, after, ceiling });
+    params.push(limit);
+    const [rows] = await pool.query(
+      `SELECT d.id, d.document_number, td.movement_type, td.document_1c_guid,
+              td.source_system, td.one_c_stage, td.one_c_stage_updated_at,
+              d.created_at AS cursor_created_at
+       FROM documents d
+       JOIN tro_document_details td ON td.document_id = d.id
+       WHERE ${where.join(" AND ")}
+       ORDER BY d.created_at, d.id
        LIMIT ?`,
-      [...branchIds, limit],
+      params,
     );
     return rows;
   }

@@ -4,6 +4,14 @@ function success(res, data) {
   return res.status(200).json({ ok: true, data });
 }
 
+function paginatedSuccess(res, result) {
+  return res.status(200).json({
+    ok: true,
+    data: result.data,
+    pagination: result.pagination,
+  });
+}
+
 function failure(res, error) {
   console.error("1C TRO integration error:", error);
   const status = Number(error?.status) || 500;
@@ -18,7 +26,7 @@ function failure(res, error) {
 
 export async function listTroRequests(req, res) {
   try {
-    return success(res, await troIntegration.listReady(req.user, req.query));
+    return paginatedSuccess(res, await troIntegration.listReady(req.user, req.query));
   } catch (error) {
     return failure(res, error);
   }
@@ -42,7 +50,7 @@ export async function rejectTroRequest(req, res) {
 
 export async function listStatusPending(req, res) {
   try {
-    return success(res, await troIntegration.listPending(req.user, req.query));
+    return paginatedSuccess(res, await troIntegration.listPending(req.user, req.query));
   } catch (error) {
     return failure(res, error);
   }

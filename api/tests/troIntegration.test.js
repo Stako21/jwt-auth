@@ -37,8 +37,15 @@ function document(overrides = {}) {
     warehouse_guid: null,
     one_c_stage: null,
     one_c_stage_updated_at: null,
+    created_at: "2026-09-06T09:00:00.000Z",
+    updated_at: "2026-09-06T09:00:00.000Z",
     ...overrides,
   };
+}
+
+function compareCursorTuple(left, right) {
+  const dateDifference = new Date(left.created_at).getTime() - new Date(right.createdAt).getTime();
+  return dateDifference || Number(left.id) - Number(right.id);
 }
 
 function fakeRepository(initialDocuments = [document()]) {
@@ -50,26 +57,64 @@ function fakeRepository(initialDocuments = [document()]) {
     history,
     get deleted() { return deleted; },
     async getAccessibleBranchIds() { return [1]; },
-    async listReady({ branchIds, movementType, limit }) {
-      return [...documents.values()].filter((item) =>
+    async getReadyCeiling({ branchIds, movementType }) {
+      const rows = [...documents.values()].filter((item) =>
         branchIds.includes(item.branch_id)
         && item.document_type === "TRO"
         && item.status === "NOT_COMPLETED"
         && (!movementType || item.movement_type === movementType))
+        .sort((left, right) => compareCursorTuple(left, {
+          createdAt: right.created_at,
+          id: right.id,
+        }));
+      const last = rows.at(-1);
+      return last ? { createdAt: last.created_at, id: last.id } : null;
+    },
+    async listReady({ branchIds, movementType, after, ceiling, limit }) {
+      return [...documents.values()].filter((item) =>
+        branchIds.includes(item.branch_id)
+        && item.document_type === "TRO"
+        && item.status === "NOT_COMPLETED"
+        && (!movementType || item.movement_type === movementType)
+        && (!after || compareCursorTuple(item, after) > 0)
+        && (!ceiling || compareCursorTuple(item, ceiling) <= 0))
+        .sort((left, right) => compareCursorTuple(left, {
+          createdAt: right.created_at,
+          id: right.id,
+        }))
         .slice(0, limit)
         .map((item) => ({
           ...item,
-          created_at: new Date(), updated_at: new Date(), comment: null,
+          comment: null,
           branch_name: "Філія", trade_point_guid: "tp", trade_point_name: "ТТ",
           trade_point_address: "Адреса", contractor_guid: "co", contractor_name: "Контрагент",
           request_agent_guid: "agent", request_agent_name: "ТА заявки",
         }));
     },
     async getItems() { return []; },
-    async listPending({ branchIds }) {
+    async getPendingCeiling({ branchIds }) {
+      const rows = [...documents.values()].filter((item) =>
+        branchIds.includes(item.branch_id) && item.document_1c_guid
+        && item.status !== "REJECTED" && [null, "NEW", "IN_PROGRESS"].includes(item.one_c_stage))
+        .sort((left, right) => compareCursorTuple(left, {
+          createdAt: right.created_at,
+          id: right.id,
+        }));
+      const last = rows.at(-1);
+      return last ? { createdAt: last.created_at, id: last.id } : null;
+    },
+    async listPending({ branchIds, after, ceiling, limit }) {
       return [...documents.values()].filter((item) =>
         branchIds.includes(item.branch_id) && item.document_1c_guid
-        && item.status !== "REJECTED" && [null, "NEW", "IN_PROGRESS"].includes(item.one_c_stage));
+        && item.status !== "REJECTED" && [null, "NEW", "IN_PROGRESS"].includes(item.one_c_stage)
+        && (!after || compareCursorTuple(item, after) > 0)
+        && (!ceiling || compareCursorTuple(item, ceiling) <= 0))
+        .sort((left, right) => compareCursorTuple(left, {
+          createdAt: right.created_at,
+          id: right.id,
+        }))
+        .slice(0, limit)
+        .map((item) => ({ ...item, cursor_created_at: item.created_at }));
     },
     async transaction(work) { return work({}); },
     async lockDocument(_connection, id) { return documents.get(Number(id)) || null; },
@@ -111,8 +156,9 @@ function fakeRepository(initialDocuments = [document()]) {
 test("GET returns NOT_COMPLETED documents and excludes NEW", async () => {
   const repo = fakeRepository([document(), document({ id: 126, status: "NEW", document_number: "ТРО-ZP-000126" })]);
   const result = await createTroIntegrationService(repo).listReady(USER);
-  assert.deepEqual(result.map((item) => item.portal_document_id), [125]);
-  assert.equal(result[0].status, "NOT_COMPLETED");
+  assert.deepEqual(result.data.map((item) => item.portal_document_id), [125]);
+  assert.equal(result.data[0].status, "NOT_COMPLETED");
+  assert.deepEqual(result.pagination, { next_cursor: null, has_more: false });
 });
 
 test("created links 1C, preserves author/TA and moves to PLANNED", async () => {
@@ -216,6 +262,110 @@ test("rejected keeps the document and repeated identical request is idempotent",
   assert.equal(repo.deleted, false);
   assert.equal(repeated.idempotent, true);
   assert.equal(repo.history.length, 1);
+});
+
+function paginationDocuments(kind, count = 5) {
+  return Array.from({ length: count }, (_, index) => document({
+    id: 201 + index,
+    document_number: `TRO-ZP-${String(201 + index).padStart(6, "0")}`,
+    created_at: "2026-09-06T10:00:00.000Z",
+    updated_at: "2026-09-06T10:00:00.000Z",
+    status: kind === "pending" ? "PLANNED" : "NOT_COMPLETED",
+    document_1c_guid: kind === "pending" ? `external-${201 + index}` : null,
+    source_system: kind === "pending" ? "UP" : null,
+    one_c_stage: kind === "pending" ? "NEW" : null,
+  }));
+}
+
+function paginationSubject(kind, count = 5) {
+  const repo = fakeRepository(paginationDocuments(kind, count));
+  const service = createTroIntegrationService(repo, async () => {}, { cursorSecret: "test-cursor-secret" });
+  const load = (query = {}) => kind === "ready"
+    ? service.listReady(USER, query)
+    : service.listPending(USER, query);
+  return { repo, load };
+}
+
+for (const kind of ["ready", "pending"]) {
+  test(`${kind} cursor pagination returns the first page`, async () => {
+    const { load } = paginationSubject(kind);
+    const result = await load({ limit: 2 });
+    assert.deepEqual(result.data.map((item) => item.portal_document_id), [201, 202]);
+    assert.equal(result.pagination.has_more, true);
+    assert.equal(typeof result.pagination.next_cursor, "string");
+  });
+
+  test(`${kind} cursor pagination returns the next page`, async () => {
+    const { load } = paginationSubject(kind);
+    const first = await load({ limit: 2 });
+    const second = await load({ limit: 2, cursor: first.pagination.next_cursor });
+    assert.deepEqual(second.data.map((item) => item.portal_document_id), [203, 204]);
+    assert.equal(second.pagination.has_more, true);
+  });
+
+  test(`${kind} cursor pagination marks the last page`, async () => {
+    const { load } = paginationSubject(kind);
+    const first = await load({ limit: 2 });
+    const second = await load({ limit: 2, cursor: first.pagination.next_cursor });
+    const last = await load({ limit: 2, cursor: second.pagination.next_cursor });
+    assert.deepEqual(last.data.map((item) => item.portal_document_id), [205]);
+    assert.deepEqual(last.pagination, { next_cursor: null, has_more: false });
+  });
+
+  test(`${kind} cursor pagination has no duplicates between pages`, async () => {
+    const { load } = paginationSubject(kind);
+    const ids = [];
+    let cursor;
+    do {
+      const result = await load({ limit: 2, ...(cursor ? { cursor } : {}) });
+      ids.push(...result.data.map((item) => item.portal_document_id));
+      cursor = result.pagination.next_cursor;
+    } while (cursor);
+    assert.deepEqual(ids, [201, 202, 203, 204, 205]);
+    assert.equal(new Set(ids).size, ids.length);
+  });
+
+  test(`${kind} cursor pagination is stable when timestamps are identical`, async () => {
+    const { load } = paginationSubject(kind);
+    const first = await load({ limit: 3 });
+    const second = await load({ limit: 3, cursor: first.pagination.next_cursor });
+    assert.deepEqual(
+      [...first.data, ...second.data].map((item) => item.portal_document_id),
+      [201, 202, 203, 204, 205],
+    );
+  });
+
+  test(`${kind} cursor pagination rejects an invalid cursor with 422`, async () => {
+    const { load } = paginationSubject(kind);
+    await assert.rejects(
+      load({ limit: 2, cursor: "invalid-cursor" }),
+      (error) => error instanceof IntegrationError
+        && error.status === 422
+        && error.code === "INVALID_CURSOR",
+    );
+  });
+
+  test(`${kind} request without cursor remains compatible`, async () => {
+    const { load } = paginationSubject(kind, 1);
+    const result = await load();
+    assert.equal(Array.isArray(result.data), true);
+    assert.equal(result.data.length, 1);
+    assert.deepEqual(result.pagination, { next_cursor: null, has_more: false });
+  });
+}
+
+test("new documents do not extend an active cursor traversal", async () => {
+  const { repo, load } = paginationSubject("ready", 3);
+  const first = await load({ limit: 2 });
+  repo.documents.set(999, document({
+    id: 999,
+    document_number: "TRO-ZP-000999",
+    created_at: "2026-09-06T11:00:00.000Z",
+    updated_at: "2026-09-06T11:00:00.000Z",
+  }));
+  const last = await load({ limit: 2, cursor: first.pagination.next_cursor });
+  assert.deepEqual(last.data.map((item) => item.portal_document_id), [203]);
+  assert.deepEqual(last.pagination, { next_cursor: null, has_more: false });
 });
 
 function invoke(middleware, user) {

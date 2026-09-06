@@ -1,8 +1,10 @@
+import crypto from "node:crypto";
 import TroIntegrationRepository from "../repositories/TroIntegration.js";
 
 const MOVEMENTS = new Set(["INSTALL", "RETURN"]);
 const STAGES = new Set(["NEW", "IN_PROGRESS", "COMPLETED", "CANCELLED"]);
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CURSOR_VERSION = 1;
 
 export class IntegrationError extends Error {
   constructor(status, code, message) {
@@ -56,7 +58,85 @@ function stageLabel(stage) {
   return ({ NEW: "Новий", IN_PROGRESS: "Виконується", COMPLETED: "Завершено", CANCELLED: "Скасовано" })[stage] || stage;
 }
 
-export function createTroIntegrationService(repository = TroIntegrationRepository, notify = async () => {}) {
+function cursorTuple(createdAt, id) {
+  const parsedDate = new Date(createdAt);
+  const parsedId = Number(id);
+  if (Number.isNaN(parsedDate.getTime()) || !Number.isInteger(parsedId) || parsedId < 1) {
+    throw new IntegrationError(422, "INVALID_CURSOR", "Некоректний cursor");
+  }
+  return { createdAt: parsedDate, id: parsedId };
+}
+
+export function createTroIntegrationService(
+  repository = TroIntegrationRepository,
+  notify = async () => {},
+  options = {},
+) {
+  const cursorSecret = options.cursorSecret || process.env.ACCESS_TOKEN_SECRET;
+
+  function cursorScope(kind, accessibleBranchIds, movementType = null) {
+    return crypto.createHash("sha256").update(JSON.stringify({
+      kind,
+      branchIds: [...accessibleBranchIds].map(Number).sort((left, right) => left - right),
+      movementType,
+    })).digest("base64url");
+  }
+
+  function encodeCursor(payload) {
+    if (!cursorSecret) {
+      throw new IntegrationError(500, "CURSOR_CONFIGURATION_ERROR", "Не налаштовано секрет cursor");
+    }
+    const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    const signature = crypto.createHmac("sha256", cursorSecret).update(encoded).digest("base64url");
+    return `${encoded}.${signature}`;
+  }
+
+  function decodeCursor(value, kind, scope) {
+    try {
+      if (!cursorSecret || typeof value !== "string" || value.length > 4096) throw new Error();
+      const parts = value.split(".");
+      if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error();
+      const expected = crypto.createHmac("sha256", cursorSecret).update(parts[0]).digest();
+      const received = Buffer.from(parts[1], "base64url");
+      if (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) throw new Error();
+      const payload = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+      if (payload?.v !== CURSOR_VERSION || payload.kind !== kind || payload.scope !== scope) throw new Error();
+      return {
+        after: cursorTuple(payload.after?.createdAt, payload.after?.id),
+        ceiling: cursorTuple(payload.ceiling?.createdAt, payload.ceiling?.id),
+      };
+    } catch {
+      throw new IntegrationError(422, "INVALID_CURSOR", "Некоректний cursor");
+    }
+  }
+
+  async function paginate({ kind, scope, rawCursor, pageLimit, getCeiling, getRows, rowTuple }) {
+    const decoded = rawCursor ? decodeCursor(rawCursor, kind, scope) : null;
+    const ceiling = decoded?.ceiling || await getCeiling();
+    if (!ceiling) {
+      return { rows: [], pagination: { next_cursor: null, has_more: false } };
+    }
+
+    const rows = await getRows({
+      after: decoded?.after || null,
+      ceiling,
+      limit: pageLimit + 1,
+    });
+    const hasMore = rows.length > pageLimit;
+    const page = rows.slice(0, pageLimit);
+    const last = page.at(-1);
+    const nextCursor = hasMore && last
+      ? encodeCursor({
+        v: CURSOR_VERSION,
+        kind,
+        scope,
+        after: rowTuple(last),
+        ceiling: cursorTuple(ceiling.createdAt, ceiling.id),
+      })
+      : null;
+    return { rows: page, pagination: { next_cursor: nextCursor, has_more: hasMore } };
+  }
+
   async function branchIds(user, requestedBranchId) {
     const accessible = await repository.getAccessibleBranchIds(user.id, user.branchId);
     if (!requestedBranchId) return accessible;
@@ -100,10 +180,26 @@ export function createTroIntegrationService(repository = TroIntegrationRepositor
       if (movementType && !MOVEMENTS.has(movementType)) {
         throw new IntegrationError(422, "INVALID_MOVEMENT_TYPE", "Невідомий movement_type");
       }
-      const rows = await repository.listReady({
-        branchIds: await branchIds(user, query.branch_id),
-        movementType,
-        limit: limit(query.limit),
+      const accessibleBranchIds = await branchIds(user, query.branch_id);
+      const pageLimit = limit(query.limit);
+      const scope = cursorScope("ready", accessibleBranchIds, movementType);
+      const { rows, pagination } = await paginate({
+        kind: "ready",
+        scope,
+        rawCursor: query.cursor,
+        pageLimit,
+        getCeiling: () => repository.getReadyCeiling({
+          branchIds: accessibleBranchIds,
+          movementType,
+        }),
+        getRows: ({ after, ceiling, limit: fetchLimit }) => repository.listReady({
+          branchIds: accessibleBranchIds,
+          movementType,
+          after,
+          ceiling,
+          limit: fetchLimit,
+        }),
+        rowTuple: (row) => cursorTuple(row.created_at, row.id),
       });
       const items = await repository.getItems(rows.map((row) => row.id));
       const byDocument = new Map();
@@ -115,7 +211,7 @@ export function createTroIntegrationService(repository = TroIntegrationRepositor
           quantity: Number(item.quantity),
         });
       }
-      return rows.map((row) => ({
+      return { data: rows.map((row) => ({
         portal_document_id: row.id,
         portal_document_number: row.document_number,
         portal_created_at: row.created_at,
@@ -128,7 +224,7 @@ export function createTroIntegrationService(repository = TroIntegrationRepositor
         comment: row.comment,
         status: row.status,
         updated_at: row.updated_at,
-      }));
+      })), pagination };
     },
 
     async created(user, documentId, payload) {
@@ -241,10 +337,24 @@ export function createTroIntegrationService(repository = TroIntegrationRepositor
     },
 
     async listPending(user, query = {}) {
-      return repository.listPending({
-        branchIds: await branchIds(user, query.branch_id),
-        limit: limit(query.limit),
-      }).then((rows) => rows.map((row) => ({
+      const accessibleBranchIds = await branchIds(user, query.branch_id);
+      const pageLimit = limit(query.limit);
+      const scope = cursorScope("status-pending", accessibleBranchIds);
+      const { rows, pagination } = await paginate({
+        kind: "status-pending",
+        scope,
+        rawCursor: query.cursor,
+        pageLimit,
+        getCeiling: () => repository.getPendingCeiling({ branchIds: accessibleBranchIds }),
+        getRows: ({ after, ceiling, limit: fetchLimit }) => repository.listPending({
+          branchIds: accessibleBranchIds,
+          after,
+          ceiling,
+          limit: fetchLimit,
+        }),
+        rowTuple: (row) => cursorTuple(row.cursor_created_at, row.id),
+      });
+      return { data: rows.map((row) => ({
         portal_document_id: row.id,
         portal_document_number: row.document_number,
         movement_type: row.movement_type,
@@ -252,7 +362,7 @@ export function createTroIntegrationService(repository = TroIntegrationRepositor
         source_system: row.source_system,
         one_c_stage: row.one_c_stage,
         one_c_stage_updated_at: row.one_c_stage_updated_at,
-      })));
+      })), pagination };
     },
 
     async stage(user, documentId, payload) {

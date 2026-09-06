@@ -104,3 +104,85 @@ Query: `movement_type=INSTALL|RETURN`, `branch_id`, `limit=1..500`.
 Допустимі `NEW`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`. Повтор незміненого стану повертає `200` без додаткової історії. Застаріле `changed_at` повертає `409 STALE_STAGE_UPDATE`.
 
 Основні коди: `400` некоректний запит, `401` JWT відсутній/недійсний, `403` обліковий запис або філія недоступні, `404` документ відсутній, `409` конфлікт зв'язку/стану, `422` помилка полів, `429` ліміт запитів, `500` внутрішня помилка без stack trace.
+
+## Cursor pagination
+
+`GET /api/1c/tro-requests` і `GET /api/1c/tro-requests/status-pending` використовують однаковий контракт cursor pagination.
+
+Query parameters:
+
+- `limit` — необов'язковий, за замовчуванням `100`, діапазон `1..500`;
+- `cursor` — необов'язковий opaque cursor із попередньої відповіді;
+- `branch_id` залишається доступним для обох endpoint;
+- `movement_type=INSTALL|RETURN` залишається доступним для `/tro-requests`.
+
+Перша сторінка запитується без `cursor`. Наступну сторінку потрібно запитувати з незміненими фільтрами та значенням `pagination.next_cursor`:
+
+```http
+GET /api/1c/tro-requests?movement_type=INSTALL&branch_id=1&limit=100
+Authorization: Bearer <access-token>
+```
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "portal_document_id": 125,
+      "portal_document_number": "ТРО-ZP-000125",
+      "portal_created_at": "2026-09-06T08:15:00.000Z",
+      "movement_type": "INSTALL",
+      "branch": { "id": 1, "name": "Філія" },
+      "trade_point": { "guid": "...", "name": "Торгова точка", "address": "Адреса" },
+      "contractor": { "guid": "...", "name": "Контрагент" },
+      "request_sales_agent": { "guid": "...", "name": "Торговий агент" },
+      "items": [
+        { "product_guid": "...", "product_name": "ТРО", "quantity": 1 }
+      ],
+      "comment": null,
+      "status": "NOT_COMPLETED",
+      "updated_at": "2026-09-06T08:20:00.000Z"
+    }
+  ],
+  "pagination": {
+    "next_cursor": "eyJ2IjoxLC4uLn0.signature",
+    "has_more": true
+  }
+}
+```
+
+```http
+GET /api/1c/tro-requests?movement_type=INSTALL&branch_id=1&limit=100&cursor=<next_cursor>
+Authorization: Bearer <access-token>
+```
+
+Остання сторінка:
+
+```json
+{
+  "ok": true,
+  "data": [],
+  "pagination": {
+    "next_cursor": null,
+    "has_more": false
+  }
+}
+```
+
+`data` завжди є масивом. Старий запит без `cursor` повертає першу сторінку і залишається сумісним за складом DTO; поле `pagination` є додатковим.
+
+Порядок стабільний: `documents.created_at ASC, documents.id ASC`. Cursor підписаний, прив'язаний до endpoint, доступних філій і фільтрів та не повинен розбиратися або змінюватися клієнтом. Перша сторінка фіксує верхню межу обходу, тому документи, створені після початку обходу, будуть отримані в наступному повному циклі синхронізації.
+
+Некоректний, змінений або використаний з іншими фільтрами cursor:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "INVALID_CURSOR",
+    "message": "Некоректний cursor"
+  }
+}
+```
+
+HTTP status: `422 Unprocessable Entity`.
