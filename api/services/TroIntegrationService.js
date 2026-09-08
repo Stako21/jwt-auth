@@ -233,61 +233,86 @@ export function createTroIntegrationService(
       const documentGuid = guid(payload.document_1c_guid, "document_1c_guid");
       const documentNumber = clean(payload.document_1c_number, 20);
       const documentDate = date(payload.document_1c_date, "document_1c_date");
-      const agentGuid = guid(payload.sales_agent_guid, "sales_agent_guid");
-      const agentName = clean(payload.sales_agent_name, 150);
+      const responsibleGuid = guid(payload.responsible_guid, "responsible_guid");
+      const responsibleName = clean(payload.responsible_name, 150);
+      const salesAgentGuid = guid(payload.sales_agent_guid, "sales_agent_guid");
+      const salesAgentName = clean(payload.sales_agent_name, 150);
       const sourceSystem = clean(payload.source_system || "UP", 32).toUpperCase();
       const warehouseGuid = guid(payload.warehouse_guid, "warehouse_guid", false);
-      if (!portalNumber || !documentNumber || !agentName || !sourceSystem) {
+      if (!portalNumber || !documentNumber || !responsibleName || !salesAgentName || !sourceSystem) {
         throw new IntegrationError(422, "REQUIRED_FIELD_MISSING", "Не всі обов'язкові поля заповнено");
       }
 
       let result;
       try {
         result = await repository.transaction(async (connection) => {
-        const doc = await repository.lockDocument(connection, Number(documentId));
-        assertDocument(doc, accessible);
-        if (doc.document_number !== portalNumber) {
-          throw new IntegrationError(409, "PORTAL_NUMBER_MISMATCH", "Номер документа порталу не відповідає id");
-        }
-        if (doc.document_1c_guid) {
-          const equivalent = doc.document_1c_guid.toLowerCase() === documentGuid
-            && String(doc.source_system).toUpperCase() === sourceSystem
-            && doc.up_document_number === documentNumber
-            && doc.executor_name === agentName
-            && String(doc.executor_agent_guid || "").toLowerCase() === agentGuid
-            && sameDate(doc.document_1c_date, documentDate)
-            && String(doc.warehouse_guid || "").toLowerCase() === String(warehouseGuid || "").toLowerCase();
-          if (!equivalent) {
-            throw new IntegrationError(409, "DOCUMENT_ALREADY_LINKED", "Документ уже пов'язаний з іншим документом 1С");
+          const doc = await repository.lockDocument(connection, Number(documentId));
+          assertDocument(doc, accessible);
+          if (doc.document_number !== portalNumber) {
+            throw new IntegrationError(409, "PORTAL_NUMBER_MISMATCH", "Номер документа порталу не відповідає id");
           }
-          return {
-            idempotent: true,
-            portal_status: doc.status,
-            one_c_stage: doc.one_c_stage,
-            warning: doc.last_sync_error || null,
-          };
-        }
-        if (doc.status !== "NOT_COMPLETED") {
-          throw new IntegrationError(409, "INVALID_PORTAL_STATUS", "Документ не готовий до створення в 1С");
-        }
-        const existing = await repository.findDocumentByExternalGuid(connection, sourceSystem, documentGuid);
-        if (existing && Number(existing.document_id) !== Number(doc.id)) {
-          throw new IntegrationError(409, "ONE_C_DOCUMENT_ALREADY_LINKED", "GUID документа 1С вже використовується");
-        }
-        const agent = await resolveAgent(connection, doc, agentGuid, agentName);
-        await repository.saveCreated(connection, {
-          documentId: doc.id, documentGuid, documentDate, sourceSystem, documentNumber,
-          agentName, agentGuid, salesAgentId: agent.id, warehouseGuid, warning: agent.warning,
-        });
-        await repository.addHistory(connection, {
-          documentId: doc.id,
-          userId: user.id,
-          action: "ONE_C_CREATED",
-          oldStatus: doc.status,
-          newStatus: "PLANNED",
-          comment: `Створено документ УП ${documentNumber}. Виконавець: ${agentName}.`,
-        });
-        return { idempotent: false, portal_status: "PLANNED", one_c_stage: "NEW", warning: agent.warning };
+          if (doc.document_1c_guid) {
+            const equivalentLink = doc.document_1c_guid.toLowerCase() === documentGuid
+              && String(doc.source_system).toUpperCase() === sourceSystem;
+            const equivalentDocument = doc.up_document_number === documentNumber
+              && sameDate(doc.document_1c_date, documentDate)
+              && String(doc.warehouse_guid || "").toLowerCase() === String(warehouseGuid || "").toLowerCase();
+            if (!equivalentLink || !equivalentDocument) {
+              throw new IntegrationError(409, "DOCUMENT_ALREADY_LINKED", "Документ уже пов'язаний з іншим документом 1С");
+            }
+            const agent = await resolveAgent(
+              connection,
+              doc,
+              salesAgentGuid,
+              salesAgentName,
+            );
+            await repository.updateCreatedMetadata(connection, {
+              documentId: doc.id,
+              responsibleName,
+              responsibleGuid,
+              salesAgentId: agent.id,
+              salesAgentGuid,
+              salesAgentName,
+              warning: agent.warning,
+            });
+            return {
+              idempotent: true,
+              portal_status: doc.status,
+              one_c_stage: doc.one_c_stage,
+              warning: agent.warning,
+            };
+          }
+          if (doc.status !== "NOT_COMPLETED") {
+            throw new IntegrationError(409, "INVALID_PORTAL_STATUS", "Документ не готовий до створення в 1С");
+          }
+          const existing = await repository.findDocumentByExternalGuid(connection, sourceSystem, documentGuid);
+          if (existing && Number(existing.document_id) !== Number(doc.id)) {
+            throw new IntegrationError(409, "ONE_C_DOCUMENT_ALREADY_LINKED", "GUID документа 1С вже використовується");
+          }
+          const agent = await resolveAgent(connection, doc, salesAgentGuid, salesAgentName);
+          await repository.saveCreated(connection, {
+            documentId: doc.id,
+            documentGuid,
+            documentDate,
+            sourceSystem,
+            documentNumber,
+            responsibleName,
+            responsibleGuid,
+            salesAgentId: agent.id,
+            salesAgentGuid,
+            salesAgentName,
+            warehouseGuid,
+            warning: agent.warning,
+          });
+          await repository.addHistory(connection, {
+            documentId: doc.id,
+            userId: user.id,
+            action: "ONE_C_CREATED",
+            oldStatus: doc.status,
+            newStatus: "PLANNED",
+            comment: `Створено документ УП ${documentNumber}. Виконавець: ${responsibleName}. ТА: ${salesAgentName}.`,
+          });
+          return { idempotent: false, portal_status: "PLANNED", one_c_stage: "NEW", warning: agent.warning };
         });
       } catch (error) {
         if (error?.code === "ER_DUP_ENTRY") {

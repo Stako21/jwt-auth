@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createTroIntegrationService, IntegrationError } from "../services/TroIntegrationService.js";
+import { getTroPeople } from "../../client/src/components/Documents/troPeople.js";
 import {
   denyOneCIntegrationAccount,
   ensureOneCIntegrationAccount,
@@ -12,6 +13,8 @@ const CREATED_PAYLOAD = {
   document_1c_guid: "11111111-1111-4111-8111-111111111111",
   document_1c_number: "РП-005843",
   document_1c_date: "2026-09-06T12:15:35+03:00",
+  responsible_guid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  responsible_name: "Администратор",
   sales_agent_guid: "22222222-2222-4222-8222-222222222222",
   sales_agent_name: "Іваненко Петро Іванович",
   source_system: "UP",
@@ -33,7 +36,10 @@ function document(overrides = {}) {
     document_1c_guid: null,
     document_1c_date: null,
     source_system: null,
-    executor_agent_guid: null,
+    executor_guid: null,
+    one_c_sales_agent_id: null,
+    one_c_sales_agent_guid: null,
+    one_c_sales_agent_name: null,
     warehouse_guid: null,
     one_c_stage: null,
     one_c_stage_updated_at: null,
@@ -133,12 +139,24 @@ function fakeRepository(initialDocuments = [document()]) {
         document_1c_date: values.documentDate,
         source_system: values.sourceSystem,
         up_document_number: values.documentNumber,
-        executor_name: values.agentName,
-        executor_sales_agent_id: values.salesAgentId,
-        executor_agent_guid: values.agentGuid,
+        executor_name: values.responsibleName,
+        executor_guid: values.responsibleGuid,
+        one_c_sales_agent_id: values.salesAgentId,
+        one_c_sales_agent_guid: values.salesAgentGuid,
+        one_c_sales_agent_name: values.salesAgentName,
         warehouse_guid: values.warehouseGuid,
         one_c_stage: "NEW",
         status: item.status === "NOT_COMPLETED" ? "PLANNED" : item.status,
+      });
+    },
+    async updateCreatedMetadata(_connection, values) {
+      const item = documents.get(values.documentId);
+      Object.assign(item, {
+        executor_name: values.responsibleName,
+        executor_guid: values.responsibleGuid,
+        one_c_sales_agent_id: values.salesAgentId,
+        one_c_sales_agent_guid: values.salesAgentGuid,
+        one_c_sales_agent_name: values.salesAgentName,
       });
     },
     async saveStage(_connection, id, stage, changedAt) {
@@ -170,20 +188,73 @@ test("created links 1C, preserves author/TA and moves to PLANNED", async () => {
   assert.equal(saved.author_user_id, before.author);
   assert.equal(saved.ta_user_id, before.ta);
   assert.equal(saved.up_document_number, CREATED_PAYLOAD.document_1c_number);
-  assert.equal(saved.executor_name, CREATED_PAYLOAD.sales_agent_name);
+  assert.equal(saved.executor_name, CREATED_PAYLOAD.responsible_name);
+  assert.equal(saved.executor_guid, CREATED_PAYLOAD.responsible_guid);
+  assert.notEqual(saved.executor_name, CREATED_PAYLOAD.sales_agent_name);
+  assert.equal(saved.one_c_sales_agent_id, 77);
+  assert.equal(saved.one_c_sales_agent_guid, CREATED_PAYLOAD.sales_agent_guid);
+  assert.equal(saved.one_c_sales_agent_name, CREATED_PAYLOAD.sales_agent_name);
   assert.equal(saved.document_1c_guid, CREATED_PAYLOAD.document_1c_guid);
   assert.equal(repo.history.length, 1);
+  assert.match(repo.history[0].comment, /Виконавець: Администратор/);
+  assert.match(repo.history[0].comment, /ТА: Іваненко Петро Іванович/);
 });
 
-test("repeated equivalent created is idempotent and later status is not rolled back", async () => {
+test("repeated created updates integration metadata without workflow rollback or duplicate history", async () => {
   const repo = fakeRepository();
   const service = createTroIntegrationService(repo);
   await service.created(USER, 125, CREATED_PAYLOAD);
+  const authorId = repo.documents.get(125).author_user_id;
+  const taUserId = repo.documents.get(125).ta_user_id;
   repo.documents.get(125).status = "COMPLETED";
-  const result = await service.created(USER, 125, CREATED_PAYLOAD);
+  const metadataUpdate = {
+    ...CREATED_PAYLOAD,
+    responsible_guid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    responsible_name: "Новий відповідальний",
+    sales_agent_guid: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    sales_agent_name: "Новий торговий агент",
+  };
+  const result = await service.created(USER, 125, metadataUpdate);
+  const saved = repo.documents.get(125);
   assert.equal(result.idempotent, true);
-  assert.equal(repo.documents.get(125).status, "COMPLETED");
+  assert.equal(saved.status, "COMPLETED");
+  assert.equal(saved.author_user_id, authorId);
+  assert.equal(saved.ta_user_id, taUserId);
+  assert.equal(saved.executor_name, metadataUpdate.responsible_name);
+  assert.equal(saved.executor_guid, metadataUpdate.responsible_guid);
+  assert.equal(saved.one_c_sales_agent_id, 77);
+  assert.equal(saved.one_c_sales_agent_guid, metadataUpdate.sales_agent_guid);
+  assert.equal(saved.one_c_sales_agent_name, metadataUpdate.sales_agent_name);
   assert.equal(repo.history.length, 1);
+});
+
+test("created requires responsible GUID and name", async () => {
+  const service = createTroIntegrationService(fakeRepository());
+  await assert.rejects(
+    service.created(USER, 125, { ...CREATED_PAYLOAD, responsible_guid: "" }),
+    (error) => error instanceof IntegrationError && error.status === 422,
+  );
+  await assert.rejects(
+    service.created(USER, 125, { ...CREATED_PAYLOAD, responsible_name: "" }),
+    (error) => error instanceof IntegrationError && error.status === 422,
+  );
+});
+
+test("frontend presents 1C responsible and sales agent separately", () => {
+  assert.deepEqual(getTroPeople({
+    executorName: "Администратор",
+    oneCSalesAgentName: "Гудим Наталія Володимирівна",
+    requestSalesAgentName: "ТА заявки",
+  }), {
+    executorName: "Администратор",
+    salesAgentName: "Гудим Наталія Володимирівна",
+    isRequestSalesAgent: false,
+  });
+  assert.deepEqual(getTroPeople({ requestSalesAgentName: "ТА заявки" }), {
+    executorName: "—",
+    salesAgentName: "ТА заявки",
+    isRequestSalesAgent: true,
+  });
 });
 
 test("different GUID cannot replace an existing link", async () => {
@@ -214,8 +285,9 @@ test("missing sales agent does not block linking and returns a warning", async (
   repo.findSalesAgents = async () => [];
   const result = await createTroIntegrationService(repo).created(USER, 125, CREATED_PAYLOAD);
   assert.match(result.warning, /не знайдено/);
-  assert.equal(repo.documents.get(125).executor_sales_agent_id, null);
-  assert.equal(repo.documents.get(125).executor_name, CREATED_PAYLOAD.sales_agent_name);
+  assert.equal(repo.documents.get(125).one_c_sales_agent_id, null);
+  assert.equal(repo.documents.get(125).one_c_sales_agent_name, CREATED_PAYLOAD.sales_agent_name);
+  assert.equal(repo.documents.get(125).executor_name, CREATED_PAYLOAD.responsible_name);
 });
 
 test("ambiguous sales agent is rejected instead of selecting an arbitrary row", async () => {

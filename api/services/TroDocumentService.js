@@ -434,9 +434,11 @@ export async function getTroDocumentExtension(executor, documentId) {
   const [[details]] = await executor.query(
     `SELECT t.ta_user_id AS taUserId, ta.user_name AS taName, t.movement_type AS movementType,
        t.up_document_number AS upDocumentNumber, t.executor_name AS executorName,
+       t.executor_guid AS executorGuid,
        t.document_1c_guid AS document1cGuid, t.document_1c_date AS document1cDate,
-       t.source_system AS sourceSystem, t.executor_sales_agent_id AS executorSalesAgentId,
-       t.executor_agent_guid AS executorAgentGuid, t.warehouse_guid AS warehouseGuid,
+       t.source_system AS sourceSystem, t.one_c_sales_agent_id AS oneCSalesAgentId,
+       t.one_c_sales_agent_guid AS oneCSalesAgentGuid,
+       t.one_c_sales_agent_name AS oneCSalesAgentName, t.warehouse_guid AS warehouseGuid,
        t.one_c_stage AS oneCStage, t.one_c_stage_updated_at AS oneCStageUpdatedAt,
        t.last_synced_at AS lastSyncedAt, t.last_sync_error AS lastSyncError,
        t.accountant_user_id AS accountantUserId, t.app_install AS appInstall,

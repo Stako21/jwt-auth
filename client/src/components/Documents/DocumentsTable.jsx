@@ -4,6 +4,7 @@ import { ROLE_IDS } from "../../utils/roles.js";
 import FormInput from "../FormControl/FormInput.jsx";
 import DocumentRowActions from "./DocumentRowAction";
 import StatusBadge from "./StatusBadge";
+import { getTroPeople } from "./troPeople.js";
 import style from "./DocumentsTable.module.scss";
 
 function formatDocumentDate(value) {
@@ -38,6 +39,14 @@ function oneCStageLabel(value) {
 
 function formatDocumentDateTime(value) {
   return value ? new Date(value).toLocaleString("uk-UA") : "—";
+}
+
+function troPeople(doc) {
+  return getTroPeople({
+    executorName: doc.tro_executor_name,
+    oneCSalesAgentName: doc.tro_one_c_sales_agent_name,
+    requestSalesAgentName: doc.tro_ta_name,
+  });
 }
 
 function troRequiredDocuments(doc) {
@@ -210,6 +219,7 @@ export default function DocumentTable({
               }`}
             />
             {isTroTable ? <col className={style.troExecutorColumn} /> : null}
+            {isTroTable ? <col className={style.troTaColumn} /> : null}
             {isTroTable ? <col className={style.troUpColumn} /> : null}
             {isTroTable ? <col className={style.troStageColumn} /> : null}
             {isTroTable ? <col className={style.troDocumentsColumn} /> : null}
@@ -235,7 +245,8 @@ export default function DocumentTable({
               <th>Торгова точка</th>
               <th>Контрагент</th>
               <th>Автор</th>
-              {isTroTable ? <th>Виконавець / ТА</th> : null}
+              {isTroTable ? <th>Виконавець</th> : null}
+              {isTroTable ? <th>ТА</th> : null}
               {isTroTable ? <th>Документ УП</th> : null}
               {isTroTable ? <th>Стан в УП</th> : null}
               {isTroTable ? <th>Документи</th> : null}
@@ -278,9 +289,17 @@ export default function DocumentTable({
                   <span>{doc.author}</span>
                 </td>
                 {isTroTable ? (
-                  <td className={style.personCell} title={doc.tro_executor_name || ""}>
-                    <span>{doc.tro_executor_name || "—"}</span>
-                    {!doc.tro_executor_name && doc.tro_ta_name ? <small>ТА заявки: {doc.tro_ta_name}</small> : null}
+                  <td className={style.personCell} title={troPeople(doc).executorName}>
+                    <span>{troPeople(doc).executorName}</span>
+                  </td>
+                ) : null}
+                {isTroTable ? (
+                  <td
+                    className={style.personCell}
+                    title={troPeople(doc).salesAgentName}
+                  >
+                    <span>{troPeople(doc).salesAgentName}</span>
+                    {troPeople(doc).isRequestSalesAgent ? <small>ТА заявки</small> : null}
                   </td>
                 ) : null}
                 {isTroTable ? (
@@ -349,9 +368,15 @@ export default function DocumentTable({
                 <span>{doc.author}</span>
               </p>
               {isTroTable ? (
-                <p title={doc.tro_executor_name || doc.tro_ta_name || ""}>
+                <p title={troPeople(doc).executorName}>
                   <i className="fa-solid fa-user-tag" aria-hidden="true"></i>
-                  <span>Виконавець / ТА: {doc.tro_executor_name || (doc.tro_ta_name ? `${doc.tro_ta_name} (ТА заявки)` : "—")}</span>
+                  <span>Виконавець: {troPeople(doc).executorName}</span>
+                </p>
+              ) : null}
+              {isTroTable ? (
+                <p title={troPeople(doc).salesAgentName}>
+                  <i className="fa-regular fa-address-card" aria-hidden="true"></i>
+                  <span>ТА: {troPeople(doc).salesAgentName}{troPeople(doc).isRequestSalesAgent ? " (ТА заявки)" : ""}</span>
                 </p>
               ) : null}
               {isTroTable ? (

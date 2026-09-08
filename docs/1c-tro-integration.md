@@ -63,20 +63,42 @@ Query: `movement_type=INSTALL|RETURN`, `branch_id`, `limit=1..500`.
 
 ```json
 {
-  "portal_document_number": "ТРО-ZP-000125",
+  "portal_document_number": "ТРО-ЧК-000002",
   "document_1c_guid": "11111111-1111-4111-8111-111111111111",
-  "document_1c_number": "РП-005843",
-  "document_1c_date": "2026-09-06T12:15:35+03:00",
+  "document_1c_number": "СГ0000798",
+  "document_1c_date": "2026-09-08T08:49:52Z",
+  "responsible_guid": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "responsible_name": "Администратор",
   "sales_agent_guid": "22222222-2222-4222-8222-222222222222",
-  "sales_agent_name": "Іваненко Петро Іванович",
+  "sales_agent_name": "Гудим Наталія Володимирівна",
   "source_system": "UP",
-  "warehouse_guid": null
+  "warehouse_guid": "33333333-3333-4333-8333-333333333333"
 }
 ```
 
-Операція заповнює номер УП та snapshot виконавця, зберігає GUID, встановлює `one_c_stage=NEW` і переводить `NOT_COMPLETED → PLANNED`. Автор і `ta_user_id` не змінюються.
+Обов'язкові `responsible_guid` і `responsible_name` описують реквізит `Ответственный` документа 1С. GUID має стандартний формат GUID, ім'я — непорожній рядок до 150 символів. Вони зберігаються як `executor_guid` і snapshot `executor_name`; відповідальний не вирішується через довідник торгових агентів.
 
-Той самий еквівалентний запит ідемпотентний. Інший GUID для вже пов'язаної заявки або GUID, пов'язаний з іншою заявкою, повертає `409`.
+`sales_agent_guid` і `sales_agent_name` описують окремий реквізит `ТорговыйАгент`. GUID, як і раніше, вирішується за `branch_id + sales_agents.current_agent_guid`; результат і snapshots зберігаються в `one_c_sales_agent_id`, `one_c_sales_agent_guid`, `one_c_sales_agent_name`.
+
+Перший успішний виклик заповнює номер УП та обидва набори metadata, зберігає зв'язок з документом 1С, встановлює `one_c_stage=NEW` і переводить `NOT_COMPLETED → PLANNED`. `documents.author_user_id` і `tro_document_details.ta_user_id` не змінюються.
+
+Повторний запит для того самого портального документа, GUID і незмінних реквізитів документа 1С залишається ідемпотентним щодо зв'язку та workflow, але оновлює `executor_*` і `one_c_sales_agent_*`. Він не змінює статус, не створює повторний `ONE_C_CREATED` і не повертає workflow назад. Інший GUID для вже пов'язаної заявки або GUID, пов'язаний з іншою заявкою, повертає `409`.
+
+Успішна відповідь першого або повторного виклику:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "idempotent": false,
+    "portal_status": "PLANNED",
+    "one_c_stage": "NEW",
+    "warning": null
+  }
+}
+```
+
+Для повторного metadata-sync `idempotent` дорівнює `true`, а `portal_status` і `one_c_stage` повертаються без зміни.
 
 ### `POST /api/1c/tro-requests/:id/rejected`
 

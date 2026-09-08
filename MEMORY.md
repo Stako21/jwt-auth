@@ -2263,3 +2263,12 @@ Frontend:
 - Cursors are bound to the endpoint, accessible branches, and movement filter. Invalid, modified, or cross-scope cursors return controlled `422 INVALID_CURSOR` responses.
 - Added coverage for first, next, and final pages; duplicate prevention; equal timestamps; invalid cursors; cursor-less backward compatibility; and insertion during traversal for both read endpoints. Backend tests and syntax checks passed.
 - Created the pre-change recovery tag `checkpoint-before-1c-tro-pagination-20260906` at commit `93b4c30fb86627c2d7be2a72e1871edf313a541c`.
+
+## 2026-09-08 - Separate 1C responsible and sales-agent metadata
+
+- Added and applied development migration `020_tro_1c_responsible_and_sales_agent.js` to local database `auth` on `Stako_PC`. It adds `executor_guid`, cleanly renames the sales-agent reference/GUID columns to `one_c_sales_agent_id` and `one_c_sales_agent_guid`, adds `one_c_sales_agent_name`, and recreates the FK with `ON DELETE SET NULL`.
+- Existing linked stage-1 records moved their former `executor_name` sales-agent snapshot into `one_c_sales_agent_name`; `executor_name` was cleared for those rows so a repeated `/created` can supply the true 1C responsible. The two existing links were migrated without changing portal documents or workflow.
+- `POST /api/1c/tro-requests/:id/created` now requires `responsible_guid` and `responsible_name`. The responsible is stored only as executor metadata; the actual 1C sales agent continues to resolve by branch plus `current_agent_guid` and is stored independently.
+- A repeated `/created` for the same existing 1C link refreshes responsible and sales-agent metadata without status rollback, link recreation, notification, or duplicate `ONE_C_CREATED` history.
+- TRO desktop rows, mobile cards, and the document modal now display `Виконавець` and `ТА` separately. Before 1C creation, TA falls back to the workflow TA and is marked `ТА заявки`.
+- Backend tests (27), frontend lint, frontend production build, backend syntax checks, migration verification, and live read-only DTO queries passed. The pre-change recovery tag is `checkpoint-before-1c-tro-responsible-20260908` at commit `47f9b7fbf84ef2d0b81c4015940bd2d97b76e1e0`.

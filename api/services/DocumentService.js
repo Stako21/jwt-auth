@@ -951,6 +951,7 @@ export async function getDocumentsService(user, query) {
       td.ta_user_id AS tro_ta_user_id,
       ta.user_name AS tro_ta_name,
       td.executor_name AS tro_executor_name,
+      td.one_c_sales_agent_name AS tro_one_c_sales_agent_name,
       td.up_document_number AS tro_up_document_number,
       td.document_1c_date AS tro_document_1c_date,
       td.one_c_stage AS tro_one_c_stage,

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSnackbar } from "notistack";
 import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
+import { getTroPeople } from "../components/Documents/troPeople.js";
 import FormInput from "../components/FormControl/FormInput.jsx";
 import { createDocument, updateDocument, updateTroAccounting } from "../services/documents.api.js";
 import { ROLE_IDS } from "../utils/roles.js";
@@ -41,6 +42,11 @@ export default function CreateTroDocumentModal({
   const accountingEditable =
     Boolean(editingDocument) && isAccountant && ["NOT_COMPLETED", "PLANNED"].includes(editingDocument.status);
   const generalEditable = !editingDocument || (!isViewOnly && ["NEW", "REVISION"].includes(editingDocument.status));
+  const integrationPeople = getTroPeople({
+    executorName: editingDocument?.tro?.executorName,
+    oneCSalesAgentName: editingDocument?.tro?.oneCSalesAgentName,
+    requestSalesAgentName: editingDocument?.tro?.taName,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -301,7 +307,8 @@ export default function CreateTroDocumentModal({
             <h3>Заповнює бухгалтер</h3>
             <div className={styles.accountingGrid}>
               <div className={styles.field}><label>№ документа з УП</label><FormInput value={editingDocument.tro?.upDocumentNumber || "—"} readOnly /></div>
-              <div className={styles.field}><label>Виконавець / ТА</label><FormInput value={editingDocument.tro?.executorName || "—"} readOnly /></div>
+              <div className={styles.field}><label>Виконавець</label><FormInput value={integrationPeople.executorName} readOnly /></div>
+              <div className={styles.field}><label>ТА</label><FormInput value={`${integrationPeople.salesAgentName}${integrationPeople.isRequestSalesAgent ? " (ТА заявки)" : ""}`} readOnly /></div>
               <div className={styles.field}><label>Дата документа УП</label><FormInput value={editingDocument.tro?.document1cDate ? new Date(editingDocument.tro.document1cDate).toLocaleString("uk-UA") : "—"} readOnly /></div>
               <div className={styles.field}><label>Стан в УП</label><FormInput value={({ NEW: "Новий", IN_PROGRESS: "Виконується", COMPLETED: "Завершено", CANCELLED: "Скасовано" })[editingDocument.tro?.oneCStage] || "—"} readOnly /></div>
             </div>

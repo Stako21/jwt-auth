@@ -165,8 +165,9 @@ export default class TroIntegrationRepository {
     const [[row]] = await connection.query(
       `SELECT d.id, d.document_number, d.document_type, d.status, d.author_user_id,
               d.branch_id, td.ta_user_id, td.movement_type, td.up_document_number,
-              td.executor_name, td.document_1c_guid, td.document_1c_date,
-              td.source_system, td.executor_sales_agent_id, td.executor_agent_guid,
+              td.executor_name, td.executor_guid, td.document_1c_guid, td.document_1c_date,
+              td.source_system, td.one_c_sales_agent_id, td.one_c_sales_agent_guid,
+              td.one_c_sales_agent_name,
               td.warehouse_guid, td.one_c_stage, td.one_c_stage_updated_at,
               td.last_sync_error
        FROM documents d
@@ -203,19 +204,40 @@ export default class TroIntegrationRepository {
     await connection.query(
       `UPDATE tro_document_details
        SET document_1c_guid = ?, document_1c_date = ?, source_system = ?,
-           up_document_number = ?, executor_name = ?, executor_sales_agent_id = ?,
-           executor_agent_guid = ?, warehouse_guid = ?, one_c_stage = 'NEW',
+           up_document_number = ?, executor_name = ?, executor_guid = ?,
+           one_c_sales_agent_id = ?, one_c_sales_agent_guid = ?,
+           one_c_sales_agent_name = ?, warehouse_guid = ?, one_c_stage = 'NEW',
            one_c_stage_updated_at = NOW(), last_synced_at = NOW(), last_sync_error = ?
        WHERE document_id = ?`,
       [
         values.documentGuid, values.documentDate, values.sourceSystem,
-        values.documentNumber, values.agentName, values.salesAgentId,
-        values.agentGuid, values.warehouseGuid, values.warning, values.documentId,
+        values.documentNumber, values.responsibleName, values.responsibleGuid,
+        values.salesAgentId, values.salesAgentGuid, values.salesAgentName,
+        values.warehouseGuid, values.warning, values.documentId,
       ],
     );
     await connection.query(
       "UPDATE documents SET status = 'PLANNED' WHERE id = ? AND status = 'NOT_COMPLETED'",
       [values.documentId],
+    );
+  }
+
+  static async updateCreatedMetadata(connection, values) {
+    await connection.query(
+      `UPDATE tro_document_details
+       SET executor_name = ?, executor_guid = ?, one_c_sales_agent_id = ?,
+           one_c_sales_agent_guid = ?, one_c_sales_agent_name = ?,
+           last_synced_at = NOW(), last_sync_error = ?
+       WHERE document_id = ?`,
+      [
+        values.responsibleName,
+        values.responsibleGuid,
+        values.salesAgentId,
+        values.salesAgentGuid,
+        values.salesAgentName,
+        values.warning,
+        values.documentId,
+      ],
     );
   }
 
