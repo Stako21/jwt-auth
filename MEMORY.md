@@ -2297,3 +2297,9 @@ Frontend:
 - Raised the shared `ItemModal` from a hardcoded modal layer to the centralized `$z-popover` layer (`1500`), keeping it above its parent document modal (`1400`) and below snackbars (`1600`).
 - On phones the searchable product/TRO listbox now participates in the modal body's layout instead of extending absolutely into the footer. It receives a bounded viewport-relative height and its own contained scrolling, while the action footer remains visible.
 - Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings. The pre-change recovery tag is `checkpoint-before-item-modal-layer-listbox-20260909` at commit `45b29aa`.
+
+## 2026-09-09 - Unified document-modal layers and portaled item listbox
+
+- Unified the TRO and return/exchange parent document modals on the same derived layer (`$z-modal - 100`, currently `1300`). The shared `ItemModal` is forced onto `$z-popover` (`1500`) with `!important`, so Bulma source order cannot lower it beneath either document modal.
+- Moved the searchable Product/TRO listbox into its own `document.body` portal above the item-modal layer. Its fixed position follows the input during scrolling and viewport/virtual-keyboard changes, measures available space, and automatically opens below or above the field with a bounded internal scroller.
+- Frontend lint and production build passed; generated CSS was checked to contain the effective `1300`, `1500 !important`, and higher listbox layer values. The pre-change recovery tag is `checkpoint-before-unified-document-modal-layers-listbox-20260909` at commit `cdf9d08`.

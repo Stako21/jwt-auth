@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import FormInput from "../components/FormControl/FormInput.jsx";
 import DateInput from "../components/DateInput/DateInput.jsx";
@@ -27,6 +27,7 @@ export default function ItemModal({
   const [manufactureDate, setManufactureDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [errors, setErrors] = useState({});
+  const [productListboxStyle, setProductListboxStyle] = useState(null);
   const productInputRef = useRef(null);
 
   useEffect(() => {
@@ -106,6 +107,58 @@ export default function ItemModal({
       !query || String(product.name || "").toLocaleLowerCase("uk").includes(query),
     );
   }, [groupId, productSearch, products, productsByGroup]);
+
+  const updateProductListboxPosition = useCallback(() => {
+    const input = productInputRef.current;
+    if (!input) return;
+
+    const rect = input.getBoundingClientRect();
+    const visualViewport = window.visualViewport;
+    const viewportTop = visualViewport?.offsetTop || 0;
+    const viewportHeight = visualViewport?.height || window.innerHeight;
+    const viewportWidth = visualViewport?.width || window.innerWidth;
+    const viewportBottom = viewportTop + viewportHeight;
+    const gap = 4;
+    const edge = 8;
+    const availableBelow = Math.max(0, viewportBottom - rect.bottom - gap - edge);
+    const availableAbove = Math.max(0, rect.top - viewportTop - gap - edge);
+    const desiredHeight = Math.min(320, Math.max(48, filteredProducts.length * 52 + 8));
+    const openAbove = availableBelow < Math.min(desiredHeight, 160) &&
+      availableAbove > availableBelow;
+    const availableHeight = openAbove ? availableAbove : availableBelow;
+    const height = Math.max(48, Math.min(desiredHeight, availableHeight));
+    const width = Math.min(rect.width, viewportWidth - edge * 2);
+    const left = Math.min(
+      Math.max(rect.left, edge),
+      viewportWidth - edge - width,
+    );
+    const top = openAbove
+      ? Math.max(viewportTop + edge, rect.top - gap - height)
+      : rect.bottom + gap;
+
+    setProductListboxStyle({ left, top, width, height });
+  }, [filteredProducts.length]);
+
+  useEffect(() => {
+    if (!showProducts) {
+      setProductListboxStyle(null);
+      return undefined;
+    }
+
+    updateProductListboxPosition();
+    const visualViewport = window.visualViewport;
+    window.addEventListener("resize", updateProductListboxPosition);
+    visualViewport?.addEventListener("resize", updateProductListboxPosition);
+    visualViewport?.addEventListener("scroll", updateProductListboxPosition);
+    document.addEventListener("scroll", updateProductListboxPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateProductListboxPosition);
+      visualViewport?.removeEventListener("resize", updateProductListboxPosition);
+      visualViewport?.removeEventListener("scroll", updateProductListboxPosition);
+      document.removeEventListener("scroll", updateProductListboxPosition, true);
+    };
+  }, [showProducts, updateProductListboxPosition]);
 
   function selectProduct(product) {
     const nextGroupId = String(product.group_id ?? product.groupId ?? "");
@@ -232,8 +285,12 @@ export default function ItemModal({
                   setErrors((prev) => ({ ...prev, productId: false }));
                 }}
               />
-              {showProducts ? (
-                <div className={style.productOptions} role="listbox">
+              {showProducts && productListboxStyle ? createPortal(
+                <div
+                  className={style.productOptions}
+                  role="listbox"
+                  style={productListboxStyle}
+                >
                   {filteredProducts.length ? filteredProducts.map((product) => {
                     const productGroupId = String(product.group_id ?? product.groupId ?? "");
                     return (
@@ -253,7 +310,8 @@ export default function ItemModal({
                   }) : (
                     <p className={style.emptyProducts}>{productLabel} не знайдено</p>
                   )}
-                </div>
+                </div>,
+                document.body,
               ) : null}
             </div>
           </div>
