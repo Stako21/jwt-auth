@@ -2279,3 +2279,8 @@ Frontend:
 - Selecting a product automatically fills its directory group. Changing the group keeps the product only when it still belongs to that group; otherwise the stale product selection and search text are cleared.
 - Product results show the product name plus a muted secondary group label, while the selected input retains only the product name. Empty searches show `Товар не знайдено`; mouse, focus, and Escape interactions remain supported.
 - Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings. The pre-change recovery tag is `checkpoint-before-item-product-group-link-20260909` at commit `f2b86f8f876da66ee2864b3584fc6618f1579326`.
+
+## 2026-09-09 - Mobile item-modal width containment
+
+- Prevented long selected product names from expanding the return/exchange item modal beyond the phone viewport. The modal shell, grid body, fields, searchable product picker, results, footer, and form controls now allow shrinking with bounded widths and ellipsis where appropriate.
+- Removed mobile negative column gutters inside this modal so quantity/date rows cannot create horizontal overflow. Frontend lint and production build passed with existing warnings; the pre-fix tag is `checkpoint-before-item-modal-mobile-width-20260909` at commit `b4d4af5`.
