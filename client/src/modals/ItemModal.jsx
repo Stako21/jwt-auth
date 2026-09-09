@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import FormInput from "../components/FormControl/FormInput.jsx";
 import DateInput from "../components/DateInput/DateInput.jsx";
 import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
@@ -22,6 +23,7 @@ export default function ItemModal({
   const [manufactureDate, setManufactureDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [errors, setErrors] = useState({});
+  const productInputRef = useRef(null);
 
   useEffect(() => {
     if (initialItem) {
@@ -108,6 +110,7 @@ export default function ItemModal({
     setGroupId(nextGroupId);
     setShowProducts(false);
     setErrors((prev) => ({ ...prev, groupId: false, productId: false }));
+    productInputRef.current?.blur();
   }
 
   function validate() {
@@ -143,7 +146,7 @@ export default function ItemModal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       className={`modal is-active ${style.itemModal}`}
     >
@@ -204,6 +207,7 @@ export default function ItemModal({
               }}
             >
               <FormInput
+                ref={productInputRef}
                 className={errors.productId ? "is-danger" : ""}
                 value={productSearch}
                 placeholder="Почніть вводити назву товару"
@@ -337,6 +341,7 @@ export default function ItemModal({
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

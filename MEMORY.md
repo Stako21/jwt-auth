@@ -2282,5 +2282,5 @@ Frontend:
 
 ## 2026-09-09 - Mobile item-modal width containment
 
-- Prevented long selected product names from expanding the return/exchange item modal beyond the phone viewport. The modal shell, grid body, fields, searchable product picker, results, footer, and form controls now allow shrinking with bounded widths and ellipsis where appropriate.
-- Removed mobile negative column gutters inside this modal so quantity/date rows cannot create horizontal overflow. Frontend lint and production build passed with existing warnings; the pre-fix tag is `checkpoint-before-item-modal-mobile-width-20260909` at commit `b4d4af5`.
+- Prevented long selected product names from shifting the return/exchange item modal on phones. The item modal now renders through a portal directly under `document.body`, explicitly stays within the viewport, and releases the searchable input focus after a product is selected so Android does not pan the page toward the end of the input value.
+- The modal shell, grid body, fields, searchable picker, footer, and form controls can shrink without horizontal overflow; mobile negative column gutters were removed. Product option names remain fully visible and wrap to multiple lines rather than being truncated. Frontend lint and production build passed with existing warnings; recovery tags bracket the fix from `checkpoint-before-item-modal-mobile-width-20260909`.
