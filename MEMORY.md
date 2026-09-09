@@ -2291,3 +2291,9 @@ Frontend:
 - TRO position entry now contains only Group, TRO, and Quantity: unit and manufacture/expiry dates remain present for return/exchange documents but are hidden and excluded from validation in TRO mode.
 - Replaced inline TRO selectors with the same compact document-position table pattern used by return/exchange documents. The table shows separate TRO and Quantity cells plus copy/edit/remove actions appropriate to the current workflow permissions; names remain selectable and copyable in read-only stages. Adding or editing a duplicate TRO name immediately collapses the visible rows and sums their quantities, matching backend normalization.
 - Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings. The pre-change recovery tag is `checkpoint-before-tro-item-modal-table-20260909` at commit `3808063`.
+
+## 2026-09-09 - Nested item-modal layer and mobile results
+
+- Raised the shared `ItemModal` from a hardcoded modal layer to the centralized `$z-popover` layer (`1500`), keeping it above its parent document modal (`1400`) and below snackbars (`1600`).
+- On phones the searchable product/TRO listbox now participates in the modal body's layout instead of extending absolutely into the footer. It receives a bounded viewport-relative height and its own contained scrolling, while the action footer remains visible.
+- Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings. The pre-change recovery tag is `checkpoint-before-item-modal-layer-listbox-20260909` at commit `45b29aa`.
