@@ -13,6 +13,10 @@ export default function ItemModal({
   productGroups,
   products,
   datesRequired = true,
+  showUnit = true,
+  showDates = true,
+  productLabel = "Товар",
+  productPlaceholder = "Почніть вводити назву товару",
 }) {
   const [groupId, setGroupId] = useState("");
   const [productId, setProductId] = useState("");
@@ -118,10 +122,10 @@ export default function ItemModal({
 
     if (!groupId) nextErrors.groupId = true;
     if (!productId) nextErrors.productId = true;
-    if (!quantity) nextErrors.quantity = true;
-    if (datesRequired && !manufactureDate) nextErrors.manufactureDate = true;
-    if (datesRequired && !expiryDate) nextErrors.expiryDate = true;
-    if (manufactureDate && expiryDate && manufactureDate > expiryDate) {
+    if (!quantity || Number(quantity) <= 0) nextErrors.quantity = true;
+    if (showDates && datesRequired && !manufactureDate) nextErrors.manufactureDate = true;
+    if (showDates && datesRequired && !expiryDate) nextErrors.expiryDate = true;
+    if (showDates && manufactureDate && expiryDate && manufactureDate > expiryDate) {
       nextErrors.mismathDate = true;
     }
 
@@ -197,7 +201,7 @@ export default function ItemModal({
           </div>
 
           <div className="field">
-            <label className="label">Товар *</label>
+            <label className="label">{productLabel} *</label>
             <div
               className={style.productPicker}
               onBlur={(event) => {
@@ -210,8 +214,8 @@ export default function ItemModal({
                 ref={productInputRef}
                 className={errors.productId ? "is-danger" : ""}
                 value={productSearch}
-                placeholder="Почніть вводити назву товару"
-                aria-label="Товар"
+                placeholder={productPlaceholder}
+                aria-label={productLabel}
                 role="combobox"
                 aria-expanded={showProducts}
                 aria-haspopup="listbox"
@@ -247,15 +251,15 @@ export default function ItemModal({
                       </button>
                     );
                   }) : (
-                    <p className={style.emptyProducts}>Товар не знайдено</p>
+                    <p className={style.emptyProducts}>{productLabel} не знайдено</p>
                   )}
                 </div>
               ) : null}
             </div>
           </div>
 
-          <div className={`columns ${style.compactColumns}`}>
-            <div className="column is-4">
+          <div className={showUnit ? `columns ${style.compactColumns}` : "field"}>
+            {showUnit ? <div className="column is-4">
               <label className="label">Одиниця</label>
               <CompactSelect
                 value={unit}
@@ -268,9 +272,9 @@ export default function ItemModal({
                 ariaLabel="Одиниця"
                 onChange={setUnit}
               />
-            </div>
+            </div> : null}
 
-            <div className="column">
+            <div className={showUnit ? "column" : undefined}>
               <label className="label">Кількість *</label>
               <FormInput
                 className={`input ${errors.quantity ? "is-danger" : ""}`}
@@ -285,7 +289,7 @@ export default function ItemModal({
             </div>
           </div>
 
-          <div className={`columns ${style.compactColumns} ${style.dateColumns}`}>
+          {showDates ? <div className={`columns ${style.compactColumns} ${style.dateColumns}`}>
             <div className="column">
               <label className="label">
                 Дата виготовлення{datesRequired ? " *" : ""}
@@ -315,9 +319,9 @@ export default function ItemModal({
                 }}
               />
             </div>
-          </div>
+          </div> : null}
 
-          {errors.mismathDate && (
+          {showDates && errors.mismathDate && (
             <p className={style.dateErrorMessage}>
               Дата виготовлення не може бути пізніше дати придатності
             </p>

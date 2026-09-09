@@ -7,9 +7,11 @@ import FormInput from "../components/FormControl/FormInput.jsx";
 import { createDocument, updateDocument, updateTroAccounting } from "../services/documents.api.js";
 import { ROLE_IDS } from "../utils/roles.js";
 import { UI_TIMING } from "../uiTokens.js";
+import ItemModal from "./ItemModal.jsx";
 import styles from "./CreateTroDocumentModal.module.scss";
 
-const EMPTY_ITEM = { troProductId: "", productName: "", quantity: 1 };
+const FALLBACK_TRO_GROUP = "Без групи";
+const LEGACY_TRO_GROUP = "Раніше вибрані";
 
 export default function CreateTroDocumentModal({
   isOpen,
@@ -31,7 +33,9 @@ export default function CreateTroDocumentModal({
   const [taUserId, setTaUserId] = useState("");
   const [movementType, setMovementType] = useState("INSTALL");
   const [comment, setComment] = useState("");
-  const [items, setItems] = useState([{ ...EMPTY_ITEM }]);
+  const [items, setItems] = useState([]);
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [editingItemIndex, setEditingItemIndex] = useState(null);
   const [appInstall, setAppInstall] = useState(false);
   const [photoInstall, setPhotoInstall] = useState(false);
   const [appReturn, setAppReturn] = useState(false);
@@ -57,7 +61,9 @@ export default function CreateTroDocumentModal({
       setTaUserId(String(taOptions[0]?.id || ""));
       setMovementType("INSTALL");
       setComment("");
-      setItems([{ ...EMPTY_ITEM }]);
+      setItems([]);
+      setIsItemModalOpen(false);
+      setEditingItemIndex(null);
       setAppInstall(false);
       setPhotoInstall(false);
       setAppReturn(false);
@@ -118,28 +124,91 @@ export default function CreateTroDocumentModal({
     return options;
   }, [editingDocument, taOptions]);
 
-  const productOptions = useMemo(() => {
-    const options = troProducts.map((item) => ({
-      value: item.id,
-      label: item.group_name ? `${item.name} · ${item.group_name}` : item.name,
+  const modalProducts = useMemo(() => {
+    const products = troProducts.map((item) => ({
+      ...item,
+      group_id: `tro-group:${item.group_name || FALLBACK_TRO_GROUP}`,
     }));
     for (const item of editingDocument?.tro?.items || []) {
-      if (!options.some((option) => Number(option.value) === Number(item.troProductId))) {
-        options.push({ value: item.troProductId, label: item.productName });
+      if (!products.some((product) => Number(product.id) === Number(item.troProductId))) {
+        products.push({
+          id: item.troProductId,
+          name: item.productName,
+          group_id: `tro-group:${LEGACY_TRO_GROUP}`,
+          group_name: LEGACY_TRO_GROUP,
+        });
       }
     }
-    return options;
+    return products;
   }, [editingDocument, troProducts]);
 
-  const updateItem = (index, patch) => {
-    setItems((current) => current.map((item, itemIndex) =>
-      itemIndex === index ? { ...item, ...patch } : item));
-  };
+  const troProductGroups = useMemo(() => {
+    const groups = new Map();
+    for (const product of modalProducts) {
+      const groupId = String(product.group_id);
+      if (!groups.has(groupId)) {
+        groups.set(groupId, {
+          id: groupId,
+          name: product.group_name || FALLBACK_TRO_GROUP,
+        });
+      }
+    }
+    return [...groups.values()].sort((left, right) =>
+      left.name.localeCompare(right.name, "uk"));
+  }, [modalProducts]);
 
   const getProductLabel = (item) =>
-    productOptions.find(
-      (option) => String(option.value) === String(item.troProductId),
-    )?.label || item.productName || "";
+    modalProducts.find(
+      (product) => String(product.id) === String(item.troProductId),
+    )?.name || item.productName || "";
+
+  const openAddItem = () => {
+    setEditingItemIndex(null);
+    setIsItemModalOpen(true);
+  };
+
+  const openEditItem = (index) => {
+    setEditingItemIndex(index);
+    setIsItemModalOpen(true);
+  };
+
+  const handleSaveItem = (item) => {
+    const product = modalProducts.find(
+      (candidate) => String(candidate.id) === String(item.productId),
+    );
+    const nextItem = {
+      troProductId: String(item.productId),
+      productName: product?.name || "",
+      quantity: item.quantity,
+    };
+
+    setItems((current) => {
+      const withoutEdited = editingItemIndex === null
+        ? current
+        : current.filter((_, index) => index !== editingItemIndex);
+      const nextNameKey = nextItem.productName.trim().toLocaleLowerCase("uk");
+      const duplicateIndex = withoutEdited.findIndex((currentItem) =>
+        getProductLabel(currentItem).trim().toLocaleLowerCase("uk") === nextNameKey);
+
+      if (duplicateIndex < 0) {
+        if (editingItemIndex === null) return [...withoutEdited, nextItem];
+        const result = [...withoutEdited];
+        result.splice(editingItemIndex, 0, nextItem);
+        return result;
+      }
+
+      return withoutEdited.map((currentItem, index) => index === duplicateIndex
+        ? {
+            ...currentItem,
+            quantity: Number(currentItem.quantity) + Number(nextItem.quantity),
+          }
+        : currentItem);
+    });
+  };
+
+  const removeItem = (index) => {
+    setItems((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  };
 
   const copyProductLabel = async (item) => {
     const label = getProductLabel(item);
@@ -267,40 +336,27 @@ export default function CreateTroDocumentModal({
           </section>
 
           <section className={styles.itemsSection}>
-            <div className={styles.sectionTitle}><h3>ТРО</h3>{generalEditable ? <button type="button" onClick={() => setItems((current) => [...current, { ...EMPTY_ITEM }])}><i className="fa-solid fa-plus" /> Додати</button> : null}</div>
-            <div className={styles.itemList}>{items.map((item, index) => (
-              <div className={styles.itemRow} key={`${index}-${item.troProductId}`}>
-                <div className={styles.productField}>
-                  {generalEditable ? (
-                    <CompactSelect value={item.troProductId} options={productOptions}
-                      onChange={(value) => updateItem(index, { troProductId: value, productName: troProducts.find((product) => String(product.id) === String(value))?.name || "" })}
-                      ariaLabel={`ТРО ${index + 1}`} placement="top" />
-                  ) : (
-                    <FormInput
-                      className={styles.copyableProductName}
-                      value={getProductLabel(item)}
-                      readOnly
-                      aria-label={`ТРО ${index + 1}`}
-                      onFocus={(event) => event.currentTarget.select()}
-                    />
-                  )}
-                  {editingDocument ? (
-                    <button
-                      className={styles.copyProduct}
-                      type="button"
-                      title="Копіювати назву ТРО"
-                      aria-label={`Копіювати назву ТРО ${index + 1}`}
-                      onClick={() => copyProductLabel(item)}
-                    >
-                      <i className="fa-regular fa-copy" aria-hidden="true" />
-                    </button>
-                  ) : null}
-                </div>
-                <FormInput type="number" min="0.001" step="0.001" value={item.quantity} disabled={!generalEditable}
-                  onChange={(event) => updateItem(index, { quantity: event.target.value })} aria-label="Кількість" />
-                {generalEditable ? <button className={styles.removeItem} type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label="Видалити позицію"><i className="fa-solid fa-trash" /></button> : null}
+            <div className={styles.sectionTitle}><h3>ТРО</h3>{generalEditable ? <button type="button" onClick={openAddItem}><i className="fa-solid fa-plus" /> Додати позицію</button> : null}</div>
+            {items.length === 0 ? (
+              <p className={styles.emptyItems}>Позиції ще не додані</p>
+            ) : (
+              <div className={styles.itemsTableScroll}>
+                <table className={`table ${styles.itemsTable}`}>
+                  <thead><tr><th>ТРО</th><th>Кількість</th><th aria-label="Дії" /></tr></thead>
+                  <tbody>{items.map((item, index) => (
+                    <tr key={`${item.troProductId}-${index}`}>
+                      <td><span className={styles.copyableProductName}>{getProductLabel(item)}</span></td>
+                      <td>{item.quantity}</td>
+                      <td>
+                        {editingDocument ? <button className={styles.itemActionButton} type="button" title="Копіювати назву ТРО" aria-label={`Копіювати назву ТРО ${index + 1}`} onClick={() => copyProductLabel(item)}><i className="fa-regular fa-copy" aria-hidden="true" /></button> : null}
+                        {generalEditable ? <button className={styles.itemActionButton} type="button" aria-label="Редагувати позицію" onClick={() => openEditItem(index)}><i className="fa-solid fa-pencil" aria-hidden="true" /></button> : null}
+                        {generalEditable ? <button className={`${styles.itemActionButton} ${styles.removeItemButton}`} type="button" aria-label="Видалити позицію" onClick={() => removeItem(index)}><i className="fa-solid fa-xmark" aria-hidden="true" /></button> : null}
+                      </td>
+                    </tr>
+                  ))}</tbody>
+                </table>
               </div>
-            ))}</div>
+            )}
           </section>
 
           {editingDocument ? <section className={styles.accountingSection}>
@@ -324,6 +380,22 @@ export default function CreateTroDocumentModal({
           {accountingEditable ? <><button className={styles.secondary} type="button" disabled={saving} onClick={() => saveAccounting(false)}>Зберегти дані</button><button className={styles.primary} type="button" disabled={saving} onClick={() => saveAccounting(true)}>Підтвердити виконання</button></> : null}
         </footer>
       </div>
+      <ItemModal
+        isOpen={isItemModalOpen}
+        onClose={() => setIsItemModalOpen(false)}
+        onSave={handleSaveItem}
+        initialItem={editingItemIndex === null ? null : {
+          productId: items[editingItemIndex]?.troProductId,
+          quantity: items[editingItemIndex]?.quantity,
+        }}
+        productGroups={troProductGroups}
+        products={modalProducts}
+        datesRequired={false}
+        showUnit={false}
+        showDates={false}
+        productLabel="ТРО"
+        productPlaceholder="Почніть вводити назву ТРО"
+      />
     </div>,
     document.body,
   );

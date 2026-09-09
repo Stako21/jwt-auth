@@ -26,13 +26,23 @@
 .sectionTitle h3,
 .accountingSection h3 { margin: 0; color: $text-high; font-size: 13px; }
 .sectionTitle button { min-height: 30px; padding: 0 $space-3; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-control; color: $text-high; cursor: pointer; }
-.itemList { display: grid; gap: $space-2; }
-.itemRow { display: grid; grid-template-columns: minmax(240px, 1fr) 110px 32px; gap: $space-2; align-items: center; }
-.productField { display: grid; grid-template-columns: minmax(0, 1fr) 32px; gap: $space-2; min-width: 0; }
-.copyableProductName { cursor: text !important; opacity: 1 !important; user-select: text; }
-.copyProduct { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-control; color: $text-medium; cursor: pointer; }
-.copyProduct:hover { border-color: $primary-accent-border; background: $select-option-hover-surface; color: $primary-accent-light; }
-.removeItem { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid $negative-border-soft; border-radius: $radius-md; background: $negative-surface-soft; color: $negative-muted; cursor: pointer; }
+.emptyItems { margin: 0; padding: $space-3; border: 1px dashed $outline-medium; border-radius: $radius-md; color: $text-muted; font-size: 11px; text-align: center; }
+.itemsTableScroll { width: 100%; overflow-x: auto; border: 1px solid $table-border; border-radius: $radius-md; }
+.itemsTable { width: 100%; min-width: 430px; margin: 0 !important; border: 0 !important; border-collapse: collapse; background: $table-shell-surface !important; color: $table-text !important; font-size: 11px !important; }
+.itemsTable th,
+.itemsTable td { padding: 6px $space-2 !important; border: 0 !important; border-bottom: 1px solid $table-border !important; background: $table-row-odd !important; color: inherit !important; line-height: 1.25; vertical-align: middle; }
+.itemsTable th { background: $table-head-surface !important; color: $table-text-strong !important; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.itemsTable tbody tr:nth-child(even) td { background: $table-row-even !important; }
+.itemsTable tbody tr:hover td { background: $table-row-hover !important; }
+.itemsTable tbody tr:last-child td { border-bottom: 0 !important; }
+.itemsTable th:nth-child(2),
+.itemsTable td:nth-child(2) { width: 110px; text-align: right; white-space: nowrap; }
+.itemsTable th:last-child,
+.itemsTable td:last-child { width: 108px; text-align: right; white-space: nowrap; }
+.copyableProductName { display: block; min-width: 0; cursor: text; overflow-wrap: anywhere; user-select: text; }
+.itemActionButton { display: inline-grid; place-items: center; width: 28px; min-width: 28px; height: 28px; margin-left: $space-1; padding: 0; border: 0; border-radius: $radius-sm; background: $surface-container-high; color: $text-medium; cursor: pointer; }
+.itemActionButton:hover { background: $select-option-hover-surface; color: $primary-accent-light; }
+.removeItemButton { background: $status-rejected-surface; color: $status-rejected; }
 .accountingSection { border-color: $primary-accent-border-soft; background: $primary-accent-surface-subtle; }
 .accountingGrid { display: grid; grid-template-columns: minmax(160px, 0.45fr) minmax(240px, 1fr); gap: $space-3; margin-top: $space-2; }
 .checks { display: flex; flex-wrap: wrap; gap: $space-2 $space-4; margin-top: $space-3; color: $text-medium; font-size: 12px; }
@@ -52,7 +62,7 @@
   .commentField { grid-column: auto; }
   .itemsSection,
   .accountingSection { padding: $space-2; }
-  .itemRow { grid-template-columns: minmax(0, 1fr) 82px 38px; }
+  .itemsTable { min-width: 390px; }
   .footer { flex-wrap: wrap; padding: $space-2; }
   .footer button { flex: 1 1 140px; min-height: 42px; }
 }

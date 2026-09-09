@@ -2284,3 +2284,10 @@ Frontend:
 
 - Prevented long selected product names from shifting the return/exchange item modal on phones. The item modal now renders through a portal directly under `document.body`, explicitly stays within the viewport, and releases the searchable input focus after a product is selected so Android does not pan the page toward the end of the input value.
 - The modal shell, grid body, fields, searchable picker, footer, and form controls can shrink without horizontal overflow; mobile negative column gutters were removed. Product option names remain fully visible and wrap to multiple lines rather than being truncated. Frontend lint and production build passed with existing warnings; recovery tags bracket the fix from `checkpoint-before-item-modal-mobile-width-20260909`.
+
+## 2026-09-09 - TRO item picker and document table
+
+- Reused the shared bidirectional Group/Product item modal for TRO positions in a quantity-only mode. TRO groups are derived from the branch-scoped directory `group_name`; the modal keeps Group and TRO mutually dependent and supports full-directory name search before choosing a group.
+- TRO position entry now contains only Group, TRO, and Quantity: unit and manufacture/expiry dates remain present for return/exchange documents but are hidden and excluded from validation in TRO mode.
+- Replaced inline TRO selectors with the same compact document-position table pattern used by return/exchange documents. The table shows separate TRO and Quantity cells plus copy/edit/remove actions appropriate to the current workflow permissions; names remain selectable and copyable in read-only stages. Adding or editing a duplicate TRO name immediately collapses the visible rows and sums their quantities, matching backend normalization.
+- Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings. The pre-change recovery tag is `checkpoint-before-tro-item-modal-table-20260909` at commit `3808063`.
