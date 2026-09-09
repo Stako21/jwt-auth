@@ -2272,3 +2272,10 @@ Frontend:
 - A repeated `/created` for the same existing 1C link refreshes responsible and sales-agent metadata without status rollback, link recreation, notification, or duplicate `ONE_C_CREATED` history.
 - TRO desktop rows, mobile cards, and the document modal now display `Виконавець` and `ТА` separately. Before 1C creation, TA falls back to the workflow TA and is marked `ТА заявки`.
 - Backend tests (27), frontend lint, frontend production build, backend syntax checks, migration verification, and live read-only DTO queries passed. The pre-change recovery tag is `checkpoint-before-1c-tro-responsible-20260908` at commit `47f9b7fbf84ef2d0b81c4015940bd2d97b76e1e0`.
+
+## 2026-09-09 - Bidirectional group/product selection
+
+- Reworked the return/exchange item modal so Product is searchable and enabled before a Group is chosen. With no group it searches the full directory; selecting a group limits the same search to that group.
+- Selecting a product automatically fills its directory group. Changing the group keeps the product only when it still belongs to that group; otherwise the stale product selection and search text are cleared.
+- Product results show the product name plus a muted secondary group label, while the selected input retains only the product name. Empty searches show `Товар не знайдено`; mouse, focus, and Escape interactions remain supported.
+- Frontend lint and production build passed with the existing Sass legacy API and bundle-size warnings. The pre-change recovery tag is `checkpoint-before-item-product-group-link-20260909` at commit `f2b86f8f876da66ee2864b3584fc6618f1579326`.

@@ -15,6 +15,8 @@ export default function ItemModal({
 }) {
   const [groupId, setGroupId] = useState("");
   const [productId, setProductId] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [showProducts, setShowProducts] = useState(false);
   const [unit, setUnit] = useState("PCS");
   const [quantity, setQuantity] = useState("");
   const [manufactureDate, setManufactureDate] = useState("");
@@ -43,6 +45,8 @@ export default function ItemModal({
       setProductId(
         foundProduct ? foundProduct.id.toString() : initialItem.productId || "",
       );
+      setProductSearch(foundProduct?.name || initialItem.product || "");
+      setShowProducts(false);
       setUnit(initialItem.unit || "PCS");
       setQuantity(initialItem.quantity || "");
       setManufactureDate(initialItem.manufactureDate || "");
@@ -56,6 +60,8 @@ export default function ItemModal({
   function reset() {
     setGroupId("");
     setProductId("");
+    setProductSearch("");
+    setShowProducts(false);
     setUnit("PCS");
     setQuantity("");
     setManufactureDate("");
@@ -76,6 +82,33 @@ export default function ItemModal({
 
     return map;
   }, [products]);
+
+  const groupNames = useMemo(
+    () => new Map(
+      (productGroups || []).map((group) => [String(group.id), group.name]),
+    ),
+    [productGroups],
+  );
+
+  const filteredProducts = useMemo(() => {
+    const query = productSearch.trim().toLocaleLowerCase("uk");
+    const source = groupId
+      ? productsByGroup[String(groupId)] || []
+      : products || [];
+
+    return source.filter((product) =>
+      !query || String(product.name || "").toLocaleLowerCase("uk").includes(query),
+    );
+  }, [groupId, productSearch, products, productsByGroup]);
+
+  function selectProduct(product) {
+    const nextGroupId = String(product.group_id ?? product.groupId ?? "");
+    setProductId(String(product.id));
+    setProductSearch(product.name || "");
+    setGroupId(nextGroupId);
+    setShowProducts(false);
+    setErrors((prev) => ({ ...prev, groupId: false, productId: false }));
+  }
 
   function validate() {
     const nextErrors = {};
@@ -144,8 +177,17 @@ export default function ItemModal({
               hasError={Boolean(errors.groupId)}
               ariaLabel="Група"
               onChange={(nextGroupId) => {
+                const selectedProduct = (products || []).find(
+                  (product) => String(product.id) === String(productId),
+                );
+                const selectedProductGroupId = String(
+                  selectedProduct?.group_id ?? selectedProduct?.groupId ?? "",
+                );
                 setGroupId(nextGroupId);
-                setProductId("");
+                if (selectedProduct && selectedProductGroupId !== String(nextGroupId)) {
+                  setProductId("");
+                  setProductSearch("");
+                }
                 setErrors((prev) => ({ ...prev, groupId: false }));
               }}
             />
@@ -153,22 +195,59 @@ export default function ItemModal({
 
           <div className="field">
             <label className="label">Товар *</label>
-            <CompactSelect
-              value={productId}
-              options={(productsByGroup[String(groupId)] || []).map(
-                (product) => ({
-                  value: product.id,
-                  label: product.name,
-                }),
-              )}
-              disabled={!groupId}
-              hasError={Boolean(errors.productId)}
-              ariaLabel="Товар"
-              onChange={(nextProductId) => {
-                setProductId(nextProductId);
-                setErrors((prev) => ({ ...prev, productId: false }));
+            <div
+              className={style.productPicker}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setShowProducts(false);
+                }
               }}
-            />
+            >
+              <FormInput
+                className={errors.productId ? "is-danger" : ""}
+                value={productSearch}
+                placeholder="Почніть вводити назву товару"
+                aria-label="Товар"
+                role="combobox"
+                aria-expanded={showProducts}
+                aria-haspopup="listbox"
+                autoComplete="off"
+                onFocus={() => setShowProducts(true)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setShowProducts(false);
+                  if (event.key === "ArrowDown") setShowProducts(true);
+                }}
+                onChange={(event) => {
+                  setProductSearch(event.target.value);
+                  setProductId("");
+                  setShowProducts(true);
+                  setErrors((prev) => ({ ...prev, productId: false }));
+                }}
+              />
+              {showProducts ? (
+                <div className={style.productOptions} role="listbox">
+                  {filteredProducts.length ? filteredProducts.map((product) => {
+                    const productGroupId = String(product.group_id ?? product.groupId ?? "");
+                    return (
+                      <button
+                        key={product.id}
+                        className={style.productOption}
+                        type="button"
+                        role="option"
+                        aria-selected={String(product.id) === String(productId)}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => selectProduct(product)}
+                      >
+                        <span>{product.name}</span>
+                        <small>{groupNames.get(productGroupId) || "Без групи"}</small>
+                      </button>
+                    );
+                  }) : (
+                    <p className={style.emptyProducts}>Товар не знайдено</p>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className={`columns ${style.compactColumns}`}>
