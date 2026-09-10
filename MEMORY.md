@@ -2318,3 +2318,10 @@ Frontend:
 - The Admin balance-page editor now accepts `Заголовки: з рядка`, `Заголовки: по рядок`, and the first data row. Inspection builds each column's stable source identity from its full vertical header path while resolving both horizontal and vertical Excel merged cells; the editable display title defaults to the most specific final header fragment.
 - Backend preview/save validation and frontend runtime parsing use the same composite-header rules. Actual Excel column letters respect a worksheet whose used range begins after column A, and structure mismatch remains an explicit error.
 - Verified against the current `balanceZP.xlsx` rows 8–10: the quantity column resolves as `Склад Центральний Запоріжжя / Свободный остаток / В ед. хранения`. Backend tests pass 31/31; frontend lint and production build pass with the existing Sass and bundle-size warnings. The pre-change recovery tag is `checkpoint-before-balance-multiline-headers-20260910`.
+
+## 2026-09-10 - Balance outline groups and configured Price popover
+
+- Changed balance hierarchy classification so a row followed by a deeper XLSX outline level is always treated as a group, even when digits or slash notation make its name look product-like. This fixes the real `balanceZP.xlsx` row `КАРАМЕЛЬ 200/300`, verified with 63 child rows.
+- A configured `Price` column remains part of the validated source contract but is no longer rendered as a table column. Its raw and multiplier-adjusted values feed the same accessible click/tap product-name popover as the legacy automatic parser.
+- Price can no longer also be the hierarchy column; choosing a Price column as hierarchy clears that designation, and backend normalization rejects an ambiguous persisted contract.
+- Backend tests pass 33/33, including synthetic outline/price and invalid hierarchy-price regression tests; frontend lint and production build pass with existing warnings. The pre-change tag is `checkpoint-before-balance-group-price-popover-20260910`.

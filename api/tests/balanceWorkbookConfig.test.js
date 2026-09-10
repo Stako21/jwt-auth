@@ -70,6 +70,22 @@ test("normalizes ordered columns and optional price target", () => {
   assert.equal(config.priceColumnId, "column-3");
 });
 
+test("rejects using the hierarchy column as Price", () => {
+  assert.throws(
+    () => normalizeBalanceColumnConfig({
+      columns: [{
+        id: "column-0",
+        sourceIndex: 0,
+        sourceHeader: "Номенклатура",
+        title: "Номенклатура",
+        role: "hierarchy",
+      }],
+      priceColumnId: "column-0",
+    }),
+    (error) => error?.status === 400 && /Price/.test(error?.error),
+  );
+});
+
 test("rejects a changed header explicitly", async (t) => {
   const { directory, fileName } = await createWorkbook();
   t.after(() => fs.rm(directory, { recursive: true, force: true }));

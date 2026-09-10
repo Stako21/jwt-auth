@@ -71,6 +71,10 @@ export const Table = ({ data, columns = null }) => {
   }, [activePriceRowId]);
 
   const flatData = useMemo(() => flattenData(data), [data]);
+  const visibleColumns = useMemo(
+    () => columns?.filter((column) => !column.isPrice) || null,
+    [columns],
+  );
   const rowMap = useMemo(
     () => Object.fromEntries(flatData.map((row) => [row.id, row])),
     [flatData],
@@ -119,10 +123,10 @@ export const Table = ({ data, columns = null }) => {
     <div className={style.wraperTable}>
       <div className={style.tableShell}>
         <div className={style.scrollContainer}>
-          <table className={cn(style.balanceTable, columns?.length && style.configuredTable)}>
+          <table className={cn(style.balanceTable, visibleColumns?.length && style.configuredTable)}>
             <thead>
               <tr>
-                {columns?.length ? columns.map((column) => (
+                {visibleColumns?.length ? visibleColumns.map((column) => (
                   <th
                     key={column.id}
                     className={column.role === "hierarchy" ? style.productHeader : style.metricHeader}
@@ -159,7 +163,7 @@ export const Table = ({ data, columns = null }) => {
                       [style.oddRow]: isLeafRow && leafRowIndex % 2 !== 0,
                     })}
                   >
-                    {columns?.length ? columns.map((column) => column.role === "hierarchy" ? (
+                    {visibleColumns?.length ? visibleColumns.map((column) => column.role === "hierarchy" ? (
                       <td
                         key={column.id}
                         className={style.productCell}
@@ -177,7 +181,32 @@ export const Table = ({ data, columns = null }) => {
                               : "fa-solid fa-chevron-right")} />
                           </button>
                         )}
-                        <span className={style.productText}>{row.productNameCell}</span>
+                        <span
+                          className={cn(style.productText, {
+                            [style.productTextWithPrice]: hasPrice,
+                          })}
+                          onClick={hasPrice ? () => setActivePriceRowId((currentId) =>
+                            currentId === row.id ? null : row.id) : undefined}
+                          role={hasPrice ? "button" : undefined}
+                          tabIndex={hasPrice ? 0 : undefined}
+                          onKeyDown={hasPrice ? (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setActivePriceRowId((currentId) =>
+                                currentId === row.id ? null : row.id);
+                            }
+                          } : undefined}
+                        >
+                          {row.productNameCell}
+                        </span>
+                        {hasPrice && activePriceRowId === row.id && (
+                          <div className={style.pricePopover}>
+                            <div className={style.priceLine}>
+                              <span>Ціна</span>
+                              <strong>{formatPrice(displayPrice)}</strong>
+                            </div>
+                          </div>
+                        )}
                       </td>
                     ) : (
                       <td

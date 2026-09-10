@@ -228,6 +228,9 @@ export function normalizeBalanceColumnConfig(rawConfig) {
   if (priceColumnId && !seenIds.has(priceColumnId)) {
     throw new BadRequest("Колонка для множника має входити до списку виведених колонок");
   }
+  if (priceColumnId && columns.find((column) => column.id === priceColumnId)?.role === "hierarchy") {
+    throw new BadRequest("Колонка номенклатури не може одночасно бути колонкою Price");
+  }
 
   return { version: 1, columns, priceColumnId };
 }

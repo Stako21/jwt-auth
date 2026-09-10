@@ -126,10 +126,14 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
   };
 
   const setHierarchyColumn = (index) => {
-    updateConfig(selectedColumns.map((column, columnIndex) => ({
+    const nextColumns = selectedColumns.map((column, columnIndex) => ({
       ...column,
       role: columnIndex === index ? "hierarchy" : "value",
-    })));
+    }));
+    const priceColumnId = selectedColumns[index].id === config?.priceColumnId
+      ? null
+      : config?.priceColumnId;
+    updateConfig(nextColumns, priceColumnId);
   };
 
   const moveColumn = (index, direction) => {
@@ -212,6 +216,7 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
                 checked={column.role === "hierarchy"} onChange={() => setHierarchyColumn(index)} /> Ієрархія</label>
               <label className={styles.role}><input type="radio" name="balance-price-column"
                 checked={config?.priceColumnId === column.id}
+                disabled={column.role === "hierarchy"}
                 onChange={() => updateConfig(selectedColumns, column.id)} /> Price</label>
               <div className={styles.orderButtons}>
                 <button type="button" disabled={index === 0} onClick={() => moveColumn(index, -1)} aria-label="Перемістити вище"><i className="fa-solid fa-arrow-up" /></button>

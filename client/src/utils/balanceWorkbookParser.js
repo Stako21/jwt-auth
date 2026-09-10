@@ -56,6 +56,11 @@ function isLikelyGroupName(value) {
   return uppercaseRatio >= 0.85 && normalized.length <= 80;
 }
 
+function isHierarchyParent(row, nextRow) {
+  if (!nextRow) return false;
+  return nextRow.baseLevel > row.baseLevel || isLikelyGroupName(row.productNameCell);
+}
+
 function normalizeQuantityCells(cells) {
   return cells.filter((value) => value !== null && value !== undefined && value !== "");
 }
@@ -215,10 +220,7 @@ function buildHierarchy(rows, rowMeta, dataStartIndex, options = {}) {
 
   parsedRows.forEach((row, index) => {
     const nextRow = parsedRows[index + 1] || null;
-    const isGroupRow =
-      isLikelyGroupName(row.productNameCell) &&
-      Boolean(nextRow) &&
-      nextRow.productNameCell !== "";
+    const isGroupRow = isHierarchyParent(row, nextRow);
     const effectiveLevel = getEffectiveLevel(
       row.baseLevel,
       isGroupRow,
@@ -345,8 +347,12 @@ function buildConfiguredHierarchy(rows, rowMeta, merges, columnOffset, options) 
           : rawValue;
         return [column.id, value];
       }));
+      const priceColumn = columns.find((column) => column.isPrice);
+      const priceCell = priceColumn
+        ? getNumericCell(cells?.[priceColumn.sourceIndex])
+        : null;
       const numericValues = columns
-        .filter((column) => column.role !== "hierarchy")
+        .filter((column) => column.role !== "hierarchy" && !column.isPrice)
         .map((column) => configuredValues[column.id])
         .filter((value) => typeof value === "number" && Number.isFinite(value));
       const baseLevel = Number.isInteger(rowMeta?.[rowIndex]?.level)
@@ -357,8 +363,8 @@ function buildConfiguredHierarchy(rows, rowMeta, merges, columnOffset, options) 
         rowIndex,
         productNameCell,
         productQuantityCell: numericValues,
-        priceCell: null,
-        adjustedPriceCell: null,
+        priceCell,
+        adjustedPriceCell: applyPriceMultiplier(priceCell, priceMultiplierPercent),
         priceMultiplierPercent,
         configuredValues,
         baseLevel,
@@ -370,7 +376,7 @@ function buildConfiguredHierarchy(rows, rowMeta, merges, columnOffset, options) 
   const stack = [];
   parsedRows.forEach((row, index) => {
     const nextRow = parsedRows[index + 1] || null;
-    const isGroupRow = isLikelyGroupName(row.productNameCell) && Boolean(nextRow);
+    const isGroupRow = isHierarchyParent(row, nextRow);
     const effectiveLevel = getEffectiveLevel(
       row.baseLevel,
       isGroupRow,
