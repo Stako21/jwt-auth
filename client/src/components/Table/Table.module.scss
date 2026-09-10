@@ -31,6 +31,10 @@
   table-layout: auto;
 }
 
+.extraConfiguredCell {
+  max-width: 240px;
+}
+
 .balanceTable thead th {
   position: sticky;
   top: 0;
@@ -283,6 +287,43 @@
     max-height: none;
   }
 
+  .configuredTable {
+    --primary-metric-width: 96px;
+    width: max-content;
+    min-width: 100%;
+    table-layout: fixed;
+  }
+
+  .primaryProductColumn {
+    width: calc(100vw - var(--primary-metric-width));
+  }
+
+  .primaryMetricColumn {
+    width: var(--primary-metric-width);
+  }
+
+  .extraConfiguredColumn {
+    width: max-content;
+  }
+
+  .configuredTable .productHeader,
+  .configuredTable .productCell {
+    min-width: 0;
+    max-width: calc(100vw - var(--primary-metric-width));
+  }
+
+  .configuredTable .metricHeader:not(.extraConfiguredCell),
+  .configuredTable .metricCell:not(.extraConfiguredCell) {
+    width: var(--primary-metric-width);
+    min-width: var(--primary-metric-width);
+    max-width: var(--primary-metric-width);
+  }
+
+  .configuredTable .extraConfiguredCell {
+    min-width: 112px;
+    max-width: 220px;
+  }
+
   .balanceTable thead th {
     height: 36px;
     padding: 0 14px;
@@ -321,6 +362,10 @@
 }
 
 @media (max-width: 420px) {
+  .configuredTable {
+    --primary-metric-width: 84px;
+  }
+
   .quantityHeader,
   .quantityCell {
     width: 84px;

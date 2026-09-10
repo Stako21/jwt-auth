@@ -51,9 +51,43 @@ function formatConfiguredValue(value, isPrice) {
   }).format(value);
 }
 
+function useMobileTableLayout() {
+  const query = "(max-width: 768px)";
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia(query).matches);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = (event) => setIsMobile(event.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  return isMobile;
+}
+
+function prioritizeMobileColumns(columns) {
+  if (!columns?.length) return columns;
+  const hierarchyColumn = columns.find((column) => column.role === "hierarchy");
+  const balanceColumn = columns.find((column) =>
+    column.role !== "hierarchy" &&
+    /остат|залиш|свобод/i.test(`${column.sourceHeader || ""} ${column.title || ""}`));
+  const primaryMetric = balanceColumn || columns.find((column) => column.role !== "hierarchy");
+  const primaryIds = new Set([hierarchyColumn?.id, primaryMetric?.id].filter(Boolean));
+  return [hierarchyColumn, primaryMetric, ...columns.filter((column) => !primaryIds.has(column.id))]
+    .filter(Boolean);
+}
+
+function getMobileExtraColumnWidth(column, rows) {
+  const lengths = [column.title, ...rows.map((row) => row.configuredValues?.[column.id])]
+    .map((value) => Array.from(String(value ?? "")).length);
+  const longestValue = Math.min(28, Math.max(...lengths));
+  return Math.min(220, Math.max(112, Math.ceil(longestValue * 7.2 + 28)));
+}
+
 export const Table = ({ data, columns = null }) => {
   const [visibility, setVisibility] = useState(() => buildVisibilityMap(data));
   const [activePriceRowId, setActivePriceRowId] = useState(null);
+  const isMobileLayout = useMobileTableLayout();
 
   useEffect(() => {
     setVisibility(buildVisibilityMap(data));
@@ -75,6 +109,23 @@ export const Table = ({ data, columns = null }) => {
     () => columns?.filter((column) => !column.isPrice) || null,
     [columns],
   );
+  const displayColumns = useMemo(
+    () => isMobileLayout ? prioritizeMobileColumns(visibleColumns) : visibleColumns,
+    [isMobileLayout, visibleColumns],
+  );
+  const mobileExtraWidths = useMemo(() => {
+    if (!isMobileLayout || !displayColumns?.length) return {};
+    return Object.fromEntries(displayColumns.slice(2).map((column) => [
+      column.id,
+      getMobileExtraColumnWidth(column, flatData),
+    ]));
+  }, [displayColumns, flatData, isMobileLayout]);
+  const mobileTableStyle = useMemo(() => {
+    if (!isMobileLayout || !displayColumns?.length) return undefined;
+    const extraWidth = Object.values(mobileExtraWidths)
+      .reduce((total, width) => total + width, 0);
+    return { width: `calc(100vw + ${extraWidth}px)` };
+  }, [displayColumns, isMobileLayout, mobileExtraWidths]);
   const rowMap = useMemo(
     () => Object.fromEntries(flatData.map((row) => [row.id, row])),
     [flatData],
@@ -123,13 +174,34 @@ export const Table = ({ data, columns = null }) => {
     <div className={style.wraperTable}>
       <div className={style.tableShell}>
         <div className={style.scrollContainer}>
-          <table className={cn(style.balanceTable, visibleColumns?.length && style.configuredTable)}>
+          <table
+            className={cn(style.balanceTable, displayColumns?.length && style.configuredTable)}
+            style={mobileTableStyle}
+          >
+            {displayColumns?.length ? (
+              <colgroup>
+                {displayColumns.map((column, index) => (
+                  <col
+                    key={column.id}
+                    className={cn({
+                      [style.primaryProductColumn]: index === 0,
+                      [style.primaryMetricColumn]: index === 1,
+                      [style.extraConfiguredColumn]: index > 1,
+                    })}
+                    style={index > 1 ? { width: mobileExtraWidths[column.id] } : undefined}
+                  />
+                ))}
+              </colgroup>
+            ) : null}
             <thead>
               <tr>
-                {visibleColumns?.length ? visibleColumns.map((column) => (
+                {displayColumns?.length ? displayColumns.map((column, index) => (
                   <th
                     key={column.id}
-                    className={column.role === "hierarchy" ? style.productHeader : style.metricHeader}
+                    className={cn(
+                      column.role === "hierarchy" ? style.productHeader : style.metricHeader,
+                      index > 1 && style.extraConfiguredCell,
+                    )}
                   >
                     {column.title}
                   </th>
@@ -163,10 +235,10 @@ export const Table = ({ data, columns = null }) => {
                       [style.oddRow]: isLeafRow && leafRowIndex % 2 !== 0,
                     })}
                   >
-                    {visibleColumns?.length ? visibleColumns.map((column) => column.role === "hierarchy" ? (
+                    {displayColumns?.length ? displayColumns.map((column, index) => column.role === "hierarchy" ? (
                       <td
                         key={column.id}
-                        className={style.productCell}
+                        className={cn(style.productCell, index > 1 && style.extraConfiguredCell)}
                         style={{ "--row-level": row.level }}
                       >
                         {row.hasChildren && (
@@ -213,6 +285,7 @@ export const Table = ({ data, columns = null }) => {
                         key={column.id}
                         className={cn(
                           style.metricCell,
+                          index > 1 && style.extraConfiguredCell,
                           typeof row.configuredValues?.[column.id] !== "number" && style.textMetricCell,
                           Number(row.configuredValues?.[column.id]) < 0 && style.negative,
                         )}

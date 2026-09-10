@@ -2325,3 +2325,9 @@ Frontend:
 - A configured `Price` column remains part of the validated source contract but is no longer rendered as a table column. Its raw and multiplier-adjusted values feed the same accessible click/tap product-name popover as the legacy automatic parser.
 - Price can no longer also be the hierarchy column; choosing a Price column as hierarchy clears that designation, and backend normalization rejects an ambiguous persisted contract.
 - Backend tests pass 33/33, including synthetic outline/price and invalid hierarchy-price regression tests; frontend lint and production build pass with existing warnings. The pre-change tag is `checkpoint-before-balance-group-price-popover-20260910`.
+
+## 2026-09-10 - Mobile balance primary-column viewport
+
+- Configured balance tables now reorder only their mobile presentation so Nomenclature/hierarchy and the first balance/stock metric are always the first two columns, regardless of the administrator-defined desktop order.
+- The primary pair occupies one phone viewport: stock uses 96 px (84 px at 420 px and below) and nomenclature consumes the remainder. Additional columns extend to the right with widths calculated from their header/data content and clamped to 112–220 px.
+- Desktop order and sizing remain unchanged. Frontend lint and production build pass with the existing Sass legacy API and bundle-size warnings. The pre-change tag is `checkpoint-before-balance-mobile-primary-columns-20260910`.
