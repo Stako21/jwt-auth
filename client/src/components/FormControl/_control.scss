@@ -35,9 +35,9 @@
   &[readonly] {
     border-color: $outline-dark;
     background-color: $form-control-surface-disabled;
-    color: $text-muted;
+    color: $text-medium;
     cursor: not-allowed;
-    opacity: 0.62;
+    opacity: 1;
   }
 }
 

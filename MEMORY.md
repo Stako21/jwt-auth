@@ -2331,3 +2331,9 @@ Frontend:
 - Configured balance tables now reorder only their mobile presentation so Nomenclature/hierarchy and the first balance/stock metric are always the first two columns, regardless of the administrator-defined desktop order.
 - The primary pair occupies one phone viewport: stock uses 96 px (84 px at 420 px and below) and nomenclature consumes the remainder. Additional columns extend to the right with widths calculated from their header/data content and clamped to 112–220 px.
 - Desktop order and sizing remain unchanged. Frontend lint and production build pass with the existing Sass legacy API and bundle-size warnings. The pre-change tag is `checkpoint-before-balance-mobile-primary-columns-20260910`.
+
+## 2026-09-10 - Readable locked document fields
+
+- Raised disabled and read-only control values from `$text-muted` with reduced element opacity to `$text-medium` at full opacity. Disabled surfaces, borders, and the not-allowed cursor continue to distinguish locked fields without sacrificing readability.
+- Applied the rule through the shared FormInput/DateInput control mixin and CompactSelect, plus the return/exchange, TRO, and shared item-modal overrides so every document type has consistent contrast.
+- Frontend lint and production build pass with the existing Sass legacy API and bundle-size warnings. The pre-change tag is `checkpoint-before-disabled-control-contrast-20260910`.

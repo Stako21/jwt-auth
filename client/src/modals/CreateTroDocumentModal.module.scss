@@ -14,7 +14,7 @@
 .field > label { color: $text-medium; font-size: 11px; font-weight: 700; }
 .field textarea { width: 100%; min-height: 56px; resize: vertical; padding: $space-2; border: 1px solid $form-control-border; border-radius: $radius-md; outline: 0; background: $form-control-surface; color: $form-control-text; font: inherit; }
 .field textarea:focus { border-color: $primary-accent; box-shadow: 0 0 0 2px $form-control-focus-ring; }
-.field textarea:disabled { opacity: 0.64; }
+.field textarea:disabled { color: $text-medium; cursor: not-allowed; opacity: 1; }
 .commentField { grid-column: 1 / -1; }
 .autocomplete { position: relative; }
 .options { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; left: 0; max-height: 220px; overflow-y: auto; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-input; box-shadow: $shadow-popover; }

@@ -111,8 +111,8 @@
     }
 
     &:disabled {
-      color: $text-muted;
-      opacity: 0.58;
+      color: $text-medium;
+      opacity: 1;
     }
   }
 
