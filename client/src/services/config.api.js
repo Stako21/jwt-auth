@@ -62,6 +62,11 @@ export async function fetchBalancePagesConfig() {
   return data.balancePages || [];
 }
 
+export async function previewBalanceWorkbook(payload) {
+  const { data } = await api.post("/balance-pages/preview", payload);
+  return data.preview;
+}
+
 export async function createBalancePageConfig(payload) {
   const { data } = await api.post("/balance-pages", payload);
   return data.balancePage;

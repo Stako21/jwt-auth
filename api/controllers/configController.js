@@ -9,6 +9,7 @@ import {
   getUserAccessConfig,
   getUserAccessOptions,
   getBalancePagesForBranch,
+  getImportDir,
   getCitiesForBranch,
   getCurrentBranch,
   getImportSources,
@@ -26,6 +27,7 @@ import {
   updateCurrentBranch,
   updateCity,
 } from "../services/appConfig.service.js";
+import { inspectBalanceWorkbook } from "../services/balanceWorkbookConfig.service.js";
 
 export async function getConfig(req, res) {
   try {
@@ -139,6 +141,20 @@ export async function getBalancePages(req, res) {
   try {
     const balancePages = await getBalancePagesForBranch(req.user);
     res.json({ balancePages });
+  } catch (error) {
+    return ErrorsUtils.catchError(res, error);
+  }
+}
+
+export async function previewBalanceWorkbookController(req, res) {
+  try {
+    const preview = await inspectBalanceWorkbook({
+      importDir: getImportDir(),
+      fileName: req.body?.fileName,
+      headerRow: req.body?.headerRow,
+      dataStartRow: req.body?.dataStartRow,
+    });
+    res.json({ preview });
   } catch (error) {
     return ErrorsUtils.catchError(res, error);
   }

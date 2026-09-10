@@ -53,6 +53,9 @@ const CORE_TABLES = {
     "header_title",
     "file_name",
     "price_multiplier_percent",
+    "header_row",
+    "data_start_row",
+    "column_config",
   ],
   report_definitions: [
     "id",

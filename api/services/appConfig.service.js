@@ -4,6 +4,10 @@ import { fileURLToPath } from "url";
 import pool from "../db.cjs";
 import { BadRequest, Conflict, NotFound } from "../utils/Errors.js";
 import { ROLE_IDS } from "../utils/roles.js";
+import {
+  normalizeBalanceColumnConfig,
+  validateBalanceWorkbookConfiguration,
+} from "./balanceWorkbookConfig.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -90,6 +94,34 @@ async function getBalancePagePriceMultiplierSelect(alias = "bp") {
   return (await hasBalancePageColumn("price_multiplier_percent"))
     ? `${prefix}price_multiplier_percent AS priceMultiplierPercent,`
     : "NULL AS priceMultiplierPercent,";
+}
+
+async function getBalancePageColumnConfigurationSelect(alias = "bp") {
+  const prefix = alias ? `${alias}.` : "";
+  const [hasHeaderRow, hasDataStartRow, hasColumnConfig] = await Promise.all([
+    hasBalancePageColumn("header_row"),
+    hasBalancePageColumn("data_start_row"),
+    hasBalancePageColumn("column_config"),
+  ]);
+
+  return [
+    hasHeaderRow ? `${prefix}header_row AS headerRow,` : "NULL AS headerRow,",
+    hasDataStartRow ? `${prefix}data_start_row AS dataStartRow,` : "NULL AS dataStartRow,",
+    hasColumnConfig ? `${prefix}column_config AS columnConfig,` : "NULL AS columnConfig,",
+  ].join("\n");
+}
+
+function mapBalancePage(page) {
+  if (!page) return null;
+  let columnConfig = page.columnConfig ?? null;
+  if (typeof columnConfig === "string") {
+    try {
+      columnConfig = JSON.parse(columnConfig);
+    } catch {
+      columnConfig = null;
+    }
+  }
+  return { ...page, columnConfig };
 }
 
 async function getReportAllowedRolesSelect() {
@@ -286,6 +318,7 @@ export async function getAppConfig(user) {
   const allowedRolesSelect = await getReportAllowedRolesSelect();
   const reportMetadataSelect = await getReportMetadataSelect();
   const balancePriceMultiplierSelect = await getBalancePagePriceMultiplierSelect();
+  const balanceColumnConfigurationSelect = await getBalancePageColumnConfigurationSelect();
 
   const [[branch]] = await pool.query(
     `
@@ -327,6 +360,7 @@ export async function getAppConfig(user) {
       bp.header_title AS headerTitle,
       bp.file_name AS fileName,
       ${balancePriceMultiplierSelect}
+      ${balanceColumnConfigurationSelect}
       bp.is_active AS isActive,
       bp.sort_order AS sortOrder,
       c.short_name AS cityShortName,
@@ -364,7 +398,7 @@ export async function getAppConfig(user) {
   return {
     branch: branch || null,
     cities,
-    balancePages,
+    balancePages: balancePages.map(mapBalancePage),
     reports: reportDefinitions.filter((report) =>
       canUserAccessReportDefinition(user, report),
     ),
@@ -1001,6 +1035,7 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
   }
 
   const balancePriceMultiplierSelect = await getBalancePagePriceMultiplierSelect("");
+  const balanceColumnConfigurationSelect = await getBalancePageColumnConfigurationSelect("");
   const [sourceBalancePages] = await executor.query(
     `
     SELECT
@@ -1010,6 +1045,7 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
       header_title AS headerTitle,
       file_name AS fileName,
       ${balancePriceMultiplierSelect}
+      ${balanceColumnConfigurationSelect}
       is_active AS isActive,
       sort_order AS sortOrder
     FROM balance_pages
@@ -1020,7 +1056,11 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
   );
 
   for (const page of sourceBalancePages) {
+    const mappedPage = mapBalancePage(page);
     const hasPriceMultiplier = await hasBalancePageColumn("price_multiplier_percent");
+    const hasHeaderRow = await hasBalancePageColumn("header_row");
+    const hasDataStartRow = await hasBalancePageColumn("data_start_row");
+    const hasColumnConfig = await hasBalancePageColumn("column_config");
     const columns = [
       "branch_id",
       "city_id",
@@ -1041,6 +1081,18 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
     if (hasPriceMultiplier) {
       columns.push("price_multiplier_percent");
       values.push(page.priceMultiplierPercent);
+    }
+    if (hasHeaderRow) {
+      columns.push("header_row");
+      values.push(page.headerRow);
+    }
+    if (hasDataStartRow) {
+      columns.push("data_start_row");
+      values.push(page.dataStartRow);
+    }
+    if (hasColumnConfig) {
+      columns.push("column_config");
+      values.push(mappedPage.columnConfig ? JSON.stringify(mappedPage.columnConfig) : null);
     }
 
     columns.push("is_active", "sort_order");
@@ -1379,6 +1431,7 @@ export async function setCityActive(user, cityId, isActive) {
 export async function getBalancePagesForBranch(user) {
   const branchId = getUserBranchId(user);
   const priceMultiplierSelect = await getBalancePagePriceMultiplierSelect();
+  const columnConfigurationSelect = await getBalancePageColumnConfigurationSelect();
   const [pages] = await pool.query(
     `
     SELECT
@@ -1390,6 +1443,7 @@ export async function getBalancePagesForBranch(user) {
       bp.header_title AS headerTitle,
       bp.file_name AS fileName,
       ${priceMultiplierSelect}
+      ${columnConfigurationSelect}
       bp.is_active AS isActive,
       bp.sort_order AS sortOrder,
       c.short_name AS cityShortName,
@@ -1402,7 +1456,7 @@ export async function getBalancePagesForBranch(user) {
     [branchId],
   );
 
-  return pages;
+  return pages.map(mapBalancePage);
 }
 
 export async function getReportsForBranch(user) {
@@ -1487,6 +1541,17 @@ function normalizeBalancePagePayload(payload = {}) {
     rawPriceMultiplier === ""
       ? null
       : Number(rawPriceMultiplier);
+  const headerRow =
+    payload.headerRow === null || payload.headerRow === undefined || payload.headerRow === ""
+      ? null
+      : Number(payload.headerRow);
+  const dataStartRow =
+    payload.dataStartRow === null || payload.dataStartRow === undefined || payload.dataStartRow === ""
+      ? null
+      : Number(payload.dataStartRow);
+  const columnConfig = normalizeBalanceColumnConfig(
+    payload.columnConfig ?? payload.column_config,
+  );
   const cityId =
     payload.cityId === null ||
     payload.cityId === "" ||
@@ -1512,6 +1577,9 @@ function normalizeBalancePagePayload(payload = {}) {
     headerTitle,
     fileName,
     priceMultiplierPercent,
+    headerRow,
+    dataStartRow,
+    columnConfig,
     cityId,
     sortOrder,
     isActive,
@@ -1534,6 +1602,17 @@ function validateBalancePagePayload(page) {
       page.priceMultiplierPercent < 0)
   ) {
     throw new BadRequest("Price multiplier percent must be a non-negative number or empty");
+  }
+  if (page.columnConfig) {
+    if (!Number.isInteger(page.headerRow) || page.headerRow < 1) {
+      throw new BadRequest("Для налаштованих колонок вкажіть рядок заголовків");
+    }
+    if (!Number.isInteger(page.dataStartRow) || page.dataStartRow < 1) {
+      throw new BadRequest("Для налаштованих колонок вкажіть перший рядок даних");
+    }
+    if (page.headerRow >= page.dataStartRow) {
+      throw new BadRequest("Рядок заголовків має бути перед першим рядком даних");
+    }
   }
   if (!Number.isInteger(page.sortOrder)) {
     throw new BadRequest("Порядок сортування має бути цілим числом");
@@ -1807,8 +1886,21 @@ export async function createBalancePage(user, payload) {
     slug: page.slug,
     fileName: page.fileName,
   });
+  await validateBalanceWorkbookConfiguration({
+    importDir: getImportDir(),
+    fileName: page.fileName,
+    headerRow: page.headerRow,
+    dataStartRow: page.dataStartRow,
+    columnConfig: page.columnConfig,
+  });
 
   const hasPriceMultiplier = await hasBalancePageColumn("price_multiplier_percent");
+  const hasHeaderRow = await hasBalancePageColumn("header_row");
+  const hasDataStartRow = await hasBalancePageColumn("data_start_row");
+  const hasColumnConfig = await hasBalancePageColumn("column_config");
+  if (page.columnConfig && (!hasHeaderRow || !hasDataStartRow || !hasColumnConfig)) {
+    throw new BadRequest("Спочатку застосуйте міграцію конфігурації колонок залишків");
+  }
   const columns = [
     "branch_id",
     "city_id",
@@ -1829,6 +1921,18 @@ export async function createBalancePage(user, payload) {
   if (hasPriceMultiplier) {
     columns.push("price_multiplier_percent");
     values.push(page.priceMultiplierPercent);
+  }
+  if (hasHeaderRow) {
+    columns.push("header_row");
+    values.push(page.headerRow);
+  }
+  if (hasDataStartRow) {
+    columns.push("data_start_row");
+    values.push(page.dataStartRow);
+  }
+  if (hasColumnConfig) {
+    columns.push("column_config");
+    values.push(page.columnConfig ? JSON.stringify(page.columnConfig) : null);
   }
 
   columns.push("is_active", "sort_order");
@@ -1871,14 +1975,37 @@ export async function updateBalancePage(user, pageId, payload) {
     fileName: page.fileName,
     excludeId: pageId,
   });
+  await validateBalanceWorkbookConfiguration({
+    importDir: getImportDir(),
+    fileName: page.fileName,
+    headerRow: page.headerRow,
+    dataStartRow: page.dataStartRow,
+    columnConfig: page.columnConfig,
+  });
 
   const hasPriceMultiplier = await hasBalancePageColumn("price_multiplier_percent");
+  const hasHeaderRow = await hasBalancePageColumn("header_row");
+  const hasDataStartRow = await hasBalancePageColumn("data_start_row");
+  const hasColumnConfig = await hasBalancePageColumn("column_config");
+  if (page.columnConfig && (!hasHeaderRow || !hasDataStartRow || !hasColumnConfig)) {
+    throw new BadRequest("Спочатку застосуйте міграцію конфігурації колонок залишків");
+  }
   const priceMultiplierSet = hasPriceMultiplier
     ? "price_multiplier_percent = ?,"
     : "";
   const priceMultiplierValues = hasPriceMultiplier
     ? [page.priceMultiplierPercent]
     : [];
+  const columnConfigurationSet = [
+    hasHeaderRow ? "header_row = ?," : "",
+    hasDataStartRow ? "data_start_row = ?," : "",
+    hasColumnConfig ? "column_config = ?," : "",
+  ].join("\n");
+  const columnConfigurationValues = [
+    ...(hasHeaderRow ? [page.headerRow] : []),
+    ...(hasDataStartRow ? [page.dataStartRow] : []),
+    ...(hasColumnConfig ? [page.columnConfig ? JSON.stringify(page.columnConfig) : null] : []),
+  ];
 
   await pool.query(
     `
@@ -1890,6 +2017,7 @@ export async function updateBalancePage(user, pageId, payload) {
       header_title = ?,
       file_name = ?,
       ${priceMultiplierSet}
+      ${columnConfigurationSet}
       is_active = ?,
       sort_order = ?
     WHERE id = ?
@@ -1902,6 +2030,7 @@ export async function updateBalancePage(user, pageId, payload) {
       page.headerTitle,
       page.fileName,
       ...priceMultiplierValues,
+      ...columnConfigurationValues,
       page.isActive ? 1 : 0,
       page.sortOrder,
       pageId,
@@ -2210,6 +2339,7 @@ export async function setImportSourceActive(sourceId, isActive) {
 export async function getBalancePageBySlug(user, slug) {
   const branchId = getUserBranchId(user);
   const priceMultiplierSelect = await getBalancePagePriceMultiplierSelect("");
+  const columnConfigurationSelect = await getBalancePageColumnConfigurationSelect("");
 
   const [[page]] = await pool.query(
     `
@@ -2222,6 +2352,7 @@ export async function getBalancePageBySlug(user, slug) {
       header_title AS headerTitle,
       file_name AS fileName,
       ${priceMultiplierSelect}
+      ${columnConfigurationSelect}
       is_active AS isActive
     FROM balance_pages
     WHERE branch_id = ?
@@ -2232,7 +2363,7 @@ export async function getBalancePageBySlug(user, slug) {
     [branchId, slug],
   );
 
-  return page || null;
+  return mapBalancePage(page);
 }
 
 export async function getImportSourceConfig(sourceKey, fallbackFileName = null) {
@@ -2340,6 +2471,7 @@ export async function getImportSourcePath(sourceKey, fallbackFileName) {
 
 export async function getBalancePageById(branchId, pageId) {
   const priceMultiplierSelect = await getBalancePagePriceMultiplierSelect();
+  const columnConfigurationSelect = await getBalancePageColumnConfigurationSelect();
   const [[page]] = await pool.query(
     `
     SELECT
@@ -2351,6 +2483,7 @@ export async function getBalancePageById(branchId, pageId) {
       bp.header_title AS headerTitle,
       bp.file_name AS fileName,
       ${priceMultiplierSelect}
+      ${columnConfigurationSelect}
       bp.is_active AS isActive,
       bp.sort_order AS sortOrder,
       c.short_name AS cityShortName,
@@ -2364,7 +2497,7 @@ export async function getBalancePageById(branchId, pageId) {
     [branchId, pageId],
   );
 
-  return page || null;
+  return mapBalancePage(page);
 }
 
 export async function getReportById(branchId, reportId) {

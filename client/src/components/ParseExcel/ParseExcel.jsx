@@ -72,6 +72,9 @@ export const ParseExcel = ({
   fileName,
   balanceSlug,
   priceMultiplierPercent,
+  headerRow,
+  dataStartRow,
+  columnConfig,
   setLastUpdateTime,
 }) => {
   const [parsedData, setParsedData] = useState([]);
@@ -80,6 +83,7 @@ export const ParseExcel = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [isRendered, setIsRendered] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [columns, setColumns] = useState(null);
 
   const loadFile = useCallback(async () => {
     try {
@@ -95,11 +99,15 @@ export const ParseExcel = ({
         data = await response.arrayBuffer();
       }
 
-      const { hierarchy, lastUpdateTime } = parseBalanceWorkbookData(data, {
+      const { hierarchy, lastUpdateTime, columns: parsedColumns } = parseBalanceWorkbookData(data, {
         priceMultiplierPercent,
+        headerRow,
+        dataStartRow,
+        columnConfig,
       });
       setLastUpdateTime(lastUpdateTime);
       setParsedData(hierarchy);
+      setColumns(parsedColumns);
     } catch (error) {
       console.error("Error loading file:", error);
       const status = error.response?.status;
@@ -107,14 +115,15 @@ export const ParseExcel = ({
       setErrorMessage(
         status === 404
           ? fileNotFoundMessage || "Файл залишків не знайдено"
-          : "Помилка завантаження файлу залишків",
+          : error.message || "Помилка завантаження файлу залишків",
       );
       setParsedData([]);
       setFilteredData([]);
+      setColumns(null);
     } finally {
       setIsRendered(true);
     }
-  }, [balanceSlug, fileName, priceMultiplierPercent, setLastUpdateTime]);
+  }, [balanceSlug, columnConfig, dataStartRow, fileName, headerRow, priceMultiplierPercent, setLastUpdateTime]);
 
   useEffect(() => {
     loadFile();
@@ -152,7 +161,7 @@ export const ParseExcel = ({
           <p className={style.stateText}>{errorMessage}</p>
         </div>
       ) : filteredData.length > 0 ? (
-        <Table data={filteredData} />
+        <Table data={filteredData} columns={columns} />
       ) : (
         <div className={style.stateCard}>
           <p className={style.stateText}>Нічого не знайдено за поточним пошуком або фільтром</p>

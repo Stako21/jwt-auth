@@ -27,6 +27,7 @@ function flattenData(data, level = 0, parentId = "") {
       productQuantityCell: item.productQuantityCell,
       priceCell: item.priceCell,
       adjustedPriceCell: item.adjustedPriceCell,
+      configuredValues: item.configuredValues,
       priceMultiplierPercent: item.priceMultiplierPercent,
       level,
       parentId,
@@ -41,7 +42,16 @@ function flattenData(data, level = 0, parentId = "") {
   return flatData;
 }
 
-export const Table = ({ data }) => {
+function formatConfiguredValue(value, isPrice) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value !== "number" || !Number.isFinite(value)) return String(value);
+  return new Intl.NumberFormat("uk-UA", {
+    minimumFractionDigits: isPrice ? 2 : 0,
+    maximumFractionDigits: isPrice ? 2 : 3,
+  }).format(value);
+}
+
+export const Table = ({ data, columns = null }) => {
   const [visibility, setVisibility] = useState(() => buildVisibilityMap(data));
   const [activePriceRowId, setActivePriceRowId] = useState(null);
 
@@ -109,11 +119,20 @@ export const Table = ({ data }) => {
     <div className={style.wraperTable}>
       <div className={style.tableShell}>
         <div className={style.scrollContainer}>
-          <table className={style.balanceTable}>
+          <table className={cn(style.balanceTable, columns?.length && style.configuredTable)}>
             <thead>
               <tr>
-                <th className={style.productHeader}>Номенклатура</th>
-                <th className={style.quantityHeader}>Залишок</th>
+                {columns?.length ? columns.map((column) => (
+                  <th
+                    key={column.id}
+                    className={column.role === "hierarchy" ? style.productHeader : style.metricHeader}
+                  >
+                    {column.title}
+                  </th>
+                )) : <>
+                  <th className={style.productHeader}>Номенклатура</th>
+                  <th className={style.quantityHeader}>Залишок</th>
+                </>}
               </tr>
             </thead>
             <tbody>
@@ -140,7 +159,41 @@ export const Table = ({ data }) => {
                       [style.oddRow]: isLeafRow && leafRowIndex % 2 !== 0,
                     })}
                   >
-                    <td
+                    {columns?.length ? columns.map((column) => column.role === "hierarchy" ? (
+                      <td
+                        key={column.id}
+                        className={style.productCell}
+                        style={{ "--row-level": row.level }}
+                      >
+                        {row.hasChildren && (
+                          <button
+                            onClick={() => toggleVisibility(row.id)}
+                            className={style.toggleButton}
+                            type="button"
+                            aria-label={visibility[row.id] ? "Згорнути групу товарів" : "Розгорнути групу товарів"}
+                          >
+                            <i className={cn(style.toggleIcon, visibility[row.id]
+                              ? "fa-solid fa-chevron-down"
+                              : "fa-solid fa-chevron-right")} />
+                          </button>
+                        )}
+                        <span className={style.productText}>{row.productNameCell}</span>
+                      </td>
+                    ) : (
+                      <td
+                        key={column.id}
+                        className={cn(
+                          style.metricCell,
+                          typeof row.configuredValues?.[column.id] !== "number" && style.textMetricCell,
+                          Number(row.configuredValues?.[column.id]) < 0 && style.negative,
+                        )}
+                      >
+                        {formatConfiguredValue(
+                          row.configuredValues?.[column.id],
+                          column.isPrice,
+                        )}
+                      </td>
+                    )) : <><td
                       className={style.productCell}
                       style={{ "--row-level": row.level }}
                     >
@@ -211,6 +264,7 @@ export const Table = ({ data }) => {
                     >
                       {row.productQuantityCell.join(", ")}
                     </td>
+                    </>}
                   </tr>
                 );
               })}

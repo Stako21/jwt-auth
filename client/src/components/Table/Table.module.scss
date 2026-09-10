@@ -26,6 +26,11 @@
   table-layout: fixed;
 }
 
+.configuredTable {
+  min-width: max(100%, 680px);
+  table-layout: auto;
+}
+
 .balanceTable thead th {
   position: sticky;
   top: 0;
@@ -55,6 +60,12 @@
   text-align: right;
 }
 
+.metricHeader {
+  min-width: 112px;
+  border-left: 1px solid $table-border;
+  text-align: right;
+}
+
 .balanceTable td {
   height: 32px;
   border-bottom: 1px solid $table-border;
@@ -64,6 +75,22 @@
 .productCell,
 .quantityCell {
   padding: $space-1 14px;
+}
+
+.metricCell {
+  min-width: 112px;
+  padding: $space-1 14px;
+  border-left: 1px solid $table-border;
+  color: $table-text;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.textMetricCell {
+  text-align: left;
+  white-space: normal;
 }
 
 .productCell {
@@ -174,7 +201,8 @@
 }
 
 .level0 .productCell,
-.level0 .quantityCell {
+.level0 .quantityCell,
+.level0 .metricCell {
   color: $table-text;
   font-weight: 800;
 }
@@ -184,7 +212,8 @@
 }
 
 .level1 .productCell,
-.level1 .quantityCell {
+.level1 .quantityCell,
+.level1 .metricCell {
   color: $table-text;
   font-weight: 700;
 }
@@ -199,14 +228,17 @@
 
 .level2 .productCell,
 .level2 .quantityCell,
+.level2 .metricCell,
 .level3 .productCell,
-.level3 .quantityCell {
+.level3 .quantityCell,
+.level3 .metricCell {
   color: $table-text;
   font-weight: 650;
 }
 
 .leafRow .productCell,
-.leafRow .quantityCell {
+.leafRow .quantityCell,
+.leafRow .metricCell {
   color: $table-text;
   font-weight: 400;
 }
@@ -282,7 +314,8 @@
   }
 
   .productText,
-  .quantityCell {
+  .quantityCell,
+  .metricCell {
     font-size: 12px;
   }
 }

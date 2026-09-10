@@ -11,6 +11,7 @@ import {
 import { useAppConfig } from "../../context/AppConfigContext";
 import { DataLoader } from "../DataLoader/DataLoader";
 import { ConfigurationEditorModal } from "./ConfigurationEditorModal";
+import { BalanceColumnConfigurator } from "./BalanceColumnConfigurator.jsx";
 
 const defaultForm = {
   slug: "",
@@ -18,6 +19,9 @@ const defaultForm = {
   headerTitle: "",
   fileName: "",
   priceMultiplierPercent: "",
+  headerRow: "",
+  dataStartRow: "",
+  columnConfig: null,
   cityId: "",
   sortOrder: 0,
   isActive: true,
@@ -32,6 +36,9 @@ function normalizeForm(page) {
     headerTitle: page.headerTitle || "",
     fileName: page.fileName || "",
     priceMultiplierPercent: page.priceMultiplierPercent ?? "",
+    headerRow: page.headerRow ?? "",
+    dataStartRow: page.dataStartRow ?? "",
+    columnConfig: page.columnConfig ?? null,
     cityId: page.cityId ?? "",
     sortOrder: Number(page.sortOrder) || 0,
     isActive: Boolean(page.isActive),
@@ -102,6 +109,20 @@ export function BalancePagesConfig() {
     ) {
       nextErrors.priceMultiplierPercent = "Non-negative number or empty";
     }
+    if (form.columnConfig) {
+      if (!Number.isInteger(Number(form.headerRow)) || Number(form.headerRow) < 1) {
+        nextErrors.headerRow = "Вкажіть рядок заголовків";
+      }
+      if (!Number.isInteger(Number(form.dataStartRow)) || Number(form.dataStartRow) < 1) {
+        nextErrors.dataStartRow = "Вкажіть перший рядок даних";
+      }
+      if (Number(form.headerRow) >= Number(form.dataStartRow)) {
+        nextErrors.dataStartRow = "Має бути після рядка заголовків";
+      }
+      if (form.columnConfig.columns.some((column) => !column.title.trim())) {
+        nextErrors.columnConfig = "У всіх вибраних колонок має бути заголовок";
+      }
+    }
     if (!Number.isInteger(Number(form.sortOrder))) {
       nextErrors.sortOrder = "Має бути цілим числом";
     }
@@ -142,6 +163,9 @@ export function BalancePagesConfig() {
           form.priceMultiplierPercent === ""
             ? null
             : Number(form.priceMultiplierPercent),
+        headerRow: form.headerRow === "" ? null : Number(form.headerRow),
+        dataStartRow: form.dataStartRow === "" ? null : Number(form.dataStartRow),
+        columnConfig: form.columnConfig,
         cityId: form.cityId === "" ? null : Number(form.cityId),
         sortOrder: Number(form.sortOrder),
         isActive: Boolean(form.isActive),
@@ -232,6 +256,7 @@ export function BalancePagesConfig() {
                     <th>Місто</th>
                     <th>Порядок</th>
                     <th>Статус</th>
+                    <th>Структура</th>
                     <th>Price, %</th>
                     <th className="has-text-right">Дії</th>
                   </tr>
@@ -256,6 +281,9 @@ export function BalancePagesConfig() {
                           {page.isActive ? "Активна" : "Неактивна"}
                         </span>
                       </td>
+                      <td>{page.columnConfig?.columns?.length
+                        ? `${page.columnConfig.columns.length} кол. · рядки ${page.headerRow}/${page.dataStartRow}`
+                        : "Авто"}</td>
                       <td>{page.priceMultiplierPercent ?? "-"}</td>
                       <td className="has-text-right">
                         <div className="buttons is-right are-small">
@@ -288,7 +316,7 @@ export function BalancePagesConfig() {
                   ))}
                   {!sortedPages.length && (
                     <tr>
-                      <td colSpan="9" className="has-text-centered has-text-grey">
+                      <td colSpan="10" className="has-text-centered has-text-grey">
                         Сторінки залишків ще не налаштовані
                       </td>
                     </tr>
@@ -303,6 +331,7 @@ export function BalancePagesConfig() {
             title={editingPageId ? "Картка сторінки" : "Нова сторінка"}
             onClose={closeEditor}
             busy={saving}
+            wide
           >
           <form onSubmit={handleSubmit}>
             <div className="field">
@@ -408,6 +437,8 @@ export function BalancePagesConfig() {
                 <p className="help">Пусто или 0 = цена без изменения.</p>
               )}
             </div>
+
+            <BalanceColumnConfigurator form={form} setForm={setForm} validationErrors={errors} />
 
             <div className="field">
               <label className="label">Місто</label>

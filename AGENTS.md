@@ -145,7 +145,7 @@ Already visible in code and considered current baseline:
 - Report filter/navigation card shells share `client/src/styles/_filterPanel.scss` for the glass surface, outline, radius, shadow, blur, title, and field-label treatment. Reuse this mixin for new report filter panels and keep responsive control grids from overlapping within the sidebar-reduced viewport.
 - Desktop table/report pages use `client/src/styles/_dataViewport.scss` to keep page headers, filters, searches, and navigation panels outside the bounded results scroller. Reuse its page/scroller mixins for new data-heavy pages; keep mobile layouts in normal page flow unless a dedicated mobile interaction requires otherwise.
 - Balance parser and balance UI were recently refined for better search/filter UX and mobile density.
-- Balance XLSX parsing now supports a separate price column; product rows can show price in a click/tap popover, and `balance_pages.price_multiplier_percent` can optionally adjust displayed price by percent.
+- Balance XLSX pages support both the legacy automatic parser and an optional validated column contract in `balance_pages.header_row`, `data_start_row`, and `column_config`. Admin can inspect the current workbook, select/reorder/rename output columns, designate exactly one hierarchy column, optionally designate one displayed price column for `price_multiplier_percent`, and preview rows before saving. Configured pages validate saved header snapshots against the current workbook and must show an explicit structure-mismatch error instead of silently reading shifted columns. Legacy pages without `column_config` keep automatic detection and the existing price popover behavior.
 - Debet static report was recently added and refined with a grouping switch:
   - collector view: TA -> contractor/trade point -> documents
   - contractor view: contractor/trade point -> TA -> documents
@@ -184,6 +184,7 @@ Already visible in code and considered current baseline:
 - Keep city data in `cities`; do not duplicate city lists in frontend components.
 - Keep balance page metadata in `balance_pages`; do not hardcode balance file names in routes.
 - Keep balance price multiplier metadata in `balance_pages.price_multiplier_percent`; an empty value means display the source XLSX price without adjustment, while a numeric value is added as a percent markup.
+- Keep configured balance columns ordered inside the versioned `balance_pages.column_config` contract. Exactly one selected column must have the `hierarchy` role; `priceColumnId` is optional and may reference only a selected column. Preserve header/index validation and the legacy automatic fallback when the contract is `NULL`.
 - Keep static report metadata in `report_definitions`; do not hardcode one-off report routing/menu logic when config/registry should drive it.
 - Keep static report role visibility in `report_definitions.allowed_roles`; do not restore hardcoded `allowedRoles` lists in frontend registry except for component mapping.
 - Preserve the Picker exception: role 8 always receives only `report-bill-of-lading`, and backend filtering must use `users.user_guid = bill_of_lading_report_rows.picker_guid` within the active branch. `allowed_roles` controls full operational-report visibility for other roles.

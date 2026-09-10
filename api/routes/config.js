@@ -6,6 +6,7 @@ import {
   createCityController,
   createReportController,
   getBalancePages,
+  previewBalanceWorkbookController,
   getBranchController,
   getBranchesController,
   getCities,
@@ -78,6 +79,12 @@ router.patch(
   setCityActiveController,
 );
 router.get("/balance-pages", authMiddleware, adminOnly, getBalancePages);
+router.post(
+  "/balance-pages/preview",
+  authMiddleware,
+  adminOnly,
+  previewBalanceWorkbookController,
+);
 router.post(
   "/balance-pages",
   authMiddleware,

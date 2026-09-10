@@ -1,0 +1,40 @@
+@use "../../theme.scss" as *;
+
+.configurator { display: grid; gap: $space-3; margin: $space-4 0; padding: $space-3; border: 1px solid $outline-dark; border-radius: $radius-lg; background: $surface-modal-section; }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: $space-3; }
+.heading h4 { margin: 0; color: $text-high; font-size: 13px; }
+.heading p { margin: $space-1 0 0; color: $text-muted; font-size: 10px; }
+.readButton,
+.autoButton,
+.clearPrice { min-height: 32px; padding: 0 $space-3; border: 1px solid $primary-accent-border-soft; border-radius: $radius-md; background: $primary-accent-surface-soft; color: $primary-accent-light; cursor: pointer; font-size: 11px; font-weight: 700; }
+.readButton { display: inline-flex; flex: 0 0 auto; align-items: center; gap: $space-2; }
+.rowFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $space-3; }
+.rowFields label { display: grid; gap: $space-1; color: $text-medium; font-size: 11px; font-weight: 700; }
+.error { padding: $space-2 $space-3; border: 1px solid $negative-border-soft; border-radius: $radius-md; background: $negative-surface-soft; color: $negative-muted; font-size: 11px; }
+.availableColumns { display: flex; flex-wrap: wrap; gap: $space-2; }
+.availableColumns label { display: inline-flex; align-items: center; gap: $space-1; padding: $space-1 $space-2; border: 1px solid $outline-dark; border-radius: $radius-md; background: $surface-control; color: $text-medium; font-size: 11px; }
+.availableColumns label span { color: $primary-accent-light; font-weight: 800; }
+.selectedColumns { display: grid; gap: $space-1; }
+.columnRow { display: grid; grid-template-columns: 28px minmax(100px, .8fr) minmax(130px, 1fr) 92px 72px 64px; gap: $space-2; align-items: center; min-width: 0; padding: $space-1; border-bottom: 1px solid $outline-dark; }
+.order { color: $text-muted; font-size: 10px; text-align: center; }
+.source { min-width: 0; overflow: hidden; color: $text-medium; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.role { display: inline-flex; align-items: center; gap: $space-1; color: $text-medium; font-size: 10px; white-space: nowrap; }
+.orderButtons { display: flex; gap: $space-1; }
+.orderButtons button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid $outline-dark; border-radius: $radius-sm; background: $surface-control; color: $text-medium; cursor: pointer; }
+.orderButtons button:disabled { cursor: default; opacity: .35; }
+.clearPrice,
+.autoButton { justify-self: start; background: $surface-control; color: $text-medium; }
+.previewScroll { max-width: 100%; overflow: auto; border: 1px solid $table-border; border-radius: $radius-md; }
+.previewScroll table { width: 100%; min-width: 560px; border-collapse: collapse; color: $table-text; font-size: 10px; }
+.previewScroll th,
+.previewScroll td { max-width: 240px; padding: 5px $space-2; overflow: hidden; border-right: 1px solid $table-border; border-bottom: 1px solid $table-border; text-overflow: ellipsis; white-space: nowrap; }
+.previewScroll th { background: $table-head-surface; color: $table-text-strong; text-align: left; }
+.previewScroll td { background: $table-row-odd; }
+
+@media (max-width: $mobile-breakpoint) {
+  .heading { align-items: stretch; flex-direction: column; }
+  .readButton { justify-content: center; width: 100%; }
+  .rowFields { grid-template-columns: 1fr; }
+  .selectedColumns { overflow-x: auto; }
+  .columnRow { min-width: 650px; }
+}

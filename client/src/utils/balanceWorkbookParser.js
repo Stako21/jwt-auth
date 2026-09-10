@@ -146,6 +146,7 @@ function createNode(row) {
     priceCell: row.priceCell,
     adjustedPriceCell: row.adjustedPriceCell,
     priceMultiplierPercent: row.priceMultiplierPercent,
+    configuredValues: row.configuredValues || null,
     children: [],
   };
 }
@@ -258,16 +259,143 @@ function buildHierarchy(rows, rowMeta, dataStartIndex, options = {}) {
   return result;
 }
 
+function parseColumnConfig(rawConfig) {
+  if (!rawConfig) return null;
+  if (typeof rawConfig === "string") {
+    try {
+      return JSON.parse(rawConfig);
+    } catch {
+      throw new Error("Налаштування колонок залишків містить некоректний JSON");
+    }
+  }
+  return rawConfig;
+}
+
+function buildConfiguredHierarchy(rows, rowMeta, options) {
+  const columnConfig = parseColumnConfig(options.columnConfig);
+  const headerRow = Number(options.headerRow);
+  const dataStartRow = Number(options.dataStartRow);
+  if (!columnConfig?.columns?.length || !Number.isInteger(headerRow) ||
+    !Number.isInteger(dataStartRow) || headerRow < 1 || dataStartRow <= headerRow) {
+    throw new Error("Налаштування структури XLSX неповне. Перевірте сторінку залишків в адмініструванні");
+  }
+
+  const headerCells = rows[headerRow - 1] || [];
+  const columns = columnConfig.columns.map((column) => {
+    const actualHeader = String(headerCells[column.sourceIndex] ?? "").trim();
+    const expectedHeader = String(column.sourceHeader || "").trim();
+    if (normalizeHeaderText(actualHeader) !== normalizeHeaderText(expectedHeader)) {
+      const columnLetter = XLSX.utils.encode_col(Number(column.sourceIndex));
+      throw new Error(
+        `Структура XLSX не відповідає налаштуванню: колонка ${columnLetter} ` +
+        `мала заголовок «${expectedHeader}», зараз «${actualHeader || "порожньо"}». ` +
+        "Оновіть налаштування сторінки залишків",
+      );
+    }
+    return {
+      ...column,
+      isPrice: column.id === columnConfig.priceColumnId,
+    };
+  });
+  const hierarchyColumn = columns.find((column) => column.role === "hierarchy");
+  if (!hierarchyColumn) {
+    throw new Error("У налаштуванні не вибрано колонку номенклатури та ієрархії");
+  }
+
+  const priceMultiplierPercent = normalizePriceMultiplierPercent(
+    options.priceMultiplierPercent,
+  );
+  const parsedRows = rows
+    .slice(dataStartRow - 1)
+    .map((cells, offset) => {
+      const rowIndex = dataStartRow - 1 + offset;
+      const productNameCell = String(cells?.[hierarchyColumn.sourceIndex] ?? "").trim();
+      const configuredValues = Object.fromEntries(columns.map((column) => {
+        const rawValue = cells?.[column.sourceIndex] ?? null;
+        const value = column.isPrice && typeof rawValue === "number"
+          ? applyPriceMultiplier(rawValue, priceMultiplierPercent)
+          : rawValue;
+        return [column.id, value];
+      }));
+      const numericValues = columns
+        .filter((column) => column.role !== "hierarchy")
+        .map((column) => configuredValues[column.id])
+        .filter((value) => typeof value === "number" && Number.isFinite(value));
+      const baseLevel = Number.isInteger(rowMeta?.[rowIndex]?.level)
+        ? Number(rowMeta[rowIndex].level)
+        : 0;
+
+      return {
+        rowIndex,
+        productNameCell,
+        productQuantityCell: numericValues,
+        priceCell: null,
+        adjustedPriceCell: null,
+        priceMultiplierPercent,
+        configuredValues,
+        baseLevel,
+      };
+    })
+    .filter((row) => row.productNameCell);
+
+  const rootNodes = [];
+  const stack = [];
+  parsedRows.forEach((row, index) => {
+    const nextRow = parsedRows[index + 1] || null;
+    const isGroupRow = isLikelyGroupName(row.productNameCell) && Boolean(nextRow);
+    const effectiveLevel = getEffectiveLevel(
+      row.baseLevel,
+      isGroupRow,
+      nextRow ? nextRow.baseLevel : null,
+    );
+    attachNode(rootNodes, stack, { ...row, level: effectiveLevel, isGroupRow });
+  });
+
+  const wrapperIndex = rootNodes.findIndex((node) =>
+    isTopLevelWrapperName(node.productNameCell),
+  );
+  if (wrapperIndex === -1) return { hierarchy: rootNodes, columns };
+
+  const hierarchy = rootNodes.slice(0, wrapperIndex);
+  const wrapperNode = {
+    ...rootNodes[wrapperIndex],
+    children: [...rootNodes[wrapperIndex].children],
+  };
+  for (const node of rootNodes.slice(wrapperIndex + 1)) {
+    if (isLikelyGroupName(node.productNameCell)) wrapperNode.children.push(node);
+    else hierarchy.push(node);
+  }
+  hierarchy.push(wrapperNode);
+  return { hierarchy, columns };
+}
+
 export function parseBalanceWorkbookData(data, options = {}) {
   const workbook = XLSX.read(data, { type: "array", cellStyles: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
+  const rows = XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    blankrows: true,
+    defval: null,
+    raw: true,
+  });
   const rowMeta = sheet["!rows"] || [];
 
-  const dataStartIndex = findDataStartIndex(rows);
+  const configured = Boolean(options.columnConfig);
+  const dataStartIndex = configured
+    ? Number(options.dataStartRow) - 1
+    : findDataStartIndex(rows);
   if (dataStartIndex === -1) {
     return {
       hierarchy: [],
+      lastUpdateTime: extractLastUpdateTime(rows),
+      columns: [],
+    };
+  }
+
+  if (configured) {
+    const result = buildConfiguredHierarchy(rows, rowMeta, options);
+    return {
+      ...result,
       lastUpdateTime: extractLastUpdateTime(rows),
     };
   }
@@ -275,5 +403,6 @@ export function parseBalanceWorkbookData(data, options = {}) {
   return {
     hierarchy: buildHierarchy(rows, rowMeta, dataStartIndex, options),
     lastUpdateTime: extractLastUpdateTime(rows),
+    columns: null,
   };
 }
