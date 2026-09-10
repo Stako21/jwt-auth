@@ -36,15 +36,43 @@ function findHeaderRow(rows, dataStartRow) {
   return Math.max(1, dataStartRow - 1);
 }
 
-function buildHeaders(row = []) {
-  return row
-    .map((value, sourceIndex) => ({
+function getMergedCellValue(rows, merges, rowIndex, columnIndex) {
+  const merge = merges.find(({ s, e }) =>
+    rowIndex >= s.r && rowIndex <= e.r &&
+    columnIndex >= s.c && columnIndex <= e.c);
+  const sourceRow = merge ? merge.s.r : rowIndex;
+  const sourceColumn = merge ? merge.s.c : columnIndex;
+  return rows[sourceRow]?.[sourceColumn] ?? null;
+}
+
+function buildHeaders(rows, merges, headerRow, headerEndRow, columnOffset = 0) {
+  const startIndex = headerRow - 1;
+  const endIndex = headerEndRow - 1;
+  const maxRowColumns = rows
+    .slice(startIndex, endIndex + 1)
+    .reduce((maximum, row) => Math.max(maximum, row?.length || 0), 0);
+  const maxMergedColumn = merges
+    .filter(({ s, e }) => e.r >= startIndex && s.r <= endIndex)
+    .reduce((maximum, { e }) => Math.max(maximum, e.c + 1), 0);
+  const columnCount = Math.max(maxRowColumns, maxMergedColumn);
+
+  return Array.from({ length: columnCount }, (_, sourceIndex) => {
+    const headerParts = [];
+    for (let rowIndex = startIndex; rowIndex <= endIndex; rowIndex += 1) {
+      const part = String(getMergedCellValue(rows, merges, rowIndex, sourceIndex) ?? "").trim();
+      if (part && !headerParts.some((existing) => normalizeHeader(existing) === normalizeHeader(part))) {
+        headerParts.push(part);
+      }
+    }
+    return {
       id: `column-${sourceIndex}`,
       sourceIndex,
-      columnLetter: XLSX.utils.encode_col(sourceIndex),
-      sourceHeader: String(value ?? "").trim(),
-    }))
-    .filter((column) => column.sourceHeader);
+      columnLetter: XLSX.utils.encode_col(sourceIndex + columnOffset),
+      sourceHeader: headerParts.join(" / "),
+      headerParts,
+      suggestedTitle: headerParts.at(-1) || "",
+    };
+  }).filter((column) => column.sourceHeader);
 }
 
 async function readWorkbook(importDir, fileName) {
@@ -77,23 +105,31 @@ async function readWorkbook(importDir, fileName) {
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new BadRequest("XLSX-файл не містить аркушів");
   const sheet = workbook.Sheets[sheetName];
+  const sheetRange = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
+  const columnOffset = sheetRange.s.c;
   const rows = XLSX.utils.sheet_to_json(sheet, {
     header: 1,
     blankrows: true,
     defval: null,
     raw: true,
+    range: { s: { r: 0, c: columnOffset }, e: sheetRange.e },
   });
+  const merges = (sheet["!merges"] || []).map(({ s, e }) => ({
+    s: { r: s.r, c: s.c - columnOffset },
+    e: { r: e.r, c: e.c - columnOffset },
+  }));
 
-  return { sheetName, rows };
+  return { sheetName, rows, merges, columnOffset };
 }
 
 export async function inspectBalanceWorkbook({
   importDir,
   fileName,
   headerRow,
+  headerEndRow,
   dataStartRow,
 }) {
-  const { sheetName, rows } = await readWorkbook(importDir, fileName);
+  const { sheetName, rows, merges, columnOffset } = await readWorkbook(importDir, fileName);
   const suggestedDataStartRow = findDataStartRow(rows);
   const effectiveDataStartRow = dataStartRow
     ? requirePositiveRow(dataStartRow, "Перший рядок даних")
@@ -102,17 +138,29 @@ export async function inspectBalanceWorkbook({
   const effectiveHeaderRow = headerRow
     ? requirePositiveRow(headerRow, "Рядок заголовків")
     : suggestedHeaderRow;
+  const effectiveHeaderEndRow = headerEndRow
+    ? requirePositiveRow(headerEndRow, "Останній рядок заголовків")
+    : effectiveHeaderRow;
 
-  if (effectiveHeaderRow >= effectiveDataStartRow) {
-    throw new BadRequest("Рядок заголовків має бути перед першим рядком даних");
+  if (effectiveHeaderEndRow < effectiveHeaderRow) {
+    throw new BadRequest("Останній рядок заголовків не може бути перед першим");
   }
-  if (effectiveHeaderRow > rows.length || effectiveDataStartRow > rows.length + 1) {
+  if (effectiveHeaderEndRow >= effectiveDataStartRow) {
+    throw new BadRequest("Діапазон заголовків має бути перед першим рядком даних");
+  }
+  if (effectiveHeaderEndRow > rows.length || effectiveDataStartRow > rows.length + 1) {
     throw new BadRequest("Вказані рядки виходять за межі XLSX-файлу");
   }
 
-  const headers = buildHeaders(rows[effectiveHeaderRow - 1]);
+  const headers = buildHeaders(
+    rows,
+    merges,
+    effectiveHeaderRow,
+    effectiveHeaderEndRow,
+    columnOffset,
+  );
   if (!headers.length) {
-    throw new BadRequest("У вибраному рядку заголовків не знайдено значень");
+    throw new BadRequest("У вибраному діапазоні заголовків не знайдено значень");
   }
 
   const previewRows = rows
@@ -127,6 +175,7 @@ export async function inspectBalanceWorkbook({
   return {
     sheetName,
     headerRow: effectiveHeaderRow,
+    headerEndRow: effectiveHeaderEndRow,
     dataStartRow: effectiveDataStartRow,
     headers,
     previewRows,
@@ -187,6 +236,7 @@ export async function validateBalanceWorkbookConfiguration({
   importDir,
   fileName,
   headerRow,
+  headerEndRow,
   dataStartRow,
   columnConfig,
 }) {
@@ -195,17 +245,19 @@ export async function validateBalanceWorkbookConfiguration({
     importDir,
     fileName,
     headerRow,
+    headerEndRow,
     dataStartRow,
   });
   const headersByIndex = new Map(
-    structure.headers.map((header) => [header.sourceIndex, header.sourceHeader]),
+    structure.headers.map((header) => [header.sourceIndex, header]),
   );
 
   for (const column of columnConfig.columns) {
-    const actualHeader = headersByIndex.get(column.sourceIndex) || "";
+    const actualColumn = headersByIndex.get(column.sourceIndex);
+    const actualHeader = actualColumn?.sourceHeader || "";
     if (normalizeHeader(actualHeader) !== normalizeHeader(column.sourceHeader)) {
       throw new BadRequest(
-        `Структура XLSX змінилася: у колонці ${XLSX.utils.encode_col(column.sourceIndex)} ` +
+        `Структура XLSX змінилася: у колонці ${actualColumn?.columnLetter || XLSX.utils.encode_col(column.sourceIndex)} ` +
         `очікувався заголовок «${column.sourceHeader}», отримано «${actualHeader || "порожньо"}»`,
       );
     }

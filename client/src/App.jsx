@@ -26,6 +26,7 @@ function renderBalanceRoutes(activeBalancePages, setLastUpdateTime) {
           balanceSlug={page.slug}
           priceMultiplierPercent={page.priceMultiplierPercent}
           headerRow={page.headerRow}
+          headerEndRow={page.headerEndRow}
           dataStartRow={page.dataStartRow}
           columnConfig={page.columnConfig}
           setLastUpdateTime={setLastUpdateTime}

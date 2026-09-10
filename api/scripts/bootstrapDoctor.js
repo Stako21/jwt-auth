@@ -54,6 +54,7 @@ const CORE_TABLES = {
     "file_name",
     "price_multiplier_percent",
     "header_row",
+    "header_end_row",
     "data_start_row",
     "column_config",
   ],

@@ -15,10 +15,17 @@ async function createWorkbook() {
   const fileName = "balance.xlsx";
   const worksheet = XLSX.utils.aoa_to_sheet([
     ["Звіт залишків"],
-    ["Номенклатура", "Залишок", "Ціна", "Резерв"],
-    ["Група", 12, 100, 2],
-    ["Товар", 5, 20, 1],
+    ["Номенклатура", "Склад", null, "Ціна"],
+    [null, "Вільний залишок", "Резерв", null],
+    [null, "В од. зберігання", null, null],
+    ["Група", 12, 2, 100],
+    ["Товар", 5, 1, 20],
   ]);
+  worksheet["!merges"] = [
+    XLSX.utils.decode_range("A2:A4"),
+    XLSX.utils.decode_range("B2:C2"),
+    XLSX.utils.decode_range("D2:D4"),
+  ];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Залишки");
   XLSX.writeFile(workbook, path.join(directory, fileName));
@@ -33,14 +40,20 @@ test("inspects configured header/data rows and returns preview", async (t) => {
     importDir: directory,
     fileName,
     headerRow: 2,
-    dataStartRow: 3,
+    headerEndRow: 4,
+    dataStartRow: 5,
   });
 
   assert.equal(result.sheetName, "Залишки");
   assert.deepEqual(result.headers.map((column) => column.sourceHeader), [
-    "Номенклатура", "Залишок", "Ціна", "Резерв",
+    "Номенклатура",
+    "Склад / Вільний залишок / В од. зберігання",
+    "Склад / Резерв",
+    "Ціна",
   ]);
-  assert.equal(result.previewRows[0].cells["column-3"], 2);
+  assert.equal(result.headerEndRow, 4);
+  assert.equal(result.headers[1].suggestedTitle, "В од. зберігання");
+  assert.equal(result.previewRows[0].cells["column-3"], 100);
 });
 
 test("normalizes ordered columns and optional price target", () => {
@@ -66,7 +79,8 @@ test("rejects a changed header explicitly", async (t) => {
       importDir: directory,
       fileName,
       headerRow: 2,
-      dataStartRow: 3,
+      headerEndRow: 4,
+      dataStartRow: 5,
       columnConfig: normalizeBalanceColumnConfig({
         columns: [{
           id: "column-0",
@@ -79,4 +93,21 @@ test("rejects a changed header explicitly", async (t) => {
     }),
     (error) => error?.status === 400 && /Структура XLSX змінилася/.test(error?.error),
   );
+});
+
+test("keeps one-row header configuration backward compatible", async (t) => {
+  const { directory, fileName } = await createWorkbook();
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+
+  const result = await inspectBalanceWorkbook({
+    importDir: directory,
+    fileName,
+    headerRow: 3,
+    dataStartRow: 5,
+  });
+
+  assert.equal(result.headerEndRow, 3);
+  assert.deepEqual(result.headers.map((column) => column.sourceHeader), [
+    "Номенклатура", "Вільний залишок", "Резерв", "Ціна",
+  ]);
 });

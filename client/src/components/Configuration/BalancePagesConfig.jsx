@@ -20,6 +20,7 @@ const defaultForm = {
   fileName: "",
   priceMultiplierPercent: "",
   headerRow: "",
+  headerEndRow: "",
   dataStartRow: "",
   columnConfig: null,
   cityId: "",
@@ -37,6 +38,7 @@ function normalizeForm(page) {
     fileName: page.fileName || "",
     priceMultiplierPercent: page.priceMultiplierPercent ?? "",
     headerRow: page.headerRow ?? "",
+    headerEndRow: page.headerEndRow ?? page.headerRow ?? "",
     dataStartRow: page.dataStartRow ?? "",
     columnConfig: page.columnConfig ?? null,
     cityId: page.cityId ?? "",
@@ -116,8 +118,11 @@ export function BalancePagesConfig() {
       if (!Number.isInteger(Number(form.dataStartRow)) || Number(form.dataStartRow) < 1) {
         nextErrors.dataStartRow = "Вкажіть перший рядок даних";
       }
-      if (Number(form.headerRow) >= Number(form.dataStartRow)) {
-        nextErrors.dataStartRow = "Має бути після рядка заголовків";
+      if (!Number.isInteger(Number(form.headerEndRow)) || Number(form.headerEndRow) < Number(form.headerRow)) {
+        nextErrors.headerEndRow = "Має бути не раніше першого рядка заголовків";
+      }
+      if (Number(form.headerEndRow) >= Number(form.dataStartRow)) {
+        nextErrors.dataStartRow = "Має бути після діапазону заголовків";
       }
       if (form.columnConfig.columns.some((column) => !column.title.trim())) {
         nextErrors.columnConfig = "У всіх вибраних колонок має бути заголовок";
@@ -164,6 +169,7 @@ export function BalancePagesConfig() {
             ? null
             : Number(form.priceMultiplierPercent),
         headerRow: form.headerRow === "" ? null : Number(form.headerRow),
+        headerEndRow: form.headerEndRow === "" ? null : Number(form.headerEndRow),
         dataStartRow: form.dataStartRow === "" ? null : Number(form.dataStartRow),
         columnConfig: form.columnConfig,
         cityId: form.cityId === "" ? null : Number(form.cityId),
@@ -282,7 +288,7 @@ export function BalancePagesConfig() {
                         </span>
                       </td>
                       <td>{page.columnConfig?.columns?.length
-                        ? `${page.columnConfig.columns.length} кол. · рядки ${page.headerRow}/${page.dataStartRow}`
+                        ? `${page.columnConfig.columns.length} кол. · заголовки ${page.headerRow}–${page.headerEndRow ?? page.headerRow} / дані ${page.dataStartRow}`
                         : "Авто"}</td>
                       <td>{page.priceMultiplierPercent ?? "-"}</td>
                       <td className="has-text-right">

@@ -38,6 +38,7 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
       const nextPreview = await previewBalanceWorkbook({
         fileName: form.fileName.trim(),
         headerRow: form.headerRow || null,
+        headerEndRow: form.headerEndRow || null,
         dataStartRow: form.dataStartRow || null,
       });
       setPreview(nextPreview);
@@ -59,7 +60,7 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
             id: header.id,
             sourceIndex: header.sourceIndex,
             sourceHeader: header.sourceHeader,
-            title: header.sourceHeader,
+            title: header.suggestedTitle || header.sourceHeader,
             role: index === 0 ? "hierarchy" : "value",
           }));
       const hierarchyExists = columns.some((column) => column.role === "hierarchy");
@@ -72,6 +73,7 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
       setForm((current) => ({
         ...current,
         headerRow: nextPreview.headerRow,
+        headerEndRow: nextPreview.headerEndRow,
         dataStartRow: nextPreview.dataStartRow,
         columnConfig: columns.length
           ? { version: 1, columns, priceColumnId }
@@ -112,7 +114,7 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
         id: header.id,
         sourceIndex: header.sourceIndex,
         sourceHeader: header.sourceHeader,
-        title: header.sourceHeader,
+        title: header.suggestedTitle || header.sourceHeader,
         role: selectedColumns.length ? "value" : "hierarchy",
       },
     ]);
@@ -158,11 +160,18 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
       </div>
 
       <div className={styles.rowFields}>
-        <label>Рядок заголовків
+        <label>Заголовки: з рядка
           <FormInput type="number" min="1" value={form.headerRow} onChange={(event) => {
             setPreview(null);
             setError("");
             setForm((current) => ({ ...current, headerRow: event.target.value, columnConfig: null }));
+          }} />
+        </label>
+        <label>Заголовки: по рядок
+          <FormInput type="number" min="1" value={form.headerEndRow} onChange={(event) => {
+            setPreview(null);
+            setError("");
+            setForm((current) => ({ ...current, headerEndRow: event.target.value, columnConfig: null }));
           }} />
         </label>
         <label>Перший рядок даних
@@ -175,9 +184,9 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
       </div>
 
       {error ? <div className={styles.error}>{error}</div> : null}
-      {validationErrors.headerRow || validationErrors.dataStartRow || validationErrors.columnConfig ? (
+      {validationErrors.headerRow || validationErrors.headerEndRow || validationErrors.dataStartRow || validationErrors.columnConfig ? (
         <div className={styles.error}>
-          {validationErrors.headerRow || validationErrors.dataStartRow || validationErrors.columnConfig}
+          {validationErrors.headerRow || validationErrors.headerEndRow || validationErrors.dataStartRow || validationErrors.columnConfig}
         </div>
       ) : null}
 
@@ -185,7 +194,7 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
         <div className={styles.availableColumns}>
           {preview.headers.map((header) => {
             const checked = selectedColumns.some((column) => sameColumn(column, header));
-            return <label key={header.id}>
+            return <label key={header.id} title={header.sourceHeader}>
               <FormInput type="checkbox" checked={checked} onChange={() => toggleColumn(header)} />
               <span>{header.columnLetter}</span>{header.sourceHeader}
             </label>;
@@ -228,7 +237,7 @@ export function BalanceColumnConfigurator({ form, setForm, validationErrors = {}
       </> : null}
 
       {config ? <button type="button" className={styles.autoButton} onClick={() => setForm((current) => ({
-        ...current, headerRow: "", dataStartRow: "", columnConfig: null,
+        ...current, headerRow: "", headerEndRow: "", dataStartRow: "", columnConfig: null,
       }))}>Повернути автоматичний режим</button> : null}
     </section>
   );

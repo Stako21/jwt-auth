@@ -73,6 +73,7 @@ export const ParseExcel = ({
   balanceSlug,
   priceMultiplierPercent,
   headerRow,
+  headerEndRow,
   dataStartRow,
   columnConfig,
   setLastUpdateTime,
@@ -102,6 +103,7 @@ export const ParseExcel = ({
       const { hierarchy, lastUpdateTime, columns: parsedColumns } = parseBalanceWorkbookData(data, {
         priceMultiplierPercent,
         headerRow,
+        headerEndRow,
         dataStartRow,
         columnConfig,
       });
@@ -123,7 +125,7 @@ export const ParseExcel = ({
     } finally {
       setIsRendered(true);
     }
-  }, [balanceSlug, columnConfig, dataStartRow, fileName, headerRow, priceMultiplierPercent, setLastUpdateTime]);
+  }, [balanceSlug, columnConfig, dataStartRow, fileName, headerEndRow, headerRow, priceMultiplierPercent, setLastUpdateTime]);
 
   useEffect(() => {
     loadFile();

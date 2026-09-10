@@ -271,21 +271,49 @@ function parseColumnConfig(rawConfig) {
   return rawConfig;
 }
 
-function buildConfiguredHierarchy(rows, rowMeta, options) {
+function getMergedCellValue(rows, merges, rowIndex, columnIndex) {
+  const merge = merges.find(({ s, e }) =>
+    rowIndex >= s.r && rowIndex <= e.r &&
+    columnIndex >= s.c && columnIndex <= e.c);
+  const sourceRow = merge ? merge.s.r : rowIndex;
+  const sourceColumn = merge ? merge.s.c : columnIndex;
+  return rows[sourceRow]?.[sourceColumn] ?? null;
+}
+
+function getCompositeHeader(rows, merges, headerRow, headerEndRow, sourceIndex) {
+  const parts = [];
+  for (let rowIndex = headerRow - 1; rowIndex < headerEndRow; rowIndex += 1) {
+    const part = String(getMergedCellValue(rows, merges, rowIndex, sourceIndex) ?? "").trim();
+    if (part && !parts.some((existing) =>
+      normalizeHeaderText(existing) === normalizeHeaderText(part))) {
+      parts.push(part);
+    }
+  }
+  return parts.join(" / ");
+}
+
+function buildConfiguredHierarchy(rows, rowMeta, merges, columnOffset, options) {
   const columnConfig = parseColumnConfig(options.columnConfig);
   const headerRow = Number(options.headerRow);
+  const headerEndRow = Number(options.headerEndRow ?? options.headerRow);
   const dataStartRow = Number(options.dataStartRow);
   if (!columnConfig?.columns?.length || !Number.isInteger(headerRow) ||
-    !Number.isInteger(dataStartRow) || headerRow < 1 || dataStartRow <= headerRow) {
+    !Number.isInteger(headerEndRow) || !Number.isInteger(dataStartRow) ||
+    headerRow < 1 || headerEndRow < headerRow || dataStartRow <= headerEndRow) {
     throw new Error("Налаштування структури XLSX неповне. Перевірте сторінку залишків в адмініструванні");
   }
 
-  const headerCells = rows[headerRow - 1] || [];
   const columns = columnConfig.columns.map((column) => {
-    const actualHeader = String(headerCells[column.sourceIndex] ?? "").trim();
+    const actualHeader = getCompositeHeader(
+      rows,
+      merges,
+      headerRow,
+      headerEndRow,
+      Number(column.sourceIndex),
+    );
     const expectedHeader = String(column.sourceHeader || "").trim();
     if (normalizeHeaderText(actualHeader) !== normalizeHeaderText(expectedHeader)) {
-      const columnLetter = XLSX.utils.encode_col(Number(column.sourceIndex));
+      const columnLetter = XLSX.utils.encode_col(Number(column.sourceIndex) + columnOffset);
       throw new Error(
         `Структура XLSX не відповідає налаштуванню: колонка ${columnLetter} ` +
         `мала заголовок «${expectedHeader}», зараз «${actualHeader || "порожньо"}». ` +
@@ -372,13 +400,20 @@ function buildConfiguredHierarchy(rows, rowMeta, options) {
 export function parseBalanceWorkbookData(data, options = {}) {
   const workbook = XLSX.read(data, { type: "array", cellStyles: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const sheetRange = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
+  const columnOffset = sheetRange.s.c;
   const rows = XLSX.utils.sheet_to_json(sheet, {
     header: 1,
     blankrows: true,
     defval: null,
     raw: true,
+    range: { s: { r: 0, c: columnOffset }, e: sheetRange.e },
   });
   const rowMeta = sheet["!rows"] || [];
+  const merges = (sheet["!merges"] || []).map(({ s, e }) => ({
+    s: { r: s.r, c: s.c - columnOffset },
+    e: { r: e.r, c: e.c - columnOffset },
+  }));
 
   const configured = Boolean(options.columnConfig);
   const dataStartIndex = configured
@@ -393,7 +428,7 @@ export function parseBalanceWorkbookData(data, options = {}) {
   }
 
   if (configured) {
-    const result = buildConfiguredHierarchy(rows, rowMeta, options);
+    const result = buildConfiguredHierarchy(rows, rowMeta, merges, columnOffset, options);
     return {
       ...result,
       lastUpdateTime: extractLastUpdateTime(rows),

@@ -152,6 +152,7 @@ export async function previewBalanceWorkbookController(req, res) {
       importDir: getImportDir(),
       fileName: req.body?.fileName,
       headerRow: req.body?.headerRow,
+      headerEndRow: req.body?.headerEndRow,
       dataStartRow: req.body?.dataStartRow,
     });
     res.json({ preview });

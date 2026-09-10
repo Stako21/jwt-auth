@@ -98,14 +98,16 @@ async function getBalancePagePriceMultiplierSelect(alias = "bp") {
 
 async function getBalancePageColumnConfigurationSelect(alias = "bp") {
   const prefix = alias ? `${alias}.` : "";
-  const [hasHeaderRow, hasDataStartRow, hasColumnConfig] = await Promise.all([
+  const [hasHeaderRow, hasHeaderEndRow, hasDataStartRow, hasColumnConfig] = await Promise.all([
     hasBalancePageColumn("header_row"),
+    hasBalancePageColumn("header_end_row"),
     hasBalancePageColumn("data_start_row"),
     hasBalancePageColumn("column_config"),
   ]);
 
   return [
     hasHeaderRow ? `${prefix}header_row AS headerRow,` : "NULL AS headerRow,",
+    hasHeaderEndRow ? `${prefix}header_end_row AS headerEndRow,` : "NULL AS headerEndRow,",
     hasDataStartRow ? `${prefix}data_start_row AS dataStartRow,` : "NULL AS dataStartRow,",
     hasColumnConfig ? `${prefix}column_config AS columnConfig,` : "NULL AS columnConfig,",
   ].join("\n");
@@ -113,6 +115,10 @@ async function getBalancePageColumnConfigurationSelect(alias = "bp") {
 
 function mapBalancePage(page) {
   if (!page) return null;
+  const headerRow = page.headerRow == null ? null : Number(page.headerRow);
+  const headerEndRow = page.headerEndRow == null
+    ? headerRow
+    : Number(page.headerEndRow);
   let columnConfig = page.columnConfig ?? null;
   if (typeof columnConfig === "string") {
     try {
@@ -121,7 +127,13 @@ function mapBalancePage(page) {
       columnConfig = null;
     }
   }
-  return { ...page, columnConfig };
+  return {
+    ...page,
+    headerRow,
+    headerEndRow,
+    dataStartRow: page.dataStartRow == null ? null : Number(page.dataStartRow),
+    columnConfig,
+  };
 }
 
 async function getReportAllowedRolesSelect() {
@@ -1059,6 +1071,7 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
     const mappedPage = mapBalancePage(page);
     const hasPriceMultiplier = await hasBalancePageColumn("price_multiplier_percent");
     const hasHeaderRow = await hasBalancePageColumn("header_row");
+    const hasHeaderEndRow = await hasBalancePageColumn("header_end_row");
     const hasDataStartRow = await hasBalancePageColumn("data_start_row");
     const hasColumnConfig = await hasBalancePageColumn("column_config");
     const columns = [
@@ -1085,6 +1098,10 @@ async function cloneBranchConfiguration(sourceBranchId, targetBranchId, executor
     if (hasHeaderRow) {
       columns.push("header_row");
       values.push(page.headerRow);
+    }
+    if (hasHeaderEndRow) {
+      columns.push("header_end_row");
+      values.push(page.headerEndRow ?? page.headerRow);
     }
     if (hasDataStartRow) {
       columns.push("data_start_row");
@@ -1545,6 +1562,11 @@ function normalizeBalancePagePayload(payload = {}) {
     payload.headerRow === null || payload.headerRow === undefined || payload.headerRow === ""
       ? null
       : Number(payload.headerRow);
+  const rawHeaderEndRow = payload.headerEndRow ?? payload.header_end_row;
+  const headerEndRow =
+    rawHeaderEndRow === null || rawHeaderEndRow === undefined || rawHeaderEndRow === ""
+      ? headerRow
+      : Number(rawHeaderEndRow);
   const dataStartRow =
     payload.dataStartRow === null || payload.dataStartRow === undefined || payload.dataStartRow === ""
       ? null
@@ -1578,6 +1600,7 @@ function normalizeBalancePagePayload(payload = {}) {
     fileName,
     priceMultiplierPercent,
     headerRow,
+    headerEndRow,
     dataStartRow,
     columnConfig,
     cityId,
@@ -1610,8 +1633,11 @@ function validateBalancePagePayload(page) {
     if (!Number.isInteger(page.dataStartRow) || page.dataStartRow < 1) {
       throw new BadRequest("Для налаштованих колонок вкажіть перший рядок даних");
     }
-    if (page.headerRow >= page.dataStartRow) {
-      throw new BadRequest("Рядок заголовків має бути перед першим рядком даних");
+    if (!Number.isInteger(page.headerEndRow) || page.headerEndRow < page.headerRow) {
+      throw new BadRequest("Останній рядок заголовків має бути не раніше першого");
+    }
+    if (page.headerEndRow >= page.dataStartRow) {
+      throw new BadRequest("Діапазон заголовків має бути перед першим рядком даних");
     }
   }
   if (!Number.isInteger(page.sortOrder)) {
@@ -1890,15 +1916,17 @@ export async function createBalancePage(user, payload) {
     importDir: getImportDir(),
     fileName: page.fileName,
     headerRow: page.headerRow,
+    headerEndRow: page.headerEndRow,
     dataStartRow: page.dataStartRow,
     columnConfig: page.columnConfig,
   });
 
   const hasPriceMultiplier = await hasBalancePageColumn("price_multiplier_percent");
   const hasHeaderRow = await hasBalancePageColumn("header_row");
+  const hasHeaderEndRow = await hasBalancePageColumn("header_end_row");
   const hasDataStartRow = await hasBalancePageColumn("data_start_row");
   const hasColumnConfig = await hasBalancePageColumn("column_config");
-  if (page.columnConfig && (!hasHeaderRow || !hasDataStartRow || !hasColumnConfig)) {
+  if (page.columnConfig && (!hasHeaderRow || !hasHeaderEndRow || !hasDataStartRow || !hasColumnConfig)) {
     throw new BadRequest("Спочатку застосуйте міграцію конфігурації колонок залишків");
   }
   const columns = [
@@ -1925,6 +1953,10 @@ export async function createBalancePage(user, payload) {
   if (hasHeaderRow) {
     columns.push("header_row");
     values.push(page.headerRow);
+  }
+  if (hasHeaderEndRow) {
+    columns.push("header_end_row");
+    values.push(page.headerEndRow);
   }
   if (hasDataStartRow) {
     columns.push("data_start_row");
@@ -1979,15 +2011,17 @@ export async function updateBalancePage(user, pageId, payload) {
     importDir: getImportDir(),
     fileName: page.fileName,
     headerRow: page.headerRow,
+    headerEndRow: page.headerEndRow,
     dataStartRow: page.dataStartRow,
     columnConfig: page.columnConfig,
   });
 
   const hasPriceMultiplier = await hasBalancePageColumn("price_multiplier_percent");
   const hasHeaderRow = await hasBalancePageColumn("header_row");
+  const hasHeaderEndRow = await hasBalancePageColumn("header_end_row");
   const hasDataStartRow = await hasBalancePageColumn("data_start_row");
   const hasColumnConfig = await hasBalancePageColumn("column_config");
-  if (page.columnConfig && (!hasHeaderRow || !hasDataStartRow || !hasColumnConfig)) {
+  if (page.columnConfig && (!hasHeaderRow || !hasHeaderEndRow || !hasDataStartRow || !hasColumnConfig)) {
     throw new BadRequest("Спочатку застосуйте міграцію конфігурації колонок залишків");
   }
   const priceMultiplierSet = hasPriceMultiplier
@@ -1998,11 +2032,13 @@ export async function updateBalancePage(user, pageId, payload) {
     : [];
   const columnConfigurationSet = [
     hasHeaderRow ? "header_row = ?," : "",
+    hasHeaderEndRow ? "header_end_row = ?," : "",
     hasDataStartRow ? "data_start_row = ?," : "",
     hasColumnConfig ? "column_config = ?," : "",
   ].join("\n");
   const columnConfigurationValues = [
     ...(hasHeaderRow ? [page.headerRow] : []),
+    ...(hasHeaderEndRow ? [page.headerEndRow] : []),
     ...(hasDataStartRow ? [page.dataStartRow] : []),
     ...(hasColumnConfig ? [page.columnConfig ? JSON.stringify(page.columnConfig) : null] : []),
   ];
