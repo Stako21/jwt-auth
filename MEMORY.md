@@ -2343,3 +2343,8 @@ Frontend:
 - Replaced the mobile/tablet bottom-sheet alignment of return, exchange, TRO, and shared product/TRO item modals with true vertical viewport centering. Cards keep a safe tokenized inset on every edge, full rounding, bounded `100dvh` height, and internal body scrolling.
 - Document pages at 900 px and below now use a viewport-height flex layout. The result area consumes the remaining height with a 160 px safety minimum and its own momentum-enabled vertical scroller; headers, filter controls, and registry actions do not shrink. If expanded filters exceed the available space, the outer page can still scroll so controls remain reachable.
 - Desktop/landscape-tablet document table containers now explicitly fill the bounded results viewport. Frontend lint and production build pass with the existing Sass legacy API and bundle-size warnings. The pre-change tag is `checkpoint-before-document-modal-scroll-layout-20260914`.
+
+## 2026-09-14 - Collapsible document filters on tablets
+
+- Extended the document filter toggle from the 900 px phone breakpoint through a centralized 1280 px tablet breakpoint. Tablet-width pages now start with the filter panel collapsed and reveal the same full filter form only on demand.
+- This keeps the viewport-bounded document result area usable on portrait and landscape tablets instead of permanently spending its height on the multi-row filter panel. The table/cards continue to own the remaining vertical scrolling area.
