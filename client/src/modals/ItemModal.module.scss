@@ -258,19 +258,16 @@
 
 @media (max-width: $mobile-breakpoint) {
   .itemModal {
-    align-items: flex-end;
-    padding: 0;
+    align-items: center;
+    padding: $space-3;
   }
 
   .itemModalCard {
     width: 100% !important;
     min-width: 0;
-    max-width: 100vw;
-    max-height: calc(100dvh - $topbar-height);
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 0;
-    border-radius: $radius-xl $radius-xl 0 0;
+    max-width: calc(100vw - #{$space-3} - #{$space-3});
+    max-height: calc(100dvh - #{$space-3} - #{$space-3});
+    border-radius: $radius-xl;
   }
 
   .modalHeader {

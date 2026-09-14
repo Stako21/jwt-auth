@@ -278,6 +278,13 @@
   text-align: center;
 }
 
+@media (min-width: ($mobile-breakpoint + 1px)) {
+  .desktopTableContainer {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
 @media (max-width: $mobile-breakpoint) {
   .desktopTableContainer {
     display: none;
@@ -285,7 +292,9 @@
 
   .mobileCards {
     display: grid;
+    align-content: start;
     gap: 10px;
+    padding-bottom: $space-2;
   }
 
   .documentCard {

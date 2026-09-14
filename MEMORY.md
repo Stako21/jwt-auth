@@ -2337,3 +2337,9 @@ Frontend:
 - Raised disabled and read-only control values from `$text-muted` with reduced element opacity to `$text-medium` at full opacity. Disabled surfaces, borders, and the not-allowed cursor continue to distinguish locked fields without sacrificing readability.
 - Applied the rule through the shared FormInput/DateInput control mixin and CompactSelect, plus the return/exchange, TRO, and shared item-modal overrides so every document type has consistent contrast.
 - Frontend lint and production build pass with the existing Sass legacy API and bundle-size warnings. The pre-change tag is `checkpoint-before-disabled-control-contrast-20260910`.
+
+## 2026-09-14 - Centered document modals and mobile/tablet result scrolling
+
+- Replaced the mobile/tablet bottom-sheet alignment of return, exchange, TRO, and shared product/TRO item modals with true vertical viewport centering. Cards keep a safe tokenized inset on every edge, full rounding, bounded `100dvh` height, and internal body scrolling.
+- Document pages at 900 px and below now use a viewport-height flex layout. The result area consumes the remaining height with a 160 px safety minimum and its own momentum-enabled vertical scroller; headers, filter controls, and registry actions do not shrink. If expanded filters exceed the available space, the outer page can still scroll so controls remain reachable.
+- Desktop/landscape-tablet document table containers now explicitly fill the bounded results viewport. Frontend lint and production build pass with the existing Sass legacy API and bundle-size warnings. The pre-change tag is `checkpoint-before-document-modal-scroll-layout-20260914`.
