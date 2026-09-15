@@ -171,7 +171,7 @@ export default class TroIntegrationRepository {
               td.source_system, td.one_c_sales_agent_id, td.one_c_sales_agent_guid,
               td.one_c_sales_agent_name,
               td.warehouse_guid, td.one_c_stage, td.one_c_stage_updated_at,
-              td.last_sync_error
+              td.last_sync_error, td.rejected_by_1c_guid, td.rejected_by_1c_name
        FROM documents d
        JOIN tro_document_details td ON td.document_id = d.id
        WHERE d.id = ?
@@ -253,8 +253,17 @@ export default class TroIntegrationRepository {
     );
   }
 
-  static async reject(connection, documentId) {
-    await connection.query("UPDATE documents SET status = 'REJECTED' WHERE id = ?", [documentId]);
+  static async reject(connection, { documentId, responsibleGuid, responsibleName }) {
+    await connection.query(
+      `UPDATE tro_document_details
+       SET rejected_by_1c_guid = ?, rejected_by_1c_name = ?
+       WHERE document_id = ?`,
+      [responsibleGuid, responsibleName, documentId],
+    );
+    await connection.query(
+      "UPDATE documents SET status = 'REJECTED' WHERE id = ?",
+      [documentId],
+    );
   }
 
   static async addHistory(connection, { documentId, userId, action, oldStatus, newStatus, comment }) {

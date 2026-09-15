@@ -21,10 +21,12 @@
 .options button { display: block; width: 100%; padding: $space-2; border: 0; border-bottom: 1px solid $outline-dark; background: $color-transparent; color: $text-high; text-align: left; cursor: pointer; }
 .options button:hover { background: $select-option-hover-surface; }
 .itemsSection,
-.accountingSection { padding: $space-3; border: 1px solid $outline-dark; border-radius: $radius-lg; background: $surface-modal-section; }
+.accountingSection,
+.rejectionSection { padding: $space-3; border: 1px solid $outline-dark; border-radius: $radius-lg; background: $surface-modal-section; }
 .sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: $space-3; margin-bottom: $space-2; }
 .sectionTitle h3,
-.accountingSection h3 { margin: 0; color: $text-high; font-size: 13px; }
+.accountingSection h3,
+.rejectionSection h3 { margin: 0; color: $text-high; font-size: 13px; }
 .sectionTitle button { min-height: 30px; padding: 0 $space-3; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-control; color: $text-high; cursor: pointer; }
 .emptyItems { margin: 0; padding: $space-3; border: 1px dashed $outline-medium; border-radius: $radius-md; color: $text-muted; font-size: 11px; text-align: center; }
 .itemsTableScroll { width: 100%; overflow-x: auto; border: 1px solid $table-border; border-radius: $radius-md; }
@@ -45,6 +47,9 @@
 .removeItemButton { background: $status-rejected-surface; color: $status-rejected; }
 .accountingSection { border-color: $primary-accent-border-soft; background: $primary-accent-surface-subtle; }
 .accountingGrid { display: grid; grid-template-columns: minmax(160px, 0.45fr) minmax(240px, 1fr); gap: $space-3; margin-top: $space-2; }
+.rejectionSection { border-color: $status-rejected; background: $status-rejected-surface; }
+.rejectionGrid { display: grid; grid-template-columns: minmax(180px, 0.4fr) minmax(260px, 1fr); gap: $space-3; margin-top: $space-2; }
+.rejectionValue { min-height: $control-height-md; margin: 0; padding: $space-2; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-control; color: $text-medium; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; user-select: text; }
 .checks { display: flex; flex-wrap: wrap; gap: $space-2 $space-4; margin-top: $space-3; color: $text-medium; font-size: 12px; }
 .checks label { display: inline-flex; align-items: center; gap: $space-2; }
 .footer { display: flex; flex: 0 0 auto; justify-content: flex-end; gap: $space-2; padding: $space-3 $space-4; border-top: 1px solid $outline-dark; background: $surface-modal-strong; }
@@ -58,10 +63,12 @@
   .card { width: 100%; max-height: calc(100dvh - #{$space-3} - #{$space-3}); border-radius: $radius-xl; }
   .body { padding: $space-2; }
   .generalSection,
-  .accountingGrid { grid-template-columns: 1fr; }
+  .accountingGrid,
+  .rejectionGrid { grid-template-columns: 1fr; }
   .commentField { grid-column: auto; }
   .itemsSection,
-  .accountingSection { padding: $space-2; }
+  .accountingSection,
+  .rejectionSection { padding: $space-2; }
   .itemsTable { min-width: 390px; }
   .footer { flex-wrap: wrap; padding: $space-2; }
   .footer button { flex: 1 1 140px; min-height: 42px; }

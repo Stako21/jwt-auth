@@ -20,6 +20,12 @@ const CREATED_PAYLOAD = {
   source_system: "UP",
   warehouse_guid: null,
 };
+const REJECTED_PAYLOAD = {
+  reason: "Некоректні дані торгової точки",
+  reason_code: "TRADE_POINT_ERROR",
+  responsible_guid: "44444444-4444-4444-8444-444444444444",
+  responsible_name: "Администратор",
+};
 
 function document(overrides = {}) {
   return {
@@ -44,6 +50,8 @@ function document(overrides = {}) {
     warehouse_guid: null,
     one_c_stage: null,
     one_c_stage_updated_at: null,
+    rejected_by_1c_guid: null,
+    rejected_by_1c_name: null,
     created_at: "2026-09-06T09:00:00.000Z",
     updated_at: "2026-09-06T09:00:00.000Z",
     ...overrides,
@@ -164,7 +172,13 @@ function fakeRepository(initialDocuments = [document()]) {
     async saveStage(_connection, id, stage, changedAt) {
       Object.assign(documents.get(id), { one_c_stage: stage, one_c_stage_updated_at: changedAt });
     },
-    async reject(_connection, id) { documents.get(id).status = "REJECTED"; },
+    async reject(_connection, values) {
+      Object.assign(documents.get(values.documentId), {
+        status: "REJECTED",
+        rejected_by_1c_guid: values.responsibleGuid,
+        rejected_by_1c_name: values.responsibleName,
+      });
+    },
     async addHistory(_connection, entry) { history.push(entry); },
     async getLastHistoryComment(_connection, id, action) {
       return [...history].reverse().find((item) => item.documentId === id && item.action === action)?.comment ?? null;
@@ -331,11 +345,69 @@ test("stage changes only integration stage and is idempotent", async () => {
 test("rejected keeps the document and repeated identical request is idempotent", async () => {
   const repo = fakeRepository();
   const service = createTroIntegrationService(repo);
-  await service.rejected(USER, 125, { reason: "Некоректні дані", reason_code: "DATA" });
-  const repeated = await service.rejected(USER, 125, { reason: "Некоректні дані", reason_code: "DATA" });
+  const before = {
+    author: repo.documents.get(125).author_user_id,
+    ta: repo.documents.get(125).ta_user_id,
+  };
+  const first = await service.rejected(USER, 125, REJECTED_PAYLOAD);
+  const repeated = await service.rejected(USER, 125, REJECTED_PAYLOAD);
+  const saved = repo.documents.get(125);
   assert.equal(repo.documents.has(125), true);
   assert.equal(repo.deleted, false);
+  assert.equal(first.idempotent, false);
   assert.equal(repeated.idempotent, true);
+  assert.equal(saved.rejected_by_1c_guid, REJECTED_PAYLOAD.responsible_guid);
+  assert.equal(saved.rejected_by_1c_name, REJECTED_PAYLOAD.responsible_name);
+  assert.equal(saved.author_user_id, before.author);
+  assert.equal(saved.ta_user_id, before.ta);
+  assert.equal(saved.executor_name, null);
+  assert.equal(repo.history.length, 1);
+  assert.equal(repo.history[0].userId, USER.id);
+  assert.equal(
+    repo.history[0].comment,
+    "Заявку відхилено в УП.\nВідповідальний: Администратор.\nПричина: Некоректні дані торгової точки.\nКод причини: TRADE_POINT_ERROR.",
+  );
+});
+
+test("rejected requires a valid responsible GUID and non-empty responsible name", async () => {
+  const service = createTroIntegrationService(fakeRepository());
+  await assert.rejects(
+    service.rejected(USER, 125, { ...REJECTED_PAYLOAD, responsible_guid: "" }),
+    (error) => error instanceof IntegrationError && error.status === 422 && error.code === "INVALID_GUID",
+  );
+  await assert.rejects(
+    service.rejected(USER, 125, { ...REJECTED_PAYLOAD, responsible_name: "   " }),
+    (error) => error instanceof IntegrationError
+      && error.status === 422
+      && error.code === "RESPONSIBLE_NAME_REQUIRED",
+  );
+  await assert.rejects(
+    service.rejected(USER, 125, { ...REJECTED_PAYLOAD, responsible_name: "x".repeat(151) }),
+    (error) => error instanceof IntegrationError && error.status === 422 && error.code === "VALUE_TOO_LONG",
+  );
+});
+
+test("rejected conflict cannot overwrite the first reason or responsible snapshot", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.rejected(USER, 125, REJECTED_PAYLOAD);
+
+  for (const changed of [
+    { reason: "Інша причина" },
+    { reason_code: "OTHER_ERROR" },
+    { responsible_guid: "55555555-5555-4555-8555-555555555555" },
+    { responsible_name: "Інший відповідальний" },
+  ]) {
+    await assert.rejects(
+      service.rejected(USER, 125, { ...REJECTED_PAYLOAD, ...changed }),
+      (error) => error instanceof IntegrationError
+        && error.status === 409
+        && error.code === "DOCUMENT_ALREADY_REJECTED",
+    );
+  }
+
+  assert.equal(repo.documents.get(125).rejected_by_1c_guid, REJECTED_PAYLOAD.responsible_guid);
+  assert.equal(repo.documents.get(125).rejected_by_1c_name, REJECTED_PAYLOAD.responsible_name);
   assert.equal(repo.history.length, 1);
 });
 

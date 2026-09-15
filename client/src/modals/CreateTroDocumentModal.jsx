@@ -13,6 +13,29 @@ import styles from "./CreateTroDocumentModal.module.scss";
 const FALLBACK_TRO_GROUP = "Без групи";
 const LEGACY_TRO_GROUP = "Раніше вибрані";
 
+function getOneCRejection(document) {
+  if (document?.status !== "REJECTED") return null;
+  const history = Array.isArray(document.history) ? document.history : [];
+  const event = [...history].reverse().find((item) => item.action === "ONE_C_REJECTED");
+  if (!event) return null;
+
+  const comment = String(event.comment || "");
+  const reasonStart = comment.indexOf("\nПричина: ");
+  const codeStart = comment.lastIndexOf("\nКод причини: ");
+  let reason = comment;
+  if (reasonStart >= 0 && codeStart > reasonStart) {
+    reason = comment.slice(reasonStart + "\nПричина: ".length, codeStart);
+    if (reason.endsWith(".")) reason = reason.slice(0, -1);
+  } else {
+    reason = comment.replace(/^\[[^\]]+\]\s*/, "");
+  }
+
+  return {
+    responsibleName: document.tro?.rejectedBy1cName || "—",
+    reason: reason.trim() || "—",
+  };
+}
+
 export default function CreateTroDocumentModal({
   isOpen,
   onClose,
@@ -51,6 +74,7 @@ export default function CreateTroDocumentModal({
     oneCSalesAgentName: editingDocument?.tro?.oneCSalesAgentName,
     requestSalesAgentName: editingDocument?.tro?.taName,
   });
+  const oneCRejection = getOneCRejection(editingDocument);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -359,7 +383,21 @@ export default function CreateTroDocumentModal({
             )}
           </section>
 
-          {editingDocument ? <section className={styles.accountingSection}>
+          {oneCRejection ? <section className={styles.rejectionSection}>
+            <h3>Відхилення в УП</h3>
+            <div className={styles.rejectionGrid}>
+              <div className={styles.field}>
+                <label>Відхилив в УП</label>
+                <p className={styles.rejectionValue}>{oneCRejection.responsibleName}</p>
+              </div>
+              <div className={styles.field}>
+                <label>Причина відхилення</label>
+                <p className={styles.rejectionValue}>{oneCRejection.reason}</p>
+              </div>
+            </div>
+          </section> : null}
+
+          {editingDocument && !oneCRejection ? <section className={styles.accountingSection}>
             <h3>Заповнює бухгалтер</h3>
             <div className={styles.accountingGrid}>
               <div className={styles.field}><label>№ документа з УП</label><FormInput value={editingDocument.tro?.upDocumentNumber || "—"} readOnly /></div>

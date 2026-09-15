@@ -2354,3 +2354,10 @@ Frontend:
 - Extended only `GET /api/1c/tro-requests` items with `city: { id, name }` while retaining the existing technical `branch` object and all branch filtering/cursor behavior.
 - City data is resolved from the existing `cities` directory with both `documents.city = cities.id` and matching `documents.branch_id`; no branch-name inference is used. The DTO test and `docs/1c-tro-integration.md` example now cover the field.
 - TRO integration tests pass 27/27, the complete backend suite passes 33/33, and syntax checks pass for the repository and service. The pre-change tag is `checkpoint-before-tro-integration-city-20260915`.
+
+## 2026-09-15 - Real 1C responsible snapshot on TRO rejection
+
+- Added migration `023_tro_1c_rejection_responsible.js` for nullable `tro_document_details.rejected_by_1c_guid` and `rejected_by_1c_name`. The migration file is committed but was not applied to a database in this slice.
+- `POST /api/1c/tro-requests/:id/rejected` now requires a valid `responsible_guid` and a trimmed non-empty `responsible_name` up to 150 characters. The first rejection atomically stores the snapshot and status; `author_user_id`, `ta_user_id`, and `executor_*` remain unchanged.
+- A retry is idempotent only when reason, optional reason code, responsible GUID, and responsible name all match. Any changed value returns `409 DOCUMENT_ALREADY_REJECTED` without overwriting the first event. History retains the integration account user ID but records the real responsible, reason, and code in a multiline comment.
+- Opened rejected TRO documents show a dedicated `Відхилення в УП` block with the responsible name and rejection reason; history comments preserve their line breaks. Backend tests pass 35/35, frontend lint/build and backend syntax checks pass. The pre-change tag is `checkpoint-before-tro-1c-rejection-responsible-20260915`.

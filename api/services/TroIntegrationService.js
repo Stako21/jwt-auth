@@ -58,6 +58,15 @@ function stageLabel(stage) {
   return ({ NEW: "Новий", IN_PROGRESS: "Виконується", COMPLETED: "Завершено", CANCELLED: "Скасовано" })[stage] || stage;
 }
 
+function rejectionComment({ reason, reasonCode, responsibleName }) {
+  return [
+    "Заявку відхилено в УП.",
+    `Відповідальний: ${responsibleName}.`,
+    `Причина: ${reason}.`,
+    `Код причини: ${reasonCode || "—"}.`,
+  ].join("\n");
+}
+
 function cursorTuple(createdAt, id) {
   const parsedDate = new Date(createdAt);
   const parsedId = Number(id);
@@ -332,8 +341,16 @@ export function createTroIntegrationService(
       const accessible = await branchIds(user);
       const reason = clean(payload.reason, 250);
       const reasonCode = clean(payload.reason_code, 64);
+      const responsibleGuid = guid(payload.responsible_guid, "responsible_guid");
+      if (typeof payload.responsible_name !== "string") {
+        throw new IntegrationError(422, "INVALID_RESPONSIBLE_NAME", "Некоректне поле responsible_name");
+      }
+      const responsibleName = clean(payload.responsible_name, 150);
       if (!reason) throw new IntegrationError(422, "REASON_REQUIRED", "Вкажіть причину відхилення");
-      const comment = reasonCode ? `[${reasonCode}] ${reason}` : reason;
+      if (!responsibleName) {
+        throw new IntegrationError(422, "RESPONSIBLE_NAME_REQUIRED", "Вкажіть відповідального 1С");
+      }
+      const comment = rejectionComment({ reason, reasonCode, responsibleName });
       const result = await repository.transaction(async (connection) => {
         const doc = await repository.lockDocument(connection, Number(documentId));
         assertDocument(doc, accessible);
@@ -342,13 +359,21 @@ export function createTroIntegrationService(
         }
         if (doc.status === "REJECTED") {
           const previous = await repository.getLastHistoryComment(connection, doc.id, "ONE_C_REJECTED");
-          if (previous === comment) return { idempotent: true, portal_status: "REJECTED" };
-          throw new IntegrationError(409, "DOCUMENT_ALREADY_REJECTED", "Документ уже відхилено з іншою причиною");
+          const sameResponsible = String(doc.rejected_by_1c_guid || "").toLowerCase() === responsibleGuid
+            && String(doc.rejected_by_1c_name || "").trim() === responsibleName;
+          if (previous === comment && sameResponsible) {
+            return { idempotent: true, portal_status: "REJECTED" };
+          }
+          throw new IntegrationError(409, "DOCUMENT_ALREADY_REJECTED", "Документ уже відхилено з іншою причиною або іншим відповідальним");
         }
         if (doc.status !== "NOT_COMPLETED") {
           throw new IntegrationError(409, "INVALID_PORTAL_STATUS", "Документ не можна відхилити у поточному статусі");
         }
-        await repository.reject(connection, doc.id);
+        await repository.reject(connection, {
+          documentId: doc.id,
+          responsibleGuid,
+          responsibleName,
+        });
         await repository.addHistory(connection, {
           documentId: doc.id, userId: user.id, action: "ONE_C_REJECTED",
           oldStatus: doc.status, newStatus: "REJECTED", comment,

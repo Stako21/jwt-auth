@@ -439,6 +439,8 @@ export async function getTroDocumentExtension(executor, documentId) {
        t.source_system AS sourceSystem, t.one_c_sales_agent_id AS oneCSalesAgentId,
        t.one_c_sales_agent_guid AS oneCSalesAgentGuid,
        t.one_c_sales_agent_name AS oneCSalesAgentName, t.warehouse_guid AS warehouseGuid,
+       t.rejected_by_1c_guid AS rejectedBy1cGuid,
+       t.rejected_by_1c_name AS rejectedBy1cName,
        t.one_c_stage AS oneCStage, t.one_c_stage_updated_at AS oneCStageUpdatedAt,
        t.last_synced_at AS lastSyncedAt, t.last_sync_error AS lastSyncError,
        t.accountant_user_id AS accountantUserId, t.app_install AS appInstall,

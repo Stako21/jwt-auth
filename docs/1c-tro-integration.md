@@ -105,10 +105,40 @@ Query: `movement_type=INSTALL|RETURN`, `branch_id`, `limit=1..500`.
 ### `POST /api/1c/tro-requests/:id/rejected`
 
 ```json
-{ "reason": "Некоректні дані", "reason_code": "DATA" }
+{
+  "reason": "Некоректні дані торгової точки",
+  "reason_code": "TRADE_POINT_ERROR",
+  "responsible_guid": "44444444-4444-4444-8444-444444444444",
+  "responsible_name": "Администратор"
+}
 ```
 
-Доступний для непов'язаної заявки `NOT_COMPLETED`. Встановлює `REJECTED`, але не видаляє документ. Повтор з тією самою причиною ідемпотентний.
+`reason`, `responsible_guid` і `responsible_name` обов'язкові; `reason_code` залишається необов'язковим. `responsible_guid` має бути UUID/GUID, `responsible_name` — непорожній після `trim` рядок до 150 символів.
+
+Доступний для непов'язаної заявки `NOT_COMPLETED`. Встановлює `REJECTED`, але не видаляє документ. Snapshot відповідального зберігається окремо у `rejected_by_1c_guid` / `rejected_by_1c_name`; він не записується в `executor_guid` / `executor_name`. `documents.author_user_id` і `tro_document_details.ta_user_id` не змінюються.
+
+Перша успішна відповідь:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "idempotent": false,
+    "portal_status": "REJECTED"
+  }
+}
+```
+
+Повторний запит ідемпотентний тільки за повного збігу нормалізованих `reason`, `reason_code`, `responsible_guid` і `responsible_name`; він повертає той самий response з `idempotent: true` без нового запису історії. Якщо хоча б одне значення відрізняється, endpoint повертає `409 DOCUMENT_ALREADY_REJECTED` і не переписує перший факт відхилення. Відсутні або некоректні обов'язкові поля повертають контрольований `422`.
+
+Подія `ONE_C_REJECTED` зберігає технічний `document_history.user_id` інтеграційного облікового запису, але її коментар містить snapshot реального відповідального:
+
+```text
+Заявку відхилено в УП.
+Відповідальний: Администратор.
+Причина: Некоректні дані торгової точки.
+Код причини: TRADE_POINT_ERROR.
+```
 
 ### `GET /api/1c/tro-requests/status-pending`
 

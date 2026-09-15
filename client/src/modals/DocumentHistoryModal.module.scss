@@ -131,7 +131,7 @@
   tbody tr:last-child td { border-bottom: 0; }
 }
 
-.comment { min-width: 180px; max-width: 280px; overflow-wrap: anywhere; }
+.comment { min-width: 180px; max-width: 280px; overflow-wrap: anywhere; white-space: pre-line; }
 .positive { color: $status-signed; }
 .info { color: $status-prepared; }
 .warning { color: $status-revision; }
