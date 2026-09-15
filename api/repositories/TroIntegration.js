@@ -59,7 +59,8 @@ export default class TroIntegrationRepository {
     params.push(limit);
     const [rows] = await pool.query(
       `SELECT d.id, d.document_number, d.created_at, d.updated_at, d.status, d.comment,
-              d.branch_id, b.name AS branch_name, td.movement_type,
+              d.branch_id, b.name AS branch_name, d.city AS city_id,
+              ci.name AS city_name, td.movement_type,
               tp.id_1c AS trade_point_guid, tp.name AS trade_point_name,
               tp.address AS trade_point_address,
               c.id_1c AS contractor_guid, c.name AS contractor_name,
@@ -67,6 +68,7 @@ export default class TroIntegrationRepository {
        FROM documents d
        JOIN tro_document_details td ON td.document_id = d.id
        JOIN branches b ON b.id = d.branch_id
+       LEFT JOIN cities ci ON ci.id = d.city AND ci.branch_id = d.branch_id
        JOIN trade_points tp ON tp.id = d.trade_point_id
        JOIN contractors c ON c.id = d.contractor_id
        JOIN users ta ON ta.id = td.ta_user_id

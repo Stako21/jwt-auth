@@ -59,6 +59,8 @@ RETURN  → ЗаявкаНаВозвратТРО
 
 Query: `movement_type=INSTALL|RETURN`, `branch_id`, `limit=1..500`.
 
+Кожна заявка містить технічний об'єкт `branch` для контролю доступу та фільтрації, а також окремий об'єкт `city` з фактичним ID і назвою з довідника `cities`. Місто визначається через `documents.city` у межах `documents.branch_id`, а не з назви філії.
+
 ### `POST /api/1c/tro-requests/:id/created`
 
 ```json
@@ -155,6 +157,7 @@ Authorization: Bearer <access-token>
       "portal_created_at": "2026-09-06T08:15:00.000Z",
       "movement_type": "INSTALL",
       "branch": { "id": 1, "name": "Філія" },
+      "city": { "id": 3, "name": "Черкаси" },
       "trade_point": { "guid": "...", "name": "Торгова точка", "address": "Адреса" },
       "contractor": { "guid": "...", "name": "Контрагент" },
       "request_sales_agent": { "guid": "...", "name": "Торговий агент" },

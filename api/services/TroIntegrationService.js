@@ -217,6 +217,7 @@ export function createTroIntegrationService(
         portal_created_at: row.created_at,
         movement_type: row.movement_type,
         branch: { id: row.branch_id, name: row.branch_name },
+        city: { id: row.city_id, name: row.city_name },
         trade_point: { guid: row.trade_point_guid, name: row.trade_point_name, address: row.trade_point_address },
         contractor: { guid: row.contractor_guid, name: row.contractor_name },
         request_sales_agent: { guid: row.request_agent_guid, name: row.request_agent_name },

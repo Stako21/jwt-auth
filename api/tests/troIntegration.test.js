@@ -29,6 +29,7 @@ function document(overrides = {}) {
     status: "NOT_COMPLETED",
     author_user_id: 10,
     branch_id: 1,
+    city: 3,
     ta_user_id: 20,
     movement_type: "INSTALL",
     up_document_number: null,
@@ -93,6 +94,7 @@ function fakeRepository(initialDocuments = [document()]) {
           ...item,
           comment: null,
           branch_name: "Філія", trade_point_guid: "tp", trade_point_name: "ТТ",
+          city_id: item.city, city_name: "Черкаси",
           trade_point_address: "Адреса", contractor_guid: "co", contractor_name: "Контрагент",
           request_agent_guid: "agent", request_agent_name: "ТА заявки",
         }));
@@ -176,6 +178,7 @@ test("GET returns NOT_COMPLETED documents and excludes NEW", async () => {
   const result = await createTroIntegrationService(repo).listReady(USER);
   assert.deepEqual(result.data.map((item) => item.portal_document_id), [125]);
   assert.equal(result.data[0].status, "NOT_COMPLETED");
+  assert.deepEqual(result.data[0].city, { id: 3, name: "Черкаси" });
   assert.deepEqual(result.pagination, { next_cursor: null, has_more: false });
 });
 

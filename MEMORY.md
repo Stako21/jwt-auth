@@ -2348,3 +2348,9 @@ Frontend:
 
 - Extended the document filter toggle from the 900 px phone breakpoint through a centralized 1280 px tablet breakpoint. Tablet-width pages now start with the filter panel collapsed and reveal the same full filter form only on demand.
 - This keeps the viewport-bounded document result area usable on portrait and landscape tablets instead of permanently spending its height on the multi-row filter panel. The table/cards continue to own the remaining vertical scrolling area.
+
+## 2026-09-15 - City in the TRO/1C ready-request DTO
+
+- Extended only `GET /api/1c/tro-requests` items with `city: { id, name }` while retaining the existing technical `branch` object and all branch filtering/cursor behavior.
+- City data is resolved from the existing `cities` directory with both `documents.city = cities.id` and matching `documents.branch_id`; no branch-name inference is used. The DTO test and `docs/1c-tro-integration.md` example now cover the field.
+- TRO integration tests pass 27/27, the complete backend suite passes 33/33, and syntax checks pass for the repository and service. The pre-change tag is `checkpoint-before-tro-integration-city-20260915`.
