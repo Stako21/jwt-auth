@@ -46,6 +46,7 @@ const TRO_DEFAULT_COLUMN_KEYS = new Set([
   "troItem",
   "troQuantity",
   "status",
+  "comment",
 ]);
 
 const TRO_COLUMNS = Object.freeze([
