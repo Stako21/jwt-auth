@@ -10,12 +10,17 @@ import {
 import RefreshSessionsRepository from "../repositories/RefreshSession.js";
 import UserRepository from "../repositories/User.js";
 import { ACCESS_TOKEN_EXPIRATION } from "../constants.js";
+import { ROLE_IDS } from "../utils/roles.js";
 import { applyUserAccessConfig, canUserAccessBranch } from "./appConfig.service.js";
 import {
   assertKnownRoleId,
   assertSupervisorRoleForChildRole,
   canRoleHaveSupervisor,
 } from "./userHierarchy.service.js";
+import {
+  replaceUserAssortments,
+  resolveUserAssortments,
+} from "./userAssortment.service.js";
 
 const INVALID_LOGIN_PASSWORD_HASH =
   "$2a$10$SO2ONX/PhhO2QwTswJ3fUeL2arnq.GjanER6/vZuLV8FS3daCadwq";
@@ -91,6 +96,8 @@ class AuthService {
     userName,
     user_name,
     userGuid,
+    assortmentGuids,
+    multiAssortmentAllowed,
     password,
     role,
     city,
@@ -104,17 +111,28 @@ class AuthService {
     try {
       await connection.beginTransaction();
       assertKnownRoleId(role);
+      const normalizedMultiAssortmentAllowed =
+        Number(role) === ROLE_IDS.SV && Boolean(multiAssortmentAllowed);
+      const assortments = await resolveUserAssortments({
+        role,
+        assortmentGuids,
+        multiAssortmentAllowed: normalizedMultiAssortmentAllowed,
+        branchId,
+        executor: connection,
+      });
 
       const hashedPassword = bcrypt.hashSync(password, 8);
       const user = await UserRepository.insertUser(connection, {
         userName,
         user_name,
         userGuid,
+        multiAssortmentAllowed: normalizedMultiAssortmentAllowed,
         hashedPassword,
         role,
         city,
         branchId,
       });
+      await replaceUserAssortments(connection, Number(user.id), assortments);
 
       await applyUserAccessConfig(
         currentUser,

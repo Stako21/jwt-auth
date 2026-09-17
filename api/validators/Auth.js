@@ -19,6 +19,15 @@ const optionalGuid = Yup.string()
   .nullable()
   .notRequired();
 
+const assortmentGuidArray = Yup.array()
+  .of(
+    Yup.string().matches(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      "Assortment GUID has an invalid format",
+    ),
+  )
+  .default([]);
+
 export const signInSchema = Yup.object({
   body: Yup.object({
     userName: Yup.string()
@@ -38,6 +47,8 @@ export const signUpSchema = Yup.object({
       .max(25, "Maximum length is 25 characters"),
     user_name: Yup.string().nullable().max(50, "Maximum length is 50 characters"),
     userGuid: optionalGuid,
+    assortment_guids: assortmentGuidArray,
+    multi_assortment_allowed: Yup.boolean().default(false),
     password: Yup.string()
       .required("Required field")
       .min(3, "Password is too short")

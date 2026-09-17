@@ -1,603 +1,16 @@
 import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath } from "url";
 import pool from "../db.cjs";
 import { createTaskLogger } from "./taskLogger.js";
 import { getImportSourcePath } from "./appConfig.service.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import {
+  SalesReportImportError,
+  buildSalesReportImportPlan,
+  normalizeSalesReportSource,
+} from "./salesReportImportPlan.js";
 
 const logger = createTaskLogger("loadSalesReports");
 const SALES_REPORT_RETENTION_DAYS = 35;
-
-export async function loadSalesReports() {
-  const source = await getImportSourcePath("loadSalesReports", "SalesReport.json");
-  const salesFile = source?.filePath;
-  const runLog = logger.start("loader started", { file: salesFile });
-  let connection;
-
-  try {
-    if (!salesFile || !source?.isActive) {
-      runLog.warn("import source is inactive or not configured, skipping", {
-        sourceKey: "loadSalesReports",
-      });
-      return {
-        status: "skipped",
-        code: "source_inactive",
-        message: "Sales reports import source is inactive or not configured",
-        details: {
-          sourceKey: "loadSalesReports",
-        },
-      };
-    }
-
-    const branch = source?.branch;
-    const branchId = Number(branch.id);
-
-    try {
-      await fs.access(salesFile);
-    } catch {
-      runLog.warn("source file not found, skipping", { file: salesFile });
-      return {
-        status: "skipped",
-        code: "source_missing",
-        message: "Sales reports source file not found",
-        details: {
-          file: salesFile,
-        },
-      };
-    }
-
-    const fileStat = await fs.stat(salesFile);
-    runLog.info("source file found", {
-      file: salesFile,
-      sizeBytes: fileStat.size,
-      modifiedAt: fileStat.mtime.toISOString(),
-    });
-
-    let raw = await fs.readFile(salesFile, "utf-8");
-    runLog.info("source file read", { rawLength: raw.length });
-    raw = raw.replace(/^\uFEFF/, "").replace(/\u0000/g, "");
-    raw = raw.replace(/,\s*(?=[}\]])/g, "");
-
-    let reports;
-    try {
-      reports = JSON.parse(raw);
-    } catch (error) {
-      runLog.fail(error, "json parse failed", { rawPreview: raw.slice(0, 200) });
-      return {
-        status: "failed",
-        code: "json_parse_failed",
-        message: "Sales reports source JSON parse failed",
-        details: {
-          file: salesFile,
-        },
-      };
-    }
-
-    runLog.info("json parsed", {
-      isArray: Array.isArray(reports),
-      recordsCount: Array.isArray(reports) ? reports.length : null,
-    });
-
-    if (!Array.isArray(reports) || reports.length === 0) {
-      runLog.warn("source file is empty or invalid array, skipping");
-      return {
-        status: "skipped",
-        code: "empty_source",
-        message: "Sales reports source file is empty or invalid",
-        details: {
-          file: salesFile,
-        },
-      };
-    }
-
-    const importDate = new Date().toISOString().split("T")[0];
-    const minAllowedReportDate = shiftIsoDate(
-      importDate,
-      -SALES_REPORT_RETENTION_DAYS,
-    );
-    const validReports = [];
-    let skippedInvalidRows = 0;
-    let skippedOutOfRangeRows = 0;
-
-    for (const report of reports) {
-      const normalized = normalizeReportRow(report);
-      if (!normalized) {
-        skippedInvalidRows += 1;
-        runLog.warn("sales report row skipped: invalid data", {
-          documentNumber: report?.number,
-          loginAgent: report?.loginAgent,
-          salesAgent: report?.salesAgent,
-          reportDate: report?.date,
-        });
-        continue;
-      }
-
-      if (normalized.docDate < minAllowedReportDate) {
-        skippedOutOfRangeRows += 1;
-        runLog.info("sales report row skipped: earlier than allowed import window", {
-          documentNumber: normalized.number,
-          loginAgent: normalized.loginAgent || null,
-          salesAgent: normalized.salesAgent || null,
-          reportDate: normalized.docDate,
-          minAllowedReportDate,
-        });
-        continue;
-      }
-
-      validReports.push(normalized);
-    }
-
-    if (validReports.length === 0) {
-      runLog.warn("no valid sales report rows remained after precheck, skipping import", {
-        recordsCount: reports.length,
-        skippedInvalidRows,
-        skippedOutOfRangeRows,
-        minAllowedReportDate,
-      });
-      return {
-        status: "skipped",
-        code: "no_valid_rows",
-        message: "Sales reports import has no valid rows after precheck",
-        details: {
-          recordsCount: reports.length,
-          skippedInvalidRows,
-          skippedOutOfRangeRows,
-          minAllowedReportDate,
-        },
-      };
-    }
-
-    const reportDate = importDate;
-    runLog.info("import metadata prepared", {
-      reportDate,
-      minAllowedReportDate,
-      branchId,
-      branchSlug: branch.slug,
-      recordsCount: validReports.length,
-      skippedInvalidRows,
-      skippedOutOfRangeRows,
-    });
-
-    connection = await pool.getConnection();
-    runLog.info("db connection acquired");
-
-    await connection.beginTransaction();
-    runLog.info("transaction started");
-
-    const [importRes] = await connection.query(
-      `
-      INSERT INTO report_imports (report_date, imported_at, rows_total, branch_id)
-      VALUES (?, NOW(), ?, ?)
-      `,
-      [reportDate, validReports.length, branchId],
-    );
-    const importId = importRes.insertId;
-    runLog.info("report_imports row created", { importId });
-
-    let insertedCount = 0;
-    let updatedCount = 0;
-    let movedCount = 0;
-    let cancelledCount = 0;
-    let missingUserCount = 0;
-
-    for (const report of validReports) {
-      try {
-        const user = await resolveReportUser(connection, report, branchId);
-        const userId = user?.id ?? null;
-        const resolvedLoginAgent = user?.loginAgent || report.loginAgent || report.salesAgent;
-        const resolvedSalesAgentName = report.salesAgent || user?.salesAgentName || null;
-
-        if (!userId) {
-          missingUserCount += 1;
-          runLog.warn("user not found for sales report row", {
-            documentNumber: report.number,
-            loginAgent: report.loginAgent || null,
-            salesAgent: report.salesAgent || null,
-          });
-        }
-
-        const [[existing]] = await connection.query(
-          `
-          SELECT *
-          FROM sales_reports
-          WHERE document_number = ?
-            AND login_agent = ?
-            AND branch_id = ?
-          ORDER BY
-            CASE status
-              WHEN 'ACTIVE' THEN 1
-              WHEN 'MOVED' THEN 2
-              ELSE 3
-            END,
-            created_at DESC
-          LIMIT 1
-          `,
-          [report.number, resolvedLoginAgent, branchId],
-        );
-
-        const [[existingSameDate]] = await connection.query(
-          `
-          SELECT *
-          FROM sales_reports
-          WHERE document_number = ?
-            AND login_agent = ?
-            AND branch_id = ?
-            AND DATE(document_date) = ?
-          ORDER BY
-            CASE status
-              WHEN 'ACTIVE' THEN 1
-              WHEN 'CANCELLED' THEN 2
-              WHEN 'MOVED' THEN 3
-              ELSE 4
-            END,
-            created_at DESC
-          LIMIT 1
-          `,
-          [report.number, resolvedLoginAgent, branchId, report.docDate],
-        );
-
-        if (report.isDeleted) {
-          const rowToCancel = existingSameDate || null;
-          const cancelComment = "Реалізація відмінена (позначена як видалена в 1С)";
-
-          if (!rowToCancel) {
-            await connection.query(
-              `
-              INSERT INTO sales_reports (
-                report_date,
-                document_number,
-                document_date,
-                login_agent,
-                user_id,
-                sales_agent_name,
-                amount,
-                point_of_sale,
-                customer,
-                comment,
-                form2,
-                status,
-                change_comment,
-                import_id,
-                branch_id
-              )
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CANCELLED', ?, ?, ?)
-              `,
-              [
-                report.docDate,
-                report.number,
-                report.originalDate,
-                resolvedLoginAgent,
-                userId,
-                resolvedSalesAgentName,
-                report.amount,
-                report.pointOfSale,
-                report.customer,
-                report.comment,
-                report.form2 ? 1 : 0,
-                cancelComment,
-                importId,
-                branchId,
-              ],
-            );
-            insertedCount += 1;
-            cancelledCount += 1;
-            continue;
-          }
-
-          await connection.query(
-            `
-            UPDATE sales_reports
-            SET report_date = ?,
-                document_date = ?,
-                status = 'CANCELLED',
-                change_comment = ?,
-                amount = ?,
-                login_agent = ?,
-                user_id = ?,
-                sales_agent_name = ?,
-                point_of_sale = ?,
-                customer = ?,
-                comment = ?,
-                form2 = ?,
-                import_id = ?
-            WHERE id = ?
-            `,
-            [
-              report.docDate,
-              report.originalDate,
-              cancelComment,
-              report.amount,
-              resolvedLoginAgent,
-              userId,
-              resolvedSalesAgentName,
-              report.pointOfSale,
-              report.customer,
-              report.comment,
-              report.form2 ? 1 : 0,
-              importId,
-              rowToCancel.id,
-            ],
-          );
-          updatedCount += 1;
-          cancelledCount += 1;
-          continue;
-        }
-
-        if (!existing) {
-          await connection.query(
-            `
-            INSERT INTO sales_reports (
-              report_date,
-              document_number,
-              document_date,
-              login_agent,
-              user_id,
-              sales_agent_name,
-              amount,
-              point_of_sale,
-              customer,
-              comment,
-              form2,
-              status,
-              import_id,
-              branch_id
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)
-            `,
-            [
-              report.docDate,
-              report.number,
-              report.originalDate,
-              resolvedLoginAgent,
-              userId,
-              resolvedSalesAgentName,
-              report.amount,
-              report.pointOfSale,
-              report.customer,
-              report.comment,
-              report.form2 ? 1 : 0,
-              importId,
-              branchId,
-            ],
-          );
-          insertedCount += 1;
-          continue;
-        }
-
-        const existingDate = existing.document_date?.toISOString().slice(0, 10);
-
-        if (existingDate === report.docDate) {
-          await connection.query(
-            `
-            UPDATE sales_reports
-            SET status = 'ACTIVE',
-                change_comment = NULL,
-                amount = ?,
-                login_agent = ?,
-                user_id = ?,
-                sales_agent_name = ?,
-                import_id = ?
-            WHERE id = ?
-            `,
-            [
-              report.amount,
-              resolvedLoginAgent,
-              userId,
-              resolvedSalesAgentName,
-              importId,
-              existing.id,
-            ],
-          );
-          updatedCount += 1;
-          continue;
-        }
-
-        const moveComment = `Перенесено з ${existingDate} на ${report.docDate}, сума ${report.amount}`;
-
-        await connection.query(
-          `
-          UPDATE sales_reports
-          SET status = 'MOVED',
-              amount = 0,
-              change_comment = ?
-          WHERE id = ?
-          `,
-          [moveComment, existing.id],
-        );
-
-        const [newRes] = await connection.query(
-          `
-          INSERT INTO sales_reports (
-            report_date,
-            document_number,
-            document_date,
-            login_agent,
-            user_id,
-            sales_agent_name,
-            amount,
-            point_of_sale,
-            customer,
-            comment,
-            form2,
-            status,
-            import_id,
-            branch_id
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)
-          `,
-          [
-            report.docDate,
-            report.number,
-            report.originalDate,
-            resolvedLoginAgent,
-            userId,
-            resolvedSalesAgentName,
-            report.amount,
-            report.pointOfSale,
-            report.customer,
-            report.comment,
-            report.form2 ? 1 : 0,
-            importId,
-            branchId,
-          ],
-        );
-
-        await connection.query(
-          `
-          UPDATE sales_reports
-          SET replaced_by_id = ?
-          WHERE id = ?
-          `,
-          [newRes.insertId, existing.id],
-        );
-
-        movedCount += 1;
-      } catch (rowError) {
-        runLog.error("sales report row processing failed", {
-          documentNumber: report.number,
-          loginAgent: report.loginAgent,
-          errorMessage: rowError.message,
-          errorStack: rowError.stack,
-        });
-        throw rowError;
-      }
-    }
-
-    runLog.info("rows processed", {
-      processedCount: validReports.length,
-      insertedCount,
-      updatedCount,
-      movedCount,
-      cancelledCount,
-      missingUserCount,
-      skippedInvalidRows,
-      skippedOutOfRangeRows,
-    });
-
-    const [delRes] = await connection.query(
-      `
-      DELETE
-        FROM sales_reports
-      WHERE report_date < DATE_SUB(?, INTERVAL ? DAY)
-        AND branch_id = ?
-      `,
-      [reportDate, SALES_REPORT_RETENTION_DAYS, branchId],
-    );
-    runLog.info("old rows cleanup completed", {
-      reportDate,
-      deletedRows: delRes.affectedRows,
-    });
-
-    await connection.commit();
-    runLog.info("transaction committed", { importId });
-
-    const hasUnresolvedRows = skippedInvalidRows > 0;
-
-    if (!source.deleteAfterSuccess) {
-      runLog.info("source file kept after successful import", { file: salesFile });
-    } else if (hasUnresolvedRows) {
-      runLog.warn("source file kept after partial import", {
-        file: salesFile,
-        skippedInvalidRows,
-      });
-    } else {
-      await fs.unlink(salesFile);
-      runLog.info("source file removed", { file: salesFile });
-    }
-
-    const result = {
-      status: hasUnresolvedRows ? "completed_with_warnings" : "completed",
-      code: hasUnresolvedRows ? "partial_import" : "import_completed",
-      message: hasUnresolvedRows
-        ? "Sales reports imported with warnings"
-        : "Sales reports imported successfully",
-      details: {
-        processedCount: validReports.length,
-        insertedCount,
-        updatedCount,
-        movedCount,
-        cancelledCount,
-        missingUserCount,
-        skippedInvalidRows,
-        skippedOutOfRangeRows,
-        minAllowedReportDate,
-        keptSourceFile: !source.deleteAfterSuccess || hasUnresolvedRows,
-      },
-    };
-
-    runLog.end("loader completed", {
-      importId,
-      recordsCount: validReports.length,
-      skippedInvalidRows,
-      skippedOutOfRangeRows,
-      keptSourceFile: !source.deleteAfterSuccess || hasUnresolvedRows,
-    });
-    return result;
-  } catch (error) {
-    try {
-      if (connection) {
-        await connection.rollback();
-        runLog.info("transaction rolled back");
-      }
-    } catch (rollbackError) {
-      runLog.error("transaction rollback failed", {
-        errorMessage: rollbackError.message,
-        errorStack: rollbackError.stack,
-      });
-    }
-
-    runLog.fail(error, "loader failed", { file: salesFile });
-    return {
-      status: "failed",
-      code: "import_failed",
-      message: "Sales reports import failed",
-      details: {
-        file: salesFile,
-        errorMessage: error.message,
-      },
-    };
-  } finally {
-    if (connection) {
-      connection.release();
-      logger.info("db connection released");
-    }
-  }
-}
-
-function normalizeReportRow(report) {
-  if (!report || !report.number || !report.date) {
-    return null;
-  }
-
-  const number = String(report.number).trim();
-  const loginAgent = String(report.loginAgent || "").trim();
-  const salesAgent = String(report.salesAgent || "").trim();
-  if (!number || (!loginAgent && !salesAgent)) {
-    return null;
-  }
-
-  const parsedDate = new Date(report.date);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return null;
-  }
-
-  return {
-    number,
-    loginAgent,
-    originalDate: report.date,
-    docDate: parsedDate.toISOString().slice(0, 10),
-    salesAgent,
-    amount: report.amount,
-    pointOfSale: report.pointOfSale,
-    customer: report.customer,
-    comment: report.comment,
-    form2: Boolean(report.form2),
-    isDeleted: Boolean(report.isDeleted),
-  };
-}
+const LOOKUP_CHUNK_SIZE = 500;
 
 function shiftIsoDate(isoDate, days) {
   const date = new Date(`${isoDate}T00:00:00Z`);
@@ -605,68 +18,508 @@ function shiftIsoDate(isoDate, days) {
   return date.toISOString().slice(0, 10);
 }
 
-async function resolveReportUser(connection, report, branchId) {
-  if (report.loginAgent) {
-    const [[userByLogin]] = await connection.query(
-      `
-      SELECT
-        u.id,
-        u.NAME AS loginAgent,
-        COALESCE(NULLIF(u.user_name, ''), NULLIF(sa.full_name, ''), u.NAME) AS salesAgentName
-      FROM users u
-      LEFT JOIN sales_agents sa
-        ON sa.user_id = u.id
-       AND sa.branch_id = u.branch_id
-      WHERE u.NAME = ?
-        AND u.is_active = 1
-        AND u.branch_id = ?
-      LIMIT 1
-      `,
-      [report.loginAgent, branchId],
+function groupRows(rows, keySelector) {
+  const result = new Map();
+  for (const row of rows) {
+    const key = keySelector(row);
+    if (!key) continue;
+    const values = result.get(key) || [];
+    values.push(row);
+    result.set(key, values);
+  }
+  return result;
+}
+
+async function queryInChunks(connection, values, queryChunk) {
+  const uniqueValues = [...new Set(values.filter(Boolean))];
+  const rows = [];
+  for (let index = 0; index < uniqueValues.length; index += LOOKUP_CHUNK_SIZE) {
+    const chunk = uniqueValues.slice(index, index + LOOKUP_CHUNK_SIZE);
+    rows.push(...(await queryChunk(chunk)));
+  }
+  return rows;
+}
+
+async function readSourceFile(filePath) {
+  let raw = await fs.readFile(filePath, "utf-8");
+  raw = raw.replace(/^\uFEFF/, "").replace(/\u0000/g, "");
+  raw = raw.replace(/,\s*(?=[}\]])/g, "");
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new SalesReportImportError(
+      "JSON_PARSE_FAILED",
+      "Sales reports source JSON parse failed",
+      { errorMessage: error.message, rawPreview: raw.slice(0, 200) },
     );
-
-    if (userByLogin) {
-      return userByLogin;
-    }
   }
+}
 
-  if (!report.salesAgent) {
-    return null;
-  }
-
-  const [[userByName]] = await connection.query(
-    `
-    SELECT
-      u.id,
-      u.NAME AS loginAgent,
-      COALESCE(NULLIF(sa.full_name, ''), NULLIF(u.user_name, ''), u.NAME) AS salesAgentName
-    FROM users u
-    LEFT JOIN sales_agents sa
-      ON sa.user_id = u.id
-     AND sa.branch_id = u.branch_id
-    WHERE u.is_active = 1
-      AND u.branch_id = ?
-      AND (
-        u.user_name = ?
-        OR sa.full_name = ?
-      )
-    ORDER BY
-      CASE
-        WHEN sa.full_name = ? THEN 1
-        WHEN u.user_name = ? THEN 2
-        ELSE 3
-      END,
-      u.id
-    LIMIT 1
-    `,
-    [
-      branchId,
-      report.salesAgent,
-      report.salesAgent,
-      report.salesAgent,
-      report.salesAgent,
-    ],
+async function loadLookupState(connection, branchId, rows) {
+  const users = await queryInChunks(
+    connection,
+    rows.map((row) => row.salesAgentGuid),
+    async (chunk) => {
+      const [found] = await connection.query(
+        `SELECT id, NAME, user_name,
+                LOWER(current_agent_guid) AS current_agent_guid
+         FROM users
+         WHERE branch_id = ? AND is_active = 1
+           AND LOWER(current_agent_guid) IN (?)`,
+        [branchId, chunk],
+      );
+      return found;
+    },
   );
 
-  return userByName || null;
+  const agents = await queryInChunks(
+    connection,
+    rows.flatMap((row) => row.agentLogins),
+    async (chunk) => {
+      const [found] = await connection.query(
+        `SELECT sa.login, sa.user_id, u.id, u.NAME, u.user_name
+         FROM sales_agents sa
+         INNER JOIN users u
+           ON u.id = sa.user_id
+          AND u.branch_id = sa.branch_id
+          AND u.is_active = 1
+         WHERE sa.branch_id = ? AND sa.is_active_1c = 1
+           AND sa.login IN (?)`,
+        [branchId, chunk],
+      );
+      return found;
+    },
+  );
+
+  const existingRows = await queryInChunks(
+    connection,
+    rows.map((row) => row.documentGuid),
+    async (chunk) => {
+      const [found] = await connection.query(
+        `SELECT sr.*,
+                DATE_FORMAT(sr.document_date, '%Y-%m-%d') AS document_date_iso
+         FROM sales_reports sr
+         WHERE sr.branch_id = ? AND sr.document_guid IN (?)
+         ORDER BY sr.created_at DESC, sr.id DESC`,
+        [branchId, chunk],
+      );
+      return found;
+    },
+  );
+
+  const legacyRows = await queryInChunks(
+    connection,
+    rows.map((row) => row.number),
+    async (chunk) => {
+      const [found] = await connection.query(
+        `SELECT sr.*,
+                DATE_FORMAT(sr.document_date, '%Y-%m-%d') AS document_date_iso
+         FROM sales_reports sr
+         WHERE sr.branch_id = ? AND sr.document_guid IS NULL
+           AND sr.document_number IN (?)
+         ORDER BY sr.created_at DESC, sr.id DESC`,
+        [branchId, chunk],
+      );
+      return found;
+    },
+  );
+
+  return {
+    usersByGuid: groupRows(users, (row) => row.current_agent_guid),
+    agentsByLogin: groupRows(agents, (row) => row.login),
+    existingByGuid: groupRows(existingRows, (row) => row.document_guid),
+    legacyByNumber: groupRows(legacyRows, (row) => row.document_number),
+  };
+}
+
+const nullable = (value) => (typeof value === "undefined" ? null : value);
+const sourceAgentName = (row) => row.salesAgent || null;
+
+async function insertReportRow(
+  connection,
+  { row, user, importId, branchId, status },
+) {
+  const [result] = await connection.query(
+    `INSERT INTO sales_reports (
+       report_date, document_number, document_guid, document_date,
+       login_agent, user_id, sales_agent_name, sales_agent_guid,
+       amount, point_of_sale, customer, comment, form2, status,
+       change_comment, import_id, branch_id
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.docDate,
+      row.number,
+      row.documentGuid,
+      row.originalDate,
+      user.loginAgent,
+      user.id,
+      sourceAgentName(row),
+      row.salesAgentGuid,
+      row.amount,
+      nullable(row.pointOfSale),
+      nullable(row.customer),
+      nullable(row.comment),
+      row.form2 ? 1 : 0,
+      status,
+      status === "CANCELLED"
+        ? "Реалізація відмінена (позначена як видалена в 1С)"
+        : null,
+      importId,
+      branchId,
+    ],
+  );
+  return result.insertId;
+}
+
+async function updateCancelledRow(connection, { action, importId }) {
+  const { row, user, existing } = action;
+  await connection.query(
+    `UPDATE sales_reports
+     SET report_date = ?, document_number = ?, document_guid = ?,
+         document_date = ?, login_agent = ?, user_id = ?,
+         sales_agent_name = ?, sales_agent_guid = ?, status = 'CANCELLED',
+         change_comment = ?, amount = ?, point_of_sale = ?, customer = ?,
+         comment = ?, form2 = ?, import_id = ?
+     WHERE id = ?`,
+    [
+      row.docDate,
+      row.number,
+      row.documentGuid,
+      row.originalDate,
+      user.loginAgent,
+      user.id,
+      sourceAgentName(row),
+      row.salesAgentGuid,
+      "Реалізація відмінена (позначена як видалена в 1С)",
+      row.amount,
+      nullable(row.pointOfSale),
+      nullable(row.customer),
+      nullable(row.comment),
+      row.form2 ? 1 : 0,
+      importId,
+      existing.id,
+    ],
+  );
+}
+
+async function updateActiveRow(connection, { action, importId }) {
+  const { row, user, existing } = action;
+  await connection.query(
+    `UPDATE sales_reports
+     SET report_date = ?, document_number = ?, document_guid = ?,
+         document_date = ?, login_agent = ?, user_id = ?,
+         sales_agent_name = ?, sales_agent_guid = ?, status = 'ACTIVE',
+         change_comment = NULL, amount = ?, point_of_sale = ?, customer = ?,
+         comment = ?, form2 = ?, import_id = ?, replaced_by_id = NULL
+     WHERE id = ?`,
+    [
+      row.docDate,
+      row.number,
+      row.documentGuid,
+      row.originalDate,
+      user.loginAgent,
+      user.id,
+      sourceAgentName(row),
+      row.salesAgentGuid,
+      row.amount,
+      nullable(row.pointOfSale),
+      nullable(row.customer),
+      nullable(row.comment),
+      row.form2 ? 1 : 0,
+      importId,
+      existing.id,
+    ],
+  );
+}
+
+async function lockActiveDocument(connection, branchId, documentGuid) {
+  const [rows] = await connection.query(
+    `SELECT id FROM sales_reports
+     WHERE branch_id = ? AND document_guid = ? AND status = 'ACTIVE'
+     FOR UPDATE`,
+    [branchId, documentGuid],
+  );
+  return rows.map((row) => Number(row.id));
+}
+
+export async function executeSalesReportImportPlan(
+  connection,
+  plan,
+  { importId, branchId },
+) {
+  const result = {
+    insertedCount: 0,
+    updatedCount: 0,
+    movedCount: 0,
+    cancelledCount: 0,
+    legacyBackfilledCount: 0,
+  };
+
+  for (const action of plan.actions) {
+    const { row, user, existing } = action;
+    const activeIds = await lockActiveDocument(connection, branchId, row.documentGuid);
+    const expectedActiveId = existing?.status === "ACTIVE"
+      ? Number(existing.id)
+      : null;
+    if (
+      activeIds.length > 1 ||
+      (activeIds.length === 1 && activeIds[0] !== expectedActiveId)
+    ) {
+      throw new SalesReportImportError(
+        "ACTIVE_DOCUMENT_GUID_CONFLICT",
+        "Active document state changed after import plan was built",
+        { documentGuid: row.documentGuid, activeIds, expectedActiveId },
+      );
+    }
+
+    if (action.type === "INSERT_NEW") {
+      await insertReportRow(connection, {
+        row,
+        user,
+        importId,
+        branchId,
+        status: row.isDeleted ? "CANCELLED" : "ACTIVE",
+      });
+      result.insertedCount += 1;
+      if (row.isDeleted) result.cancelledCount += 1;
+      continue;
+    }
+
+    if (action.type === "BACKFILL_LEGACY") {
+      result.legacyBackfilledCount += 1;
+    }
+
+    if (row.isDeleted) {
+      await updateCancelledRow(connection, { action, importId });
+      result.updatedCount += 1;
+      result.cancelledCount += 1;
+      continue;
+    }
+
+    if (existing.document_date_iso === row.docDate) {
+      await updateActiveRow(connection, { action, importId });
+      result.updatedCount += 1;
+      continue;
+    }
+
+    const moveComment = `Перенесено з ${existing.document_date_iso || "—"} на ${row.docDate}, сума ${row.amount}`;
+    await connection.query(
+      `UPDATE sales_reports
+       SET status = 'MOVED', amount = 0, change_comment = ?,
+           document_guid = ?, sales_agent_guid = ?, import_id = ?
+       WHERE id = ?`,
+      [moveComment, row.documentGuid, row.salesAgentGuid, importId, existing.id],
+    );
+    const newId = await insertReportRow(connection, {
+      row,
+      user,
+      importId,
+      branchId,
+      status: "ACTIVE",
+    });
+    await connection.query(
+      "UPDATE sales_reports SET replaced_by_id = ? WHERE id = ?",
+      [newId, existing.id],
+    );
+    result.insertedCount += 1;
+    result.movedCount += 1;
+  }
+  return result;
+}
+
+function summarizePlan(plan) {
+  return {
+    ...plan.counters,
+    diagnostics: plan.diagnostics,
+    hardConflicts: plan.hardConflicts,
+  };
+}
+
+async function runSalesReportImport(
+  source,
+  { dryRun = false, skipRetentionCleanup = false } = {},
+) {
+  const salesFile = source?.filePath;
+  const runLog = logger.start(dryRun ? "dry-run started" : "loader started", {
+    file: salesFile,
+  });
+  let connection;
+  let advisoryLockAcquired = false;
+
+  try {
+    if (!salesFile || !source?.isActive) {
+      return {
+        status: "skipped",
+        code: "source_inactive",
+        message: "Sales reports import source is inactive or not configured",
+        details: { sourceKey: "loadSalesReports" },
+      };
+    }
+    const branchId = Number(source?.branch?.id);
+    if (!Number.isInteger(branchId) || branchId <= 0) {
+      throw new SalesReportImportError(
+        "INVALID_BRANCH",
+        "Sales report import requires a valid branch",
+      );
+    }
+
+    await fs.access(salesFile);
+    const fileStat = await fs.stat(salesFile);
+    const sourceRows = await readSourceFile(salesFile);
+    const importDate = new Date().toISOString().slice(0, 10);
+    const minAllowedReportDate = shiftIsoDate(importDate, -SALES_REPORT_RETENTION_DAYS);
+    const snapshot = normalizeSalesReportSource(sourceRows, { minAllowedReportDate });
+
+    connection = await pool.getConnection();
+    if (!dryRun) {
+      const [[lockRow]] = await connection.query(
+        "SELECT GET_LOCK(?, 10) AS acquired",
+        [`sales-report-import:${branchId}`],
+      );
+      if (Number(lockRow.acquired) !== 1) {
+        throw new SalesReportImportError(
+          "IMPORT_LOCK_TIMEOUT",
+          "Another Sales Report import is already running",
+        );
+      }
+      advisoryLockAcquired = true;
+    }
+
+    const lookupState = await loadLookupState(
+      connection,
+      branchId,
+      snapshot.includedRows,
+    );
+    const plan = buildSalesReportImportPlan({ snapshot, ...lookupState });
+    const planSummary = summarizePlan(plan);
+    runLog.info("import plan built", {
+      file: salesFile,
+      sizeBytes: fileStat.size,
+      branchId,
+      ...plan.counters,
+      diagnosticsCount: plan.diagnostics.length,
+      hardConflictsCount: plan.hardConflicts.length,
+    });
+
+    if (plan.hasHardConflicts) {
+      return {
+        status: "failed",
+        code: "import_plan_conflict",
+        message: "Sales reports import plan contains hard conflicts",
+        details: { file: salesFile, ...planSummary, keptSourceFile: true },
+      };
+    }
+    if (dryRun) {
+      return {
+        status: "preview",
+        code: "dry_run_completed",
+        message: "Sales reports dry-run completed",
+        details: {
+          file: salesFile,
+          branchId,
+          ...planSummary,
+          keptSourceFile: true,
+        },
+      };
+    }
+
+    await connection.beginTransaction();
+    const [importResult] = await connection.query(
+      `INSERT INTO report_imports (
+         report_date, imported_at, rows_total, rows_inserted, branch_id
+       ) VALUES (?, NOW(), ?, 0, ?)`,
+      [importDate, snapshot.rowsTotal, branchId],
+    );
+    const importId = importResult.insertId;
+    const execution = await executeSalesReportImportPlan(connection, plan, {
+      importId,
+      branchId,
+    });
+    await connection.query(
+      "UPDATE report_imports SET rows_inserted = ? WHERE id = ?",
+      [execution.insertedCount, importId],
+    );
+
+    let retentionDeletedRows = 0;
+    if (!skipRetentionCleanup) {
+      const [deleteResult] = await connection.query(
+        `DELETE FROM sales_reports
+         WHERE report_date < DATE_SUB(?, INTERVAL ? DAY) AND branch_id = ?`,
+        [importDate, SALES_REPORT_RETENTION_DAYS, branchId],
+      );
+      retentionDeletedRows = deleteResult.affectedRows;
+    }
+    await connection.commit();
+
+    if (source.deleteAfterSuccess) await fs.unlink(salesFile);
+    const details = {
+      file: salesFile,
+      branchId,
+      importId,
+      ...planSummary,
+      ...execution,
+      retentionDeletedRows,
+      keptSourceFile: !source.deleteAfterSuccess,
+    };
+    runLog.end("loader completed", details);
+    return {
+      status: "completed",
+      code: "import_completed",
+      message: "Sales reports imported successfully",
+      details,
+    };
+  } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        runLog.error("transaction rollback failed", {
+          errorMessage: rollbackError.message,
+        });
+      }
+    }
+    runLog.fail(error, "loader failed", { file: salesFile });
+    return {
+      status: "failed",
+      code: error.code || "import_failed",
+      message: error.message || "Sales reports import failed",
+      details: {
+        file: salesFile,
+        ...(error.details || {}),
+        keptSourceFile: true,
+      },
+    };
+  } finally {
+    if (connection) {
+      if (advisoryLockAcquired) {
+        try {
+          await connection.query(
+            "SELECT RELEASE_LOCK(?)",
+            [`sales-report-import:${Number(source?.branch?.id)}`],
+          );
+        } catch (lockError) {
+          runLog.error("advisory lock release failed", {
+            errorMessage: lockError.message,
+          });
+        }
+      }
+      connection.release();
+    }
+  }
+}
+
+export async function previewSalesReportsFromSource(source) {
+  return runSalesReportImport(
+    { ...source, deleteAfterSuccess: false },
+    { dryRun: true, skipRetentionCleanup: true },
+  );
+}
+
+export async function loadSalesReportsFromSource(source, options = {}) {
+  return runSalesReportImport(source, options);
+}
+
+export async function loadSalesReports() {
+  const source = await getImportSourcePath("loadSalesReports", "SalesReport.json");
+  return runSalesReportImport(source);
 }

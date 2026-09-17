@@ -1,21 +1,105 @@
 import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath } from "url";
 import pool from "../db.cjs";
 import { createTaskLogger } from "./taskLogger.js";
 import { getImportSourcePath } from "./appConfig.service.js";
+import { buildSalesAgentImportPlan } from "./salesAgentImportPlan.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const logger = createTaskLogger("loadSalesAgents");
 
-function cleanText(value) {
-  return String(value ?? "").trim();
+async function loadPlanningState(connection, branchId) {
+  const [users] = await connection.query(
+    `SELECT id, NAME, user_name, current_agent_guid, is_active
+     FROM users
+     WHERE branch_id = ? AND is_active = 1`,
+    [branchId],
+  );
+  const [existingPositions] = await connection.query(
+    `SELECT id, login, user_id, current_agent_guid
+     FROM sales_agents
+     WHERE branch_id = ?`,
+    [branchId],
+  );
+  return { users, existingPositions };
 }
 
-function cleanGuid(value) {
-  const text = cleanText(value).toLowerCase();
-  return text || null;
+async function persistPlan(connection, branchId, plan, seenAt) {
+  const activeLogins = [];
+
+  for (const position of plan.positions) {
+    activeLogins.push(position.login);
+    await connection.query(
+      `INSERT INTO sales_agents (
+         user_id, login, route_guid, route_name, full_name,
+         current_agent_guid, assortment_guid, assortment_name,
+         supervisor_name, supervisor_guid, city, regional_division_guid,
+         branch_id, last_seen_at, is_active_1c
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+       ON DUPLICATE KEY UPDATE
+         user_id = VALUES(user_id),
+         route_guid = VALUES(route_guid),
+         route_name = VALUES(route_name),
+         full_name = VALUES(full_name),
+         current_agent_guid = VALUES(current_agent_guid),
+         assortment_guid = VALUES(assortment_guid),
+         assortment_name = VALUES(assortment_name),
+         supervisor_name = VALUES(supervisor_name),
+         supervisor_guid = VALUES(supervisor_guid),
+         city = VALUES(city),
+         regional_division_guid = VALUES(regional_division_guid),
+         last_seen_at = VALUES(last_seen_at),
+         is_active_1c = 1`,
+      [
+        position.userId,
+        position.login,
+        position.routeGuid,
+        position.routeName || null,
+        position.fullName,
+        position.currentAgentGuid,
+        position.assortmentGuid,
+        position.assortmentName || null,
+        position.supervisorName || null,
+        position.supervisorGuid,
+        position.city || null,
+        position.regionalDivisionGuid,
+        branchId,
+        seenAt,
+      ],
+    );
+  }
+
+  for (const anchor of plan.anchorUpdates) {
+    await connection.query(
+      `UPDATE users
+       SET user_name = ?, current_agent_guid = ?
+       WHERE id = ? AND branch_id = ? AND is_active = 1`,
+      [anchor.userName || null, anchor.currentAgentGuid, anchor.userId, branchId],
+    );
+  }
+
+  if (activeLogins.length) {
+    await connection.query(
+      `UPDATE sales_agents
+       SET is_active_1c = 0
+       WHERE branch_id = ? AND login NOT IN (?)`,
+      [branchId, activeLogins],
+    );
+  } else {
+    await connection.query(
+      "UPDATE sales_agents SET is_active_1c = 0 WHERE branch_id = ?",
+      [branchId],
+    );
+  }
+}
+
+export async function executeSalesAgentPlan(connection, branchId, plan, seenAt) {
+  await connection.beginTransaction();
+  try {
+    await persistPlan(connection, branchId, plan, seenAt);
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  }
 }
 
 export async function loadSalesAgents() {
@@ -26,348 +110,85 @@ export async function loadSalesAgents() {
 
   try {
     if (!salesAgentFile || !source?.isActive) {
-      runLog.warn("import source is inactive or not configured, skipping", {
-        sourceKey: "loadSalesAgents",
-      });
       return {
         status: "skipped",
         code: "source_inactive",
         message: "Sales agents import source is inactive or not configured",
-        details: {
-          sourceKey: "loadSalesAgents",
-        },
+        details: { sourceKey: "loadSalesAgents" },
       };
     }
-
-    const branch = source?.branch;
-    const branchId = Number(branch.id);
 
     try {
       await fs.access(salesAgentFile);
     } catch {
-      runLog.warn("source file not found, skipping", { file: salesAgentFile });
       return {
         status: "skipped",
         code: "source_missing",
         message: "Sales agents source file not found",
-        details: {
-          file: salesAgentFile,
-        },
+        details: { file: salesAgentFile },
       };
     }
 
-    const fileStat = await fs.stat(salesAgentFile);
-    runLog.info("source file found", {
-      file: salesAgentFile,
-      sizeBytes: fileStat.size,
-      modifiedAt: fileStat.mtime.toISOString(),
-    });
-
-    let raw = await fs.readFile(salesAgentFile, "utf-8");
-    runLog.info("source file read", { rawLength: raw.length });
-    raw = raw.replace(/^\uFEFF/, "");
-    raw = raw.replace(/\u0000/g, "");
-    raw = raw.replace(/,\s*(?=[}\]])/g, "");
-
-    let agents;
-    try {
-      agents = JSON.parse(raw);
-    } catch (error) {
-      runLog.fail(error, "json parse failed", { rawPreview: raw.slice(0, 200) });
-      await fs.writeFile(salesAgentFile + ".sanitized.json", raw, "utf8");
-      return {
-        status: "failed",
-        code: "json_parse_failed",
-        message: "Sales agents source JSON parse failed",
-        details: {
-          file: salesAgentFile,
-          sanitizedFile: salesAgentFile + ".sanitized.json",
-        },
-      };
-    }
-
-    runLog.info("json parsed", {
-      isArray: Array.isArray(agents),
-      recordsCount: Array.isArray(agents) ? agents.length : null,
-    });
-
-    if (!Array.isArray(agents) || agents.length === 0) {
-      runLog.warn("source file is empty or invalid array, skipping");
+    let raw = await fs.readFile(salesAgentFile, "utf8");
+    raw = raw.replace(/^\uFEFF/, "").replace(/\u0000/g, "").replace(/,\s*(?=[}\]])/g, "");
+    const sourceRows = JSON.parse(raw);
+    if (!Array.isArray(sourceRows) || sourceRows.length === 0) {
       return {
         status: "skipped",
         code: "empty_source",
         message: "Sales agents source file is empty or invalid",
-        details: {
-          file: salesAgentFile,
-        },
+        details: { file: salesAgentFile },
       };
     }
 
-    let skippedWithoutLogin = 0;
-    let skippedUserNotFound = 0;
-    const candidateAgents = [];
-
-    for (const agent of agents) {
-      if (!agent || !agent.login) {
-        skippedWithoutLogin += 1;
-        runLog.warn("agent row skipped: missing login", { agent });
-        continue;
-      }
-
-      candidateAgents.push(agent);
-    }
-
-    if (candidateAgents.length === 0) {
-      runLog.warn("no valid sales agents remained after precheck, skipping import", {
-        recordsCount: agents.length,
-        skippedWithoutLogin,
-      });
-      return {
-        status: "skipped",
-        code: "no_valid_rows",
-        message: "Sales agents import has no valid rows after precheck",
-        details: {
-          recordsCount: agents.length,
-          skippedWithoutLogin,
-        },
-      };
-    }
-
+    const branchId = Number(source.branch.id);
     connection = await pool.getConnection();
-    runLog.info("db connection acquired");
+    const state = await loadPlanningState(connection, branchId);
 
-    const uniqueLogins = Array.from(
-      new Set(candidateAgents.map((agent) => String(agent.login).trim()).filter(Boolean)),
-    );
+    // The complete plan and every conflict are calculated before the transaction.
+    const plan = buildSalesAgentImportPlan({ sourceRows, ...state });
+    const seenAt = new Date();
 
-    const [userRows] = await connection.query(
-      `
-      SELECT id, NAME
-      FROM users
-      WHERE NAME IN (?)
-        AND is_active = 1
-        AND branch_id = ?
-      `,
-      [uniqueLogins, branchId],
-    );
+    await executeSalesAgentPlan(connection, branchId, plan, seenAt);
 
-    const userIdByLogin = new Map(userRows.map((user) => [user.NAME, Number(user.id)]));
-    const importableAgents = [];
-
-    for (const agent of candidateAgents) {
-      const login = cleanText(agent.login);
-      const fullName = cleanText(agent.currentAgent);
-      const userId = userIdByLogin.get(login);
-
-      if (!userId) {
-        skippedUserNotFound += 1;
-        runLog.warn("user not found for sales agent", {
-          login,
-          currentAgent: fullName || null,
-        });
-        continue;
-      }
-
-      importableAgents.push({
-        login,
-        userId,
-        fullName,
-        routeGuid: cleanGuid(agent.routeGuid),
-        currentAgentGuid: cleanGuid(agent.currentAgentGuid),
-        supervisorName: cleanText(agent.supervisor),
-        supervisorGuid: cleanGuid(agent.supervisorGuid),
-        city: cleanText(agent.regionalDivision),
-        regionalDivisionGuid: cleanGuid(agent.regionalDivisionGuid),
-      });
-    }
-
-    if (importableAgents.length === 0) {
-      runLog.warn("no sales agents could be matched to active users, skipping import", {
-        recordsCount: agents.length,
-        skippedWithoutLogin,
-        skippedUserNotFound,
-        branchId,
-      });
-      return {
-        status: "skipped",
-        code: "no_matching_users",
-        message: "Sales agents import has no rows matched to active users",
-        details: {
-          recordsCount: agents.length,
-          skippedWithoutLogin,
-          skippedUserNotFound,
-          branchId,
-        },
-      };
-    }
-
-    await connection.beginTransaction();
-    runLog.info("transaction started", {
-      candidateAgents: candidateAgents.length,
-      importableAgents: importableAgents.length,
-    });
-
-    for (const agent of importableAgents) {
-      try {
-        await connection.query(
-          `INSERT INTO sales_agents (
-             user_id,
-             login,
-             route_guid,
-             full_name,
-             current_agent_guid,
-             supervisor_name,
-             supervisor_guid,
-             city,
-             regional_division_guid,
-             branch_id
-           )
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE
-             route_guid = VALUES(route_guid),
-             full_name = VALUES(full_name),
-             current_agent_guid = VALUES(current_agent_guid),
-             supervisor_name = VALUES(supervisor_name),
-             supervisor_guid = VALUES(supervisor_guid),
-             city = VALUES(city),
-             regional_division_guid = VALUES(regional_division_guid),
-             branch_id = VALUES(branch_id)`,
-          [
-            agent.userId,
-            agent.login,
-            agent.routeGuid,
-            agent.fullName,
-            agent.currentAgentGuid,
-            agent.supervisorName,
-            agent.supervisorGuid,
-            agent.city,
-            agent.regionalDivisionGuid,
-            branchId,
-          ],
-        );
-      } catch (rowError) {
-        runLog.error("agent row processing failed", {
-          login: agent.login,
-          errorMessage: rowError.message,
-          errorStack: rowError.stack,
-        });
-        throw rowError;
-      }
-    }
-
-    runLog.info("rows processed", {
-      processedCount: agents.length,
-      importedCount: importableAgents.length,
-      skippedWithoutLogin,
-      skippedUserNotFound,
-    });
-
-    const syncedUsers = await syncUserNamesFromSalesAgents(connection, branchId);
-    await connection.commit();
-    runLog.info("transaction committed", {
-      importedCount: importableAgents.length,
-      syncedUsers,
-    });
-
-    const hasUnresolvedRows = skippedWithoutLogin > 0 || skippedUserNotFound > 0;
-
-    try {
-      if (!source.deleteAfterSuccess) {
-        runLog.info("source file kept after successful import", {
-          file: salesAgentFile,
-        });
-      } else if (hasUnresolvedRows) {
-        runLog.warn("source file kept after partial import", {
-          file: salesAgentFile,
-          skippedWithoutLogin,
-          skippedUserNotFound,
-        });
-      } else {
-        await fs.unlink(salesAgentFile);
-        runLog.info("source file removed", { file: salesAgentFile });
-      }
-    } catch (unlinkError) {
-      runLog.error("failed to remove source file", {
+    const hasWarnings = plan.stats.unmatched > 0;
+    if (source.deleteAfterSuccess && !hasWarnings) {
+      await fs.unlink(salesAgentFile);
+      runLog.info("source file removed", { file: salesAgentFile });
+    } else {
+      runLog.info("source file kept", {
         file: salesAgentFile,
-        errorMessage: unlinkError.message,
-        errorStack: unlinkError.stack,
+        deleteAfterSuccess: source.deleteAfterSuccess,
+        hasWarnings,
       });
     }
 
     const result = {
-      status: hasUnresolvedRows ? "completed_with_warnings" : "completed",
-      code: hasUnresolvedRows ? "partial_import" : "import_completed",
-      message: hasUnresolvedRows
-        ? "Sales agents imported with warnings"
-        : "Sales agents imported successfully",
+      status: hasWarnings ? "completed_with_warnings" : "completed",
+      code: hasWarnings ? "partial_import" : "import_completed",
+      message: hasWarnings
+        ? "Sales agent positions imported with warnings"
+        : "Sales agent positions imported successfully",
       details: {
-        processedCount: agents.length,
-        importedCount: importableAgents.length,
-        skippedWithoutLogin,
-        skippedUserNotFound,
-        syncedUsers,
-        keptSourceFile: !source.deleteAfterSuccess || hasUnresolvedRows,
+        ...plan.stats,
+        conflicts: plan.conflicts,
+        keptSourceFile: !source.deleteAfterSuccess || hasWarnings,
       },
     };
-
-    runLog.end("loader completed", {
-      importedCount: importableAgents.length,
-      syncedUsers,
-      keptSourceFile: !source.deleteAfterSuccess || hasUnresolvedRows,
-    });
+    runLog.end("loader completed", result.details);
     return result;
   } catch (error) {
-    try {
-      if (connection) {
-        await connection.rollback();
-        runLog.info("transaction rolled back");
-      }
-    } catch (rollbackError) {
-      runLog.error("transaction rollback failed", {
-        errorMessage: rollbackError.message,
-        errorStack: rollbackError.stack,
-      });
-    }
-
-    runLog.fail(error, "loader failed", { file: salesAgentFile });
+    runLog.fail(error, "loader failed", {
+      file: salesAgentFile,
+      code: error.code || null,
+    });
     return {
       status: "failed",
-      code: "import_failed",
-      message: "Sales agents import failed",
-      details: {
-        file: salesAgentFile,
-        errorMessage: error.message,
-      },
+      code: error.code || "import_failed",
+      message: error.message || "Sales agents import failed",
+      details: { file: salesAgentFile },
     };
   } finally {
-    if (connection) {
-      connection.release();
-      logger.info("db connection released");
-    }
+    connection?.release();
   }
-}
-
-async function syncUserNamesFromSalesAgents(connection, branchId) {
-  const [result] = await connection.query(
-    `
-    UPDATE users u
-    JOIN sales_agents sa ON sa.user_id = u.id
-    SET
-      u.user_name = sa.full_name,
-      u.current_agent_guid = sa.current_agent_guid
-    WHERE
-      sa.branch_id = ?
-      AND u.branch_id = ?
-      AND
-      sa.full_name IS NOT NULL
-      AND sa.full_name <> ''
-  `,
-    [branchId, branchId],
-  );
-
-  logger.info("users.user_name synchronized from sales_agents", {
-    affectedRows: result.affectedRows,
-  });
-
-  return result.affectedRows;
 }

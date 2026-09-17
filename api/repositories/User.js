@@ -3,17 +3,30 @@ import pool from "../db.cjs";
 class UserRepository {
   static async insertUser(
     executor,
-    { userName, user_name, userGuid, hashedPassword, role, city, branchId },
+    {
+      userName,
+      user_name,
+      userGuid,
+      multiAssortmentAllowed,
+      hashedPassword,
+      role,
+      city,
+      branchId,
+    },
   ) {
     const [insertResult] = await executor.query(
       `
-      INSERT INTO users (name, user_name, user_guid, password, role, city, branch_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (
+        name, user_name, user_guid, multi_assortment_allowed,
+        password, role, city, branch_id
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         userName || null,
         user_name || null,
         userGuid || null,
+        multiAssortmentAllowed ? 1 : 0,
         hashedPassword,
         role,
         city,
@@ -34,6 +47,7 @@ class UserRepository {
     userName,
     user_name,
     userGuid,
+    multiAssortmentAllowed,
     hashedPassword,
     role,
     city,
@@ -46,6 +60,7 @@ class UserRepository {
         userName,
         user_name,
         userGuid,
+        multiAssortmentAllowed,
         hashedPassword,
         role,
         city,
@@ -119,7 +134,9 @@ class UserRepository {
   static async getAllUsers(branchId) {
     const [rows] = await pool.query(
       `
-      SELECT id, name, user_name, current_agent_guid, user_guid, role, city, branch_id, is_active
+      SELECT id, name, user_name, current_agent_guid, user_guid,
+             multi_assortment_allowed,
+             role, city, branch_id, is_active
       FROM users
       WHERE is_active = 1
         AND branch_id = ?
@@ -138,14 +155,19 @@ class UserRepository {
         user_id,
         login,
         route_guid,
+        route_name,
         full_name,
         current_agent_guid,
+        assortment_guid,
+        assortment_name,
         supervisor_name,
         supervisor_guid,
         city,
         regional_division_guid,
         supervisor_id,
-        branch_id
+        branch_id,
+        last_seen_at,
+        is_active_1c
       FROM sales_agents
       WHERE branch_id = ?
       `,
@@ -183,17 +205,28 @@ class UserRepository {
 
   static async updateUserById(
     userId,
-    { userName, user_name, userGuid, role, city },
+    { userName, user_name, userGuid, multiAssortmentAllowed, role, city },
     branchId,
+    executor = pool,
   ) {
-    const [result] = await pool.query(
+    const [result] = await executor.query(
       `
       UPDATE users
-      SET name = ?, user_name = ?, user_guid = ?, role = ?, city = ?
+      SET name = ?, user_name = ?, user_guid = ?,
+          multi_assortment_allowed = ?, role = ?, city = ?
       WHERE id = ?
         AND branch_id = ?
       `,
-      [userName || null, user_name || null, userGuid || null, role, city, userId, branchId],
+      [
+        userName || null,
+        user_name || null,
+        userGuid || null,
+        multiAssortmentAllowed ? 1 : 0,
+        role,
+        city,
+        userId,
+        branchId,
+      ],
     );
     return result;
   }
@@ -293,6 +326,7 @@ class UserRepository {
         u.NAME AS name,
         u.user_name,
         u.user_guid,
+        u.multi_assortment_allowed,
         u.role,
         u.city,
         u.branch_id,
@@ -311,6 +345,34 @@ class UserRepository {
       [branchId],
     );
     return [rows];
+  }
+
+  static async getSalesAgentPositionsForUsers(userIds, branchId) {
+    if (!userIds.length) return [];
+    const [rows] = await pool.query(
+      `SELECT
+         id, user_id, login, route_guid, route_name, current_agent_guid,
+         full_name, assortment_guid, assortment_name, supervisor_guid,
+         supervisor_name, city, is_active_1c
+       FROM sales_agents
+       WHERE branch_id = ? AND user_id IN (?)
+       ORDER BY is_active_1c DESC, assortment_name, login`,
+      [branchId, userIds],
+    );
+    return rows;
+  }
+
+  static async getUserAssortmentsForUsers(userIds, branchId, executor = pool) {
+    if (!userIds.length) return [];
+    const [rows] = await executor.query(
+      `SELECT ua.user_id, ua.assortment_guid, ua.assortment_name
+       FROM user_assortments ua
+       JOIN users u ON u.id = ua.user_id
+       WHERE u.branch_id = ? AND ua.user_id IN (?)
+       ORDER BY ua.assortment_name, ua.assortment_guid`,
+      [branchId, userIds],
+    );
+    return rows;
   }
 }
 

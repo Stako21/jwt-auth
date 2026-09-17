@@ -35,6 +35,12 @@ router.post(
 
 router.get("/users", authMiddleware, adminOnly, UserController.getAllUsers);
 router.get(
+  "/assortments",
+  authMiddleware,
+  adminOnly,
+  UserController.getAssortments,
+);
+router.get(
   "/sales_agents",
   authMiddleware,
   adminOnly,
@@ -42,6 +48,12 @@ router.get(
 );
 
 router.get("/users/tree", authMiddleware, adminOnly, UserController.getUsersTree);
+router.get(
+  "/users/:id",
+  authMiddleware,
+  adminOnly,
+  UserController.getUserDetail,
+);
 router.put(
   "/users/:id/supervisor",
   authMiddleware,
@@ -70,6 +82,12 @@ router.get(
   authMiddleware,
   adminOnly,
   DebugController.debugUserHierarchy,
+);
+router.get(
+  "/debug/assortments",
+  authMiddleware,
+  adminOnly,
+  UserController.getAssortmentDiagnostics,
 );
 
 router.get(

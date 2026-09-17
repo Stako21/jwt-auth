@@ -37,6 +37,8 @@ class AuthController {
       userName,
       user_name,
       userGuid,
+      assortment_guids,
+      multi_assortment_allowed,
       password,
       role,
       city,
@@ -78,6 +80,8 @@ class AuthController {
         userName,
         user_name,
         userGuid,
+        assortmentGuids: assortment_guids,
+        multiAssortmentAllowed: multi_assortment_allowed,
         password,
         role,
         city,
@@ -93,6 +97,7 @@ class AuthController {
           role: Number(user.role),
           city: Number(user.city),
           branchId: Number(user.branch_id),
+          multi_assortment_allowed: Boolean(user.multi_assortment_allowed),
         },
       });
     } catch (err) {

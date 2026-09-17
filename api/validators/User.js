@@ -25,6 +25,15 @@ const optionalGuid = Yup.string()
   .nullable()
   .notRequired();
 
+const assortmentGuidArray = Yup.array()
+  .of(
+    Yup.string().matches(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      "Assortment GUID has an invalid format",
+    ),
+  )
+  .default([]);
+
 const userIdParams = Yup.object({
   id: positiveInteger.required("Required field"),
 });
@@ -35,6 +44,8 @@ const updateUserSchema = Yup.object({
     userName: Yup.string().nullable().max(25, "Maximum length is 25 characters"),
     user_name: Yup.string().nullable().max(50, "Maximum length is 50 characters"),
     userGuid: optionalGuid,
+    assortment_guids: assortmentGuidArray,
+    multi_assortment_allowed: Yup.boolean().default(false),
     role: positiveInteger.max(8, "Maximum value is 8").required("Required field"),
     city: positiveInteger.required("Required field"),
   }),
