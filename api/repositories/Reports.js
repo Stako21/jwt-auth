@@ -18,6 +18,53 @@ function getBranchScopeCondition(alias, role) {
   return `${alias}.branch_id = :branch_id`;
 }
 
+const SALES_REPORT_USER_PROJECTION = `
+  u.id AS agent_id,
+  u.NAME AS agent_login,
+  u.user_name AS agent_name,
+  u.role AS agent_role,
+  agent_as.assortments AS agent_assortments,
+  sup.id AS supervisor_id,
+  sup.NAME AS supervisor_login,
+  sup.user_name AS supervisor_name,
+  sup.role AS supervisor_role,
+  supervisor_as.assortments AS supervisor_assortments,
+  manager.id AS manager_id,
+  manager.NAME AS manager_login,
+  manager.user_name AS manager_name,
+  manager.role AS manager_role,
+  manager_as.assortments AS manager_assortments
+`;
+
+const SALES_REPORT_HIERARCHY_JOINS = `
+  LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
+  LEFT JOIN users sup ON sup.id = h.parent_user_id
+  LEFT JOIN user_hierarchy sup_h ON sup_h.child_user_id = sup.id
+  LEFT JOIN users manager ON manager.id = sup_h.parent_user_id
+  LEFT JOIN (
+    SELECT user_id, branch_id,
+           GROUP_CONCAT(DISTINCT NULLIF(TRIM(assortment_name), '')
+             ORDER BY assortment_name SEPARATOR '||') AS assortments
+    FROM sales_agents
+    WHERE is_active_1c = 1
+    GROUP BY user_id, branch_id
+  ) agent_as ON agent_as.user_id = u.id AND agent_as.branch_id = sr.branch_id
+  LEFT JOIN (
+    SELECT user_id,
+           GROUP_CONCAT(DISTINCT NULLIF(TRIM(assortment_name), '')
+             ORDER BY assortment_name SEPARATOR '||') AS assortments
+    FROM user_assortments
+    GROUP BY user_id
+  ) supervisor_as ON supervisor_as.user_id = sup.id
+  LEFT JOIN (
+    SELECT user_id,
+           GROUP_CONCAT(DISTINCT NULLIF(TRIM(assortment_name), '')
+             ORDER BY assortment_name SEPARATOR '||') AS assortments
+    FROM user_assortments
+    GROUP BY user_id
+  ) manager_as ON manager_as.user_id = manager.id
+`;
+
 class ReportsRepository {
   static async getSalesReport({ userId, role, dateFrom, dateTo, branchId }) {
     let sql;
@@ -48,16 +95,11 @@ class ReportsRepository {
           sr.branch_id,
           b.name AS branch_name,
           b.short_name AS branch_short_name,
-          u.id AS agent_id,
-          u.NAME AS agent_login,
-          u.user_name AS agent_name,
-          sup.id AS supervisor_id,
-          sup.user_name AS supervisor_name
+          ${SALES_REPORT_USER_PROJECTION}
         FROM sales_reports sr
         JOIN branches b ON b.id = sr.branch_id
         JOIN users u ON u.id = sr.user_id
-        LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
-        LEFT JOIN users sup ON sup.id = h.parent_user_id
+        ${SALES_REPORT_HIERARCHY_JOINS}
         WHERE
           sr.report_date BETWEEN :date_from AND :date_to
           AND ${branchScope}
@@ -89,16 +131,11 @@ class ReportsRepository {
           sr.branch_id,
           b.name AS branch_name,
           b.short_name AS branch_short_name,
-          u.id AS agent_id,
-          u.NAME AS agent_login,
-          u.user_name AS agent_name,
-          sup.id AS supervisor_id,
-          sup.user_name AS supervisor_name
+          ${SALES_REPORT_USER_PROJECTION}
         FROM sales_reports sr
         JOIN branches b ON b.id = sr.branch_id
         JOIN users u ON u.id = sr.user_id
-        LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
-        LEFT JOIN users sup ON sup.id = h.parent_user_id
+        ${SALES_REPORT_HIERARCHY_JOINS}
         WHERE
           sr.report_date BETWEEN :date_from AND :date_to
           AND ${branchScope}
@@ -145,16 +182,11 @@ class ReportsRepository {
           sr.branch_id,
           b.name AS branch_name,
           b.short_name AS branch_short_name,
-          u.id AS agent_id,
-          u.NAME AS agent_login,
-          u.user_name AS agent_name,
-          sup.id AS supervisor_id,
-          sup.user_name AS supervisor_name
+          ${SALES_REPORT_USER_PROJECTION}
         FROM sales_reports sr
         JOIN branches b ON b.id = sr.branch_id
         JOIN users u ON u.id = sr.user_id
-        LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
-        LEFT JOIN users sup ON sup.id = h.parent_user_id
+        ${SALES_REPORT_HIERARCHY_JOINS}
         WHERE
           sr.report_date BETWEEN :date_from AND :date_to
           AND ${branchScope}
@@ -211,16 +243,11 @@ class ReportsRepository {
           sr.branch_id,
           b.name AS branch_name,
           b.short_name AS branch_short_name,
-          u.id AS agent_id,
-          u.NAME AS agent_login,
-          u.user_name AS agent_name,
-          sup.id AS supervisor_id,
-          sup.user_name AS supervisor_name
+          ${SALES_REPORT_USER_PROJECTION}
         FROM sales_reports sr
         JOIN branches b ON b.id = sr.branch_id
         JOIN users u ON u.id = sr.user_id
-        LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
-        LEFT JOIN users sup ON sup.id = h.parent_user_id
+        ${SALES_REPORT_HIERARCHY_JOINS}
         JOIN users me ON me.id = :current_user_id
         WHERE
           sr.report_date BETWEEN :date_from AND :date_to
@@ -258,16 +285,11 @@ class ReportsRepository {
           sr.branch_id,
           b.name AS branch_name,
           b.short_name AS branch_short_name,
-          u.id AS agent_id,
-          u.NAME AS agent_login,
-          u.user_name AS agent_name,
-          sup.id AS supervisor_id,
-          sup.user_name AS supervisor_name
+          ${SALES_REPORT_USER_PROJECTION}
         FROM sales_reports sr
         JOIN branches b ON b.id = sr.branch_id
         JOIN users u ON u.id = sr.user_id
-        LEFT JOIN user_hierarchy h ON h.child_user_id = u.id
-        LEFT JOIN users sup ON sup.id = h.parent_user_id
+        ${SALES_REPORT_HIERARCHY_JOINS}
         WHERE
           sr.report_date BETWEEN :date_from AND :date_to
           AND ${branchScope}

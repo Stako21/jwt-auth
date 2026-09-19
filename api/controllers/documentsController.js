@@ -52,6 +52,7 @@ export async function createDocument(req, res) {
   } catch (err) {
     console.error("createDocument error:", err);
     res.status(400).json({
+      code: err.code || undefined,
       message: err.message || "Ошибка создания документа",
     });
   }
@@ -68,7 +69,7 @@ export async function signDocument(req, res) {
     );
     res.json(result);
   } catch (e) {
-    res.status(400).json({ message: e.message });
+    res.status(400).json({ code: e.code || undefined, message: e.message });
   }
 }
 
@@ -343,7 +344,7 @@ export async function updateDocument(req, res) {
     res.json(result);
   } catch (e) {
     console.error("updateDocument error:", e.message);
-    res.status(400).json({ message: e.message });
+    res.status(400).json({ code: e.code || undefined, message: e.message });
   }
 }
 

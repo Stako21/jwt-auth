@@ -141,6 +141,10 @@
   width: 7%;
 }
 
+.oneCStageCell {
+  overflow: visible !important;
+}
+
 .troDocumentsColumn {
   width: 128px;
 }
@@ -381,6 +385,16 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+  }
+
+  .cardDetails .oneCStageDetail {
+    gap: $space-2;
+
+    > span {
+      flex: 0 0 auto;
+      overflow: visible;
+      text-overflow: clip;
     }
   }
 

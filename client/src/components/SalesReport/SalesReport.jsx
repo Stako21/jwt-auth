@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, Fragment } from "react";
+import { useContext, useEffect, useMemo, useState, Fragment } from "react";
 import cn from "classnames";
 import style from "./SalesReport.module.scss";
 import { AuthContext } from "../../context/AuthContext";
@@ -11,6 +11,8 @@ import {
 } from "../../services/reports.api";
 import { DataLoader } from "../DataLoader/DataLoader";
 import DateInput from "../DateInput/DateInput";
+import FormInput from "../FormControl/FormInput";
+import CompactSelect from "../CompactSelect/CompactSelect";
 
 function toDateKey(value) {
   const date = value instanceof Date ? value : new Date(value);
@@ -26,53 +28,161 @@ function getTomorrowKey() {
   return toDateKey(date);
 }
 
+function parseAssortments(value) {
+  return String(value || "")
+    .split("||")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeSearch(value) {
+  return String(value || "").trim().toLocaleLowerCase("uk-UA");
+}
+
+function matchesUser(user, search) {
+  if (!search || !user) return false;
+  return [user.name, user.login]
+    .some((value) => normalizeSearch(value).includes(search));
+}
+
 function groupSales(rows) {
-  const map = new Map();
+  const leaders = new Map();
 
-  for (const r of rows) {
-    const branchId = r.branch_id || "NO_BRANCH";
-    const branchName = r.branch_short_name || r.branch_name || "";
-    const svKey = `${branchId}:${r.supervisor_id || "NO_SV"}`;
-    const svNameBase = r.supervisor_name || "Без керівника";
-    const svName = branchName ? `${branchName} / ${svNameBase}` : svNameBase;
+  for (const row of rows) {
+    const branchId = row.branch_id || "NO_BRANCH";
+    const branchName = row.branch_short_name || row.branch_name || "";
+    const supervisorIsNto = Number(row.supervisor_role) === ROLE_IDS.NTO;
+    const hasManager = Boolean(row.manager_id);
+    const leaderUser = hasManager
+      ? {
+          id: row.manager_id,
+          name: row.manager_name || row.manager_login,
+          login: row.manager_login,
+          role: Number(row.manager_role),
+          assortments: parseAssortments(row.manager_assortments),
+        }
+      : supervisorIsNto
+        ? {
+            id: row.supervisor_id,
+            name: row.supervisor_name || row.supervisor_login,
+            login: row.supervisor_login,
+            role: Number(row.supervisor_role),
+            assortments: parseAssortments(row.supervisor_assortments),
+          }
+        : null;
+    const leaderKey = `${branchId}:${leaderUser?.id || "NO_NTO"}`;
 
-    if (!map.has(svKey)) {
-      map.set(svKey, {
-        id: svKey,
-        name: svName,
+    if (!leaders.has(leaderKey)) {
+      leaders.set(leaderKey, {
+        id: leaderKey,
+        user: leaderUser,
         branchName,
         branchId,
+        total: 0,
+        supervisors: new Map(),
+      });
+    }
+
+    const leader = leaders.get(leaderKey);
+    const supervisorUser = row.supervisor_id && !supervisorIsNto
+      ? {
+          id: row.supervisor_id,
+          name: row.supervisor_name || row.supervisor_login,
+          login: row.supervisor_login,
+          role: Number(row.supervisor_role),
+          assortments: parseAssortments(row.supervisor_assortments),
+        }
+      : null;
+    const supervisorKey = `${leaderKey}:${supervisorUser?.id || "DIRECT"}`;
+
+    if (!leader.supervisors.has(supervisorKey)) {
+      leader.supervisors.set(supervisorKey, {
+        id: supervisorKey,
+        user: supervisorUser,
         total: 0,
         agents: new Map(),
       });
     }
 
-    const sv = map.get(svKey);
-
-    const agentId = `${branchId}:${r.agent_id}`;
-    if (!sv.agents.has(agentId)) {
-      sv.agents.set(agentId, {
+    const supervisor = leader.supervisors.get(supervisorKey);
+    const agentId = `${branchId}:${row.agent_id}`;
+    if (!supervisor.agents.has(agentId)) {
+      supervisor.agents.set(agentId, {
         id: agentId,
-        name: r.agent_name || r.agent_login,
-        login: r.agent_login,
+        name: row.agent_name || row.agent_login,
+        login: row.agent_login,
+        role: Number(row.agent_role),
+        assortments: parseAssortments(row.agent_assortments),
         total: 0,
         rows: [],
       });
     }
 
-    const agent = sv.agents.get(agentId);
-    agent.rows.push(r);
+    const agent = supervisor.agents.get(agentId);
+    agent.rows.push(row);
 
-    if (r.status === "ACTIVE") {
-      agent.total += Number(r.amount);
-      sv.total += Number(r.amount);
+    if (row.status === "ACTIVE") {
+      const amount = Number(row.amount);
+      agent.total += amount;
+      supervisor.total += amount;
+      leader.total += amount;
     }
   }
 
-  return Array.from(map.values()).map((sv) => ({
-    ...sv,
-    agents: Array.from(sv.agents.values()),
+  return Array.from(leaders.values()).map((leader) => ({
+    ...leader,
+    supervisors: Array.from(leader.supervisors.values()).map((supervisor) => ({
+      ...supervisor,
+      agents: Array.from(supervisor.agents.values()),
+    })),
   }));
+}
+
+function filterSalesGroups(groups, searchValue, assortment) {
+  const search = normalizeSearch(searchValue);
+
+  return groups.flatMap((leader) => {
+    const leaderMatches = matchesUser(leader.user, search);
+    const supervisors = leader.supervisors.flatMap((supervisor) => {
+      const supervisorMatches = leaderMatches || matchesUser(supervisor.user, search);
+      const agents = supervisor.agents.filter((agent) => {
+        const matchesSearch = !search || supervisorMatches || matchesUser(agent, search);
+        const matchesAssortment = !assortment || agent.assortments.includes(assortment);
+        return matchesSearch && matchesAssortment;
+      });
+
+      if (!agents.length) return [];
+      return [{
+        ...supervisor,
+        agents,
+        total: agents.reduce((sum, agent) => sum + agent.total, 0),
+      }];
+    });
+
+    if (!supervisors.length) return [];
+    return [{
+      ...leader,
+      supervisors,
+      total: supervisors.reduce((sum, supervisor) => sum + supervisor.total, 0),
+    }];
+  });
+}
+
+function UserName({ user, fallback }) {
+  const name = user?.name || fallback;
+  const title = user?.assortments?.length
+    ? `${name} · ${user.assortments.join(", ")}`
+    : name;
+  return (
+    <span className={style.groupName} title={title}>
+      <span>{name}</span>
+      {user?.assortments?.length ? (
+        <small className={style.assortmentSuffix}>
+          — {user.assortments.join(", ")}
+        </small>
+      ) : null}
+    </span>
+  );
 }
 
 function money(v) {
@@ -113,8 +223,11 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
   const { userInfo } = useContext(AuthContext);
 
   const [groups, setGroups] = useState([]);
-  const [openSV, setOpenSV] = useState({});
+  const [openLeader, setOpenLeader] = useState({});
+  const [openSupervisor, setOpenSupervisor] = useState({});
   const [openAgent, setOpenAgent] = useState({});
+  const [userSearch, setUserSearch] = useState("");
+  const [assortmentFilter, setAssortmentFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [minDate, setMinDate] = useState(null);
   const [maxDate, setMaxDate] = useState(null);
@@ -174,26 +287,22 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
         setGroups(grouped);
         setShowBranchColumn(branchIds.size > 1);
 
-        const svState = {};
+        const leaderState = {};
+        const supervisorState = {};
         const agentState = {};
 
-        for (const sv of grouped) {
-          svState[sv.id] = true;
-
-          if (role === ROLE_IDS.TA || role === ROLE_IDS.SV) {
-            for (const ag of sv.agents) {
-              agentState[ag.id] = false;
-            }
-          }
-
-          if (role === ROLE_IDS.TA) {
-            for (const ag of sv.agents) {
-              agentState[ag.id] = true;
+        for (const leader of grouped) {
+          leaderState[leader.id] = true;
+          for (const supervisor of leader.supervisors) {
+            supervisorState[supervisor.id] = true;
+            for (const agent of supervisor.agents) {
+              agentState[agent.id] = role === ROLE_IDS.TA;
             }
           }
         }
 
-        setOpenSV(svState);
+        setOpenLeader(leaderState);
+        setOpenSupervisor(supervisorState);
         setOpenAgent(agentState);
 
         const lastUpdate = data?.meta?.lastUpdate
@@ -206,6 +315,28 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
       })
       .finally(() => setLoading(false));
   }, [userInfo, dateFrom, dateTo, role, setLastUpdateTime]);
+
+  const assortmentOptions = useMemo(() => {
+    const names = new Set();
+    for (const leader of groups) {
+      for (const supervisor of leader.supervisors) {
+        for (const agent of supervisor.agents) {
+          agent.assortments.forEach((name) => names.add(name));
+        }
+      }
+    }
+    return [
+      { value: "", label: "Усі асортименти" },
+      ...Array.from(names)
+        .sort((left, right) => left.localeCompare(right, "uk-UA"))
+        .map((name) => ({ value: name, label: name })),
+    ];
+  }, [groups]);
+
+  const visibleGroups = useMemo(
+    () => filterSalesGroups(groups, userSearch, assortmentFilter),
+    [groups, userSearch, assortmentFilter],
+  );
 
   async function handleOpenPdf() {
     try {
@@ -225,7 +356,11 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
     }
   }
 
-  const grandTotal = groups.reduce((sum, sv) => sum + (sv.total || 0), 0);
+  const grandTotal = visibleGroups.reduce(
+    (sum, leader) => sum + (leader.total || 0),
+    0,
+  );
+  const filtersActive = Boolean(normalizeSearch(userSearch) || assortmentFilter);
 
   const showGrandTotal =
     role === ROLE_IDS.NTO ||
@@ -275,6 +410,25 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
             PDF
           </button>
         </div>
+        <div className={style.userFilters}>
+          <FormInput
+            type="search"
+            compact
+            value={userSearch}
+            onChange={(event) => setUserSearch(event.target.value)}
+            placeholder="Пошук користувача"
+            aria-label="Пошук користувача у звіті"
+            className={style.userSearch}
+          />
+          <CompactSelect
+            value={assortmentFilter}
+            options={assortmentOptions}
+            onChange={setAssortmentFilter}
+            placeholder="Усі асортименти"
+            ariaLabel="Фільтр за асортиментом"
+            className={style.assortmentFilter}
+          />
+        </div>
       </div>
 
       <div className={style.resultsViewport}>
@@ -288,23 +442,45 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
       )}
 
       {!loading &&
-        groups.map((sv) => {
-          const svOpened = openSV[sv.id];
+        visibleGroups.map((leader) => {
+          const leaderOpened = filtersActive || openLeader[leader.id];
 
           return (
-            <div key={sv.id} className={style.supervisorBlock}>
-              <div
-                className={style.supervisorHeader}
-                onClick={() => setOpenSV((p) => ({ ...p, [sv.id]: !svOpened }))}
-              >
-                <span className={style.toggleMarker}>{svOpened ? "▾" : "▸"}</span>
-                <strong className={style.groupName}>{sv.name}</strong>
-                <span className={style.groupAmount}>{money(sv.total)}</span>
-              </div>
+            <div key={leader.id} className={style.leaderBlock}>
+              {leader.user ? (
+                <div
+                  className={style.leaderHeader}
+                  onClick={() => setOpenLeader((current) => ({
+                    ...current,
+                    [leader.id]: !leaderOpened,
+                  }))}
+                >
+                  <span className={style.toggleMarker}>{leaderOpened ? "▾" : "▸"}</span>
+                  <UserName user={leader.user} fallback="Без НТО" />
+                  <span className={style.groupAmount}>{money(leader.total)}</span>
+                </div>
+              ) : null}
 
-              {svOpened &&
-                sv.agents.map((ag) => {
-                  const agOpened = openAgent[ag.id];
+              {(leaderOpened || !leader.user) && leader.supervisors.map((supervisor) => {
+                const supervisorOpened = filtersActive || openSupervisor[supervisor.id];
+                return (
+                  <div key={supervisor.id} className={style.supervisorBlock}>
+                    {supervisor.user ? (
+                      <div
+                        className={style.supervisorHeader}
+                        onClick={() => setOpenSupervisor((current) => ({
+                          ...current,
+                          [supervisor.id]: !supervisorOpened,
+                        }))}
+                      >
+                        <span className={style.toggleMarker}>{supervisorOpened ? "▾" : "▸"}</span>
+                        <UserName user={supervisor.user} fallback="Без керівника" />
+                        <span className={style.groupAmount}>{money(supervisor.total)}</span>
+                      </div>
+                    ) : null}
+
+                    {(supervisorOpened || !supervisor.user) && supervisor.agents.map((ag) => {
+                  const agOpened = filtersActive || openAgent[ag.id];
 
                   return (
                     <div key={ag.id} className={style.agentBlock}>
@@ -318,7 +494,7 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                         }
                       >
                         <span className={style.toggleMarker}>{agOpened ? "▾" : "▸"}</span>
-                        <span className={style.groupName}>{ag.name}</span>
+                        <UserName user={ag} fallback="Без ТА" />
                         <span className={style.groupAmount}>{money(ag.total)}</span>
                       </div>
 
@@ -412,10 +588,16 @@ export const SalesReport = ({ isOpen, setLastUpdateTime }) => {
                       )}
                     </div>
                   );
-                })}
+                    })}
+                  </div>
+                );
+              })}
             </div>
           );
         })}
+      {!loading && visibleGroups.length === 0 ? (
+        <div className={style.emptyResults}>За заданими фільтрами користувачів не знайдено</div>
+      ) : null}
       </div>
 
       <ScrollToTopButton />

@@ -59,6 +59,15 @@ export const UsersList = ({
 
   const displayName = (user) => user.user_name || user.name;
 
+  const getUserAssortments = (user) => {
+    const source = Number(user.role) === ROLE_IDS.TA
+      ? user.effective_assortments
+      : user.assortments;
+    return Array.isArray(source)
+      ? source.map((item) => item?.name).filter(Boolean)
+      : [];
+  };
+
   const compareUsers = (a, b) => {
     const getSortValue = (user, key) => {
       if (key === "id") return Number(user.id) || 0;
@@ -290,6 +299,9 @@ export const UsersList = ({
   };
 
   const renderUserRow = (user, { indentLevel = 0 } = {}) => {
+    const assortmentNames = getUserAssortments(user);
+    const assortmentLabel = assortmentNames.join(", ") || "—";
+
     return (
       <tr
         key={user.id}
@@ -322,6 +334,9 @@ export const UsersList = ({
         </td>
         <td>{cityLabel[user.city]}</td>
         <td>{ROLE_LABELS[user.role] || user.role}</td>
+        <td className={style.assortmentCell} title={assortmentLabel}>
+          {assortmentLabel}
+        </td>
       </tr>
     );
   };
@@ -337,7 +352,7 @@ export const UsersList = ({
           {renderUserRow(user)}
           {(Number(user.role) === ROLE_IDS.SV || Number(user.role) === ROLE_IDS.NTO) && (
             <tr className={style.subordinateRow}>
-              <td colSpan="6">
+              <td colSpan="7">
                 {subordinateNames.length ? (
                   subordinateNames.map((name) => <div key={`${user.id}-${name}`}>• {name}</div>)
                 ) : (
@@ -411,6 +426,7 @@ export const UsersList = ({
               </th>
               <th className="has-text-centered">Місто</th>
               <th className="has-text-centered">Роль</th>
+              <th>Асортимент</th>
             </tr>
           </thead>
           <tbody>{visibleRows.map((user) => renderHierarchyNode(user))}</tbody>
@@ -569,6 +585,7 @@ export const UsersList = ({
                   </th>
                   <th className="has-text-centered">Місто</th>
                   <th className="has-text-centered">Роль</th>
+                  <th>Асортимент</th>
                 </tr>
               </thead>
               <tbody>{renderFlatRows()}</tbody>

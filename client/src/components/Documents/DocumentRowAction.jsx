@@ -61,7 +61,10 @@ export default function DocumentRowActions({
     (isTopRole && isSameBranch && ["NEW", "REVISION"].includes(doc.status))
   );
   const canSign = isTro
-    ? [ROLE_IDS.SV, ROLE_IDS.NTO].includes(role) && ["NEW", "REVISION"].includes(doc.status)
+    ? (
+      [ROLE_IDS.SV, ROLE_IDS.NTO].includes(role) ||
+      ([ROLE_IDS.Admin, ROLE_IDS.Director].includes(role) && isSameBranch)
+    ) && ["NEW", "REVISION"].includes(doc.status)
     : isTopRole && isSameBranch && doc.status === "PREPARED";
   const canRevision = isTro
     ? [ROLE_IDS.SV, ROLE_IDS.NTO].includes(role) && ["NEW", "REVISION"].includes(doc.status)

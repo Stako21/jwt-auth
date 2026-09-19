@@ -3,6 +3,7 @@ import { openDocumentPdf } from "../../services/documents.api";
 import { ROLE_IDS } from "../../utils/roles.js";
 import FormInput from "../FormControl/FormInput.jsx";
 import DocumentRowActions from "./DocumentRowAction";
+import OneCStageBadge from "./OneCStageBadge.jsx";
 import StatusBadge from "./StatusBadge";
 import { getTroPeople } from "./troPeople.js";
 import style from "./DocumentsTable.module.scss";
@@ -28,15 +29,6 @@ function troMovementLabel(value) {
   return "";
 }
 
-function oneCStageLabel(value) {
-  return ({
-    NEW: "Новий",
-    IN_PROGRESS: "Виконується",
-    COMPLETED: "Завершено",
-    CANCELLED: "Скасовано",
-  })[value] || "—";
-}
-
 function formatDocumentDateTime(value) {
   return value ? new Date(value).toLocaleString("uk-UA") : "—";
 }
@@ -45,7 +37,7 @@ function troPeople(doc) {
   return getTroPeople({
     executorName: doc.tro_executor_name,
     oneCSalesAgentName: doc.tro_one_c_sales_agent_name,
-    requestSalesAgentName: doc.tro_ta_name,
+    requestSalesAgentName: doc.tro_request_agent_name || doc.tro_ta_name,
   });
 }
 
@@ -308,7 +300,11 @@ export default function DocumentTable({
                     {doc.tro_document_1c_date ? <small>{formatDocumentDateTime(doc.tro_document_1c_date)}</small> : null}
                   </td>
                 ) : null}
-                {isTroTable ? <td>{oneCStageLabel(doc.tro_one_c_stage)}</td> : null}
+                {isTroTable ? (
+                  <td className={style.oneCStageCell}>
+                    <OneCStageBadge stage={doc.tro_one_c_stage} />
+                  </td>
+                ) : null}
                 {isTroTable ? (
                   <td>
                     <TroRequiredDocuments doc={doc} />
@@ -386,9 +382,10 @@ export default function DocumentTable({
                 </p>
               ) : null}
               {isTroTable ? (
-                <p>
+                <p className={style.oneCStageDetail}>
                   <i className="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
-                  <span>Стан в УП: {oneCStageLabel(doc.tro_one_c_stage)}</span>
+                  <span>Стан в УП:</span>
+                  <OneCStageBadge stage={doc.tro_one_c_stage} showLabel />
                 </p>
               ) : null}
               {isTroTable ? (

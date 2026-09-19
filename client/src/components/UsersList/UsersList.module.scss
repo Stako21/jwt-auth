@@ -155,7 +155,7 @@
 }
 
 .userTable {
-  min-width: 640px;
+  min-width: 790px;
   margin: 0 !important;
 
   th,
@@ -170,6 +170,15 @@
     text-align: center !important;
   }
 
+}
+
+.assortmentCell {
+  width: clamp(150px, 20vw, 280px);
+  max-width: 280px;
+  overflow: hidden;
+  color: $text-medium;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .userRow { cursor: pointer; }

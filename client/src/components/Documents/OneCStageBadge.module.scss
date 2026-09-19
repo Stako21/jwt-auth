@@ -1,0 +1,93 @@
+@use "../../theme.scss" as *;
+
+.stage {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-height: 20px;
+  padding: 2px $space-2;
+  border: 1px solid currentColor;
+  border-radius: $radius-sm;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.iconOnly {
+  width: 24px;
+  min-height: 24px;
+  padding: 0;
+  cursor: help;
+  font-size: 12px;
+
+  &::after {
+    content: attr(data-label);
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 7px);
+    z-index: 40;
+    width: max-content;
+    max-width: 190px;
+    padding: 6px $space-2;
+    border: 1px solid $outline-medium;
+    border-radius: $radius-sm;
+    background: $surface-container-highest;
+    color: $text-high;
+    box-shadow: $shadow-popover;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(4px, -50%);
+    transition:
+      opacity $motion-fast $motion-ease,
+      transform $motion-fast $motion-ease;
+  }
+
+  &:hover::after,
+  &:focus-visible::after {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+.withLabel {
+  gap: $space-2;
+}
+
+.new {
+  background: $status-new-surface;
+  color: $status-new;
+}
+
+.inProgress {
+  background: $status-revision-surface;
+  color: $status-revision;
+}
+
+.completed {
+  background: $status-signed-surface;
+  color: $status-signed;
+}
+
+.cancelled {
+  background: $status-rejected-surface;
+  color: $status-rejected;
+}
+
+.empty {
+  border-color: $outline-medium;
+  background: $surface-container-high;
+  color: $text-muted;
+}
+
+@media (max-width: $mobile-breakpoint) {
+  .stage {
+    min-height: 22px;
+    font-size: 11px;
+  }
+}

@@ -105,6 +105,13 @@ function fakeRepository(initialDocuments = [document()]) {
           city_id: item.city, city_name: "Черкаси",
           trade_point_address: "Адреса", contractor_guid: "co", contractor_name: "Контрагент",
           request_agent_guid: "agent", request_agent_name: "ТА заявки",
+          request_sales_agent_id: item.request_sales_agent_id ?? null,
+          request_agent_login: item.request_agent_login ?? null,
+          request_route_guid: item.request_route_guid ?? null,
+          request_route_name: item.request_route_name ?? null,
+          request_assortment_guid: item.request_assortment_guid ?? null,
+          request_assortment_name: item.request_assortment_name ?? null,
+          request_agent_source: item.request_sales_agent_id ? "SNAPSHOT" : "LEGACY",
         }));
     },
     async getItems() { return []; },
@@ -172,6 +179,9 @@ function fakeRepository(initialDocuments = [document()]) {
     async saveStage(_connection, id, stage, changedAt) {
       Object.assign(documents.get(id), { one_c_stage: stage, one_c_stage_updated_at: changedAt });
     },
+    async savePortalStatus(_connection, id, status) {
+      Object.assign(documents.get(id), { status });
+    },
     async reject(_connection, values) {
       Object.assign(documents.get(values.documentId), {
         status: "REJECTED",
@@ -194,6 +204,29 @@ test("GET returns NOT_COMPLETED documents and excludes NEW", async () => {
   assert.equal(result.data[0].status, "NOT_COMPLETED");
   assert.deepEqual(result.data[0].city, { id: 3, name: "Черкаси" });
   assert.deepEqual(result.pagination, { next_cursor: null, has_more: false });
+});
+
+test("GET returns immutable request position snapshots for new-model TRO", async () => {
+  const repo = fakeRepository([document({
+    request_sales_agent_id: 3385,
+    request_agent_login: "UA013-0059",
+    request_route_guid: "42b1adba-23a0-41f1-bb23-c210c7f2a6f7",
+    request_route_name: "Маршрут Lacmi",
+    request_assortment_guid: "d3dd4f7f-3c44-41e1-ae17-002618a12e97",
+    request_assortment_name: "Lacmi",
+  })]);
+  const [item] = (await createTroIntegrationService(repo).listReady(USER)).data;
+  assert.deepEqual(item.request_sales_agent, {
+    id: 3385,
+    guid: "agent",
+    name: "ТА заявки",
+    login: "UA013-0059",
+    route_guid: "42b1adba-23a0-41f1-bb23-c210c7f2a6f7",
+    route_name: "Маршрут Lacmi",
+    assortment_guid: "d3dd4f7f-3c44-41e1-ae17-002618a12e97",
+    assortment_name: "Lacmi",
+    source: "SNAPSHOT",
+  });
 });
 
 test("created links 1C, preserves author/TA and moves to PLANNED", async () => {
@@ -307,6 +340,27 @@ test("missing sales agent does not block linking and returns a warning", async (
   assert.equal(repo.documents.get(125).executor_name, CREATED_PAYLOAD.responsible_name);
 });
 
+test("created accepts optional route identity and passes it to actual-position resolver", async () => {
+  const repo = fakeRepository();
+  let receivedIdentity;
+  repo.findSalesAgents = async (_connection, _branchId, _guid, identity) => {
+    receivedIdentity = identity;
+    return [{ id: 88, full_name: CREATED_PAYLOAD.sales_agent_name }];
+  };
+  await createTroIntegrationService(repo).created(USER, 125, {
+    ...CREATED_PAYLOAD,
+    sales_agent_login: "UA013-0059",
+    sales_agent_route_guid: "42b1adba-23a0-41f1-bb23-c210c7f2a6f7",
+    sales_agent_assortment_guid: "d3dd4f7f-3c44-41e1-ae17-002618a12e97",
+  });
+  assert.deepEqual(receivedIdentity, {
+    login: "ua013-0059",
+    routeGuid: "42b1adba-23a0-41f1-bb23-c210c7f2a6f7",
+    assortmentGuid: "d3dd4f7f-3c44-41e1-ae17-002618a12e97",
+  });
+  assert.equal(repo.documents.get(125).one_c_sales_agent_id, 88);
+});
+
 test("ambiguous sales agent is rejected instead of selecting an arbitrary row", async () => {
   const repo = fakeRepository();
   repo.findSalesAgents = async () => [
@@ -340,6 +394,69 @@ test("stage changes only integration stage and is idempotent", async () => {
   assert.equal(repo.documents.get(125).one_c_stage, "COMPLETED");
   assert.equal(second.idempotent, true);
   assert.equal(repo.history.filter((item) => item.action === "ONE_C_STAGE").length, 1);
+});
+
+test("CANCELLED after IN_PROGRESS also rejects the portal request", async () => {
+  const repo = fakeRepository();
+  const notifications = [];
+  const service = createTroIntegrationService(
+    repo,
+    async (...args) => notifications.push(args),
+  );
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  notifications.length = 0;
+  await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP",
+    stage: "IN_PROGRESS",
+    changed_at: "2026-09-06T14:31:00+03:00",
+  });
+
+  const cancelled = await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP",
+    stage: "CANCELLED",
+    changed_at: "2026-09-06T15:31:00+03:00",
+  });
+  const repeated = await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP",
+    stage: "CANCELLED",
+    changed_at: "2026-09-06T15:31:00+03:00",
+  });
+
+  assert.deepEqual(cancelled, {
+    idempotent: false,
+    portal_status: "REJECTED",
+    one_c_stage: "CANCELLED",
+  });
+  assert.equal(repo.documents.get(125).status, "REJECTED");
+  assert.equal(repo.documents.get(125).one_c_stage, "CANCELLED");
+  assert.equal(repeated.idempotent, true);
+  assert.equal(repo.history.filter((item) => item.action === "ONE_C_STAGE").length, 2);
+  assert.deepEqual(notifications, [[USER, 125, "PLANNED", "REJECTED"]]);
+});
+
+test("repeated CANCELLED repairs a portal request that was not cancelled", async () => {
+  const repo = fakeRepository([document({
+    status: "PLANNED",
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP",
+    one_c_stage: "CANCELLED",
+    one_c_stage_updated_at: new Date("2026-09-06T12:31:00Z"),
+  })]);
+  const result = await createTroIntegrationService(repo).stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP",
+    stage: "CANCELLED",
+    changed_at: "2026-09-06T15:31:00+03:00",
+  });
+
+  assert.equal(result.idempotent, false);
+  assert.equal(result.portal_status, "REJECTED");
+  assert.equal(repo.documents.get(125).status, "REJECTED");
+  assert.equal(repo.history.at(-1).oldStatus, "PLANNED");
+  assert.equal(repo.history.at(-1).newStatus, "REJECTED");
 });
 
 test("rejected keeps the document and repeated identical request is idempotent", async () => {

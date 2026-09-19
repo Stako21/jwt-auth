@@ -26,6 +26,13 @@ const TRO_MOVEMENT_LABELS = Object.freeze({
   RETURN: "Повернення",
 });
 
+const ONE_C_STAGE_LABELS = Object.freeze({
+  NEW: "Новий",
+  IN_PROGRESS: "Виконується",
+  COMPLETED: "Завершено",
+  CANCELLED: "Скасовано",
+});
+
 const UNIT_LABELS = Object.freeze({
   PCS: "шт",
   KG: "кг",
@@ -46,6 +53,7 @@ const TRO_DEFAULT_COLUMN_KEYS = new Set([
   "troItem",
   "troQuantity",
   "status",
+  "oneCStage",
   "comment",
 ]);
 
@@ -62,6 +70,7 @@ const TRO_COLUMNS = Object.freeze([
   { key: "troQuantity", label: "Кількість", width: 14 },
   { key: "status", label: "Статус", width: 20 },
   { key: "upNumber", label: "№ документа з УП", width: 20 },
+  { key: "oneCStage", label: "Стан в УП", width: 16 },
   { key: "executor", label: "Виконавець", width: 26 },
   { key: "act", label: "Акт", width: 10 },
   { key: "photo", label: "Фото", width: 10 },
@@ -175,6 +184,11 @@ function yesNo(value) {
   return value ? "Так" : "Ні";
 }
 
+export function getOneCStageRegistryLabel(value) {
+  const canonicalValue = typeof value === "string" ? value.trim().toUpperCase() : "";
+  return ONE_C_STAGE_LABELS[canonicalValue] || "—";
+}
+
 function commonRow(doc) {
   const tradePoint = [doc.tradePoint?.name, doc.tradePoint?.address]
     .filter(Boolean)
@@ -192,7 +206,7 @@ function commonRow(doc) {
   };
 }
 
-function troRows(doc) {
+export function buildTroRegistryRows(doc) {
   const tro = doc.tro || {};
   const isInstall = tro.movementType === "INSTALL";
 
@@ -201,6 +215,7 @@ function troRows(doc) {
     type: TRO_MOVEMENT_LABELS[tro.movementType] || tro.movementType || "",
     ta: tro.taName || "",
     upNumber: tro.upDocumentNumber || "",
+    oneCStage: getOneCStageRegistryLabel(tro.oneCStage),
     executor: tro.executorName || "",
     act: yesNo(isInstall ? tro.appInstall : tro.appReturn),
     photo: isInstall ? yesNo(tro.photoInstall) : "",
@@ -270,7 +285,7 @@ export async function buildSelectedDocumentRegistry(user, payload) {
     : ["products", "productQuantities"];
   const includeItemRows = columns.some((column) => itemColumnKeys.includes(column.key));
   const rows = documents.flatMap((document) => {
-    const documentRows = (expectedTro ? troRows : returnExchangeRows)(document);
+    const documentRows = (expectedTro ? buildTroRegistryRows : returnExchangeRows)(document);
     return includeItemRows
       ? documentRows
       : [{ ...documentRows[0], _groupIndex: 0, _groupSize: 1 }];

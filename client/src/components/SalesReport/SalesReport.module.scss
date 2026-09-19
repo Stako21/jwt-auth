@@ -37,6 +37,19 @@
   gap: $space-2;
 }
 
+.userFilters {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 320px);
+  gap: $space-3;
+}
+
+.userSearch,
+.assortmentFilter {
+  width: 100%;
+  min-width: 0;
+}
+
 .dateLabel {
   @include filter-panel.label;
 
@@ -97,14 +110,19 @@
   }
 }
 
+.leaderBlock,
 .supervisorBlock {
   margin-bottom: $space-3;
+}
+
+.supervisorBlock {
   overflow: hidden;
   border: 1px solid $table-border;
   border-radius: $radius-lg;
   background: $table-row-odd;
 }
 
+.leaderHeader,
 .supervisorHeader,
 .agentHeader {
   display: grid;
@@ -125,8 +143,17 @@
   }
 }
 
-.supervisorHeader {
+.leaderHeader {
+  margin-bottom: $space-2;
+  border: 1px solid $table-border;
+  border-radius: $radius-lg;
   background-color: $table-group-primary;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.supervisorHeader {
+  background-color: $table-group-secondary;
   font-size: 13px;
   font-weight: 700;
 }
@@ -150,8 +177,29 @@
 }
 
 .groupName {
+  display: flex;
+  align-items: baseline;
+  gap: $space-2;
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupName > span:first-child {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assortmentSuffix {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: $text-medium;
+  font-size: 0.88em;
+  font-weight: 550;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -161,6 +209,14 @@
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.emptyResults {
+  padding: $space-5;
+  border: 1px dashed $table-border;
+  border-radius: $radius-lg;
+  color: $text-medium;
+  text-align: center;
 }
 
 .tableShell {
@@ -316,6 +372,11 @@
     justify-content: stretch;
   }
 
+  .userFilters {
+    grid-template-columns: 1fr;
+    gap: $space-2;
+  }
+
   .dateInput {
     width: 100%;
   }
@@ -331,6 +392,7 @@
     border-radius: 0;
   }
 
+  .leaderHeader,
   .supervisorHeader {
     min-height: 44px;
   }

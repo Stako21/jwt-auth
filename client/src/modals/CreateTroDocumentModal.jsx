@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSnackbar } from "notistack";
 import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
+import { getOneCStageLabel } from "../components/Documents/oneCStage.js";
 import { getTroPeople } from "../components/Documents/troPeople.js";
 import FormInput from "../components/FormControl/FormInput.jsx";
 import { createDocument, updateDocument, updateTroAccounting } from "../services/documents.api.js";
@@ -54,6 +55,7 @@ export default function CreateTroDocumentModal({
   const [showContractors, setShowContractors] = useState(false);
   const [tradePointId, setTradePointId] = useState("");
   const [taUserId, setTaUserId] = useState("");
+  const [salesAgentId, setSalesAgentId] = useState("");
   const [movementType, setMovementType] = useState("INSTALL");
   const [comment, setComment] = useState("");
   const [items, setItems] = useState([]);
@@ -72,7 +74,7 @@ export default function CreateTroDocumentModal({
   const integrationPeople = getTroPeople({
     executorName: editingDocument?.tro?.executorName,
     oneCSalesAgentName: editingDocument?.tro?.oneCSalesAgentName,
-    requestSalesAgentName: editingDocument?.tro?.taName,
+    requestSalesAgentName: editingDocument?.tro?.requestSalesAgent?.name || editingDocument?.tro?.taName,
   });
   const oneCRejection = getOneCRejection(editingDocument);
 
@@ -83,6 +85,8 @@ export default function CreateTroDocumentModal({
       setContractorSearch("");
       setTradePointId("");
       setTaUserId(String(taOptions[0]?.id || ""));
+      const initialPositions = taOptions[0]?.positions || [];
+      setSalesAgentId(initialPositions.length === 1 ? String(initialPositions[0].id) : "");
       setMovementType("INSTALL");
       setComment("");
       setItems([]);
@@ -103,6 +107,7 @@ export default function CreateTroDocumentModal({
     setContractorSearch(contractor?.name || editingDocument.contractor?.name || "");
     setTradePointId(String(editingDocument.tradePoint?.id || ""));
     setTaUserId(String(tro.taUserId || ""));
+    setSalesAgentId(String(tro.requestSalesAgent?.id || tro.requestSalesAgentId || ""));
     setMovementType(tro.movementType || "INSTALL");
     setComment(editingDocument.comment || "");
     setItems((tro.items || []).map((item) => ({
@@ -147,6 +152,50 @@ export default function CreateTroDocumentModal({
     }
     return options;
   }, [editingDocument, taOptions]);
+
+  const selectedTa = visibleTaOptions.find((item) => Number(item.id) === Number(taUserId));
+  const activePositions = selectedTa?.positions || [];
+  const savedPosition = editingDocument?.tro?.requestSalesAgent;
+  const visiblePositions = useMemo(() => {
+    const positions = [...activePositions];
+    if (savedPosition?.id && !positions.some((item) => Number(item.id) === Number(savedPosition.id))) {
+      positions.push({
+        id: savedPosition.id,
+        login: savedPosition.login,
+        agentGuid: savedPosition.guid,
+        agentName: savedPosition.name,
+        routeGuid: savedPosition.routeGuid,
+        routeName: savedPosition.routeName,
+        assortmentGuid: savedPosition.assortmentGuid,
+        assortmentName: savedPosition.assortmentName,
+        historical: true,
+      });
+    }
+    return positions;
+  }, [activePositions, savedPosition]);
+  const selectedPosition = visiblePositions.find((item) => Number(item.id) === Number(salesAgentId));
+  const preservedSavedPosition = Boolean(
+    editingDocument && savedPosition?.id
+    && Number(savedPosition.id) === Number(salesAgentId)
+    && Number(editingDocument.tro?.taUserId) === Number(taUserId),
+  );
+  const positionProblem = !taUserId || (activePositions.length === 0 && !preservedSavedPosition)
+    ? "Для торгового агента не настроена активная позиция 1С"
+    : activePositions.length > 1 && !salesAgentId
+      ? "Выберите конкретную позицию 1С торгового агента"
+      : "";
+
+  const changeTa = (value) => {
+    setTaUserId(String(value));
+    const positions = taOptions.find((item) => Number(item.id) === Number(value))?.positions || [];
+    setSalesAgentId(positions.length === 1 ? String(positions[0].id) : "");
+  };
+
+  const positionLabel = (position) => [
+    position.assortmentName || "Без асортименту",
+    position.login || "Без логіна",
+    position.routeName || "Без маршруту",
+  ].join(" — ");
 
   const modalProducts = useMemo(() => {
     const products = troProducts.map((item) => ({
@@ -272,6 +321,7 @@ export default function CreateTroDocumentModal({
     contractorId: Number(contractorId),
     tradePointId: Number(tradePointId),
     taUserId: Number(taUserId),
+    ...(salesAgentId && !preservedSavedPosition ? { salesAgentId: Number(salesAgentId) } : {}),
     movementType,
     comment: comment.trim(),
     items: items.map((item) => ({
@@ -281,7 +331,7 @@ export default function CreateTroDocumentModal({
   });
 
   async function saveGeneral() {
-    if (!contractorId || !tradePointId || !taUserId || !items.length ||
+    if (!contractorId || !tradePointId || !taUserId || positionProblem || !items.length ||
       items.some((item) => !item.troProductId || Number(item.quantity) <= 0)) {
       enqueueSnackbar("Заповніть контрагента, торгову точку, ТА та позиції ТРО", { variant: "warning" });
       return;
@@ -352,7 +402,26 @@ export default function CreateTroDocumentModal({
               options={filteredTradePoints.map((item) => ({ value: item.id, label: item.address ? `${item.name} · ${item.address}` : item.name }))}
               onChange={setTradePointId} ariaLabel="Торгова точка" /></div>
             <div className={styles.field}><label>ТА</label><CompactSelect value={taUserId} disabled={!generalEditable || Number(currentUser?.role) === ROLE_IDS.TA}
-              options={visibleTaOptions.map((item) => ({ value: item.id, label: item.name }))} onChange={setTaUserId} ariaLabel="ТА" /></div>
+              options={visibleTaOptions.map((item) => ({ value: item.id, label: item.name }))} onChange={changeTa} ariaLabel="ТА" /></div>
+            <div className={`${styles.field} ${styles.positionField}`}>
+              <label>Маршрут ТА 1С</label>
+              <CompactSelect
+                value={salesAgentId}
+                disabled={!generalEditable || (activePositions.length <= 1 && Boolean(salesAgentId))}
+                options={visiblePositions.map((item) => ({
+                  value: item.id,
+                  label: `${positionLabel(item)}${item.historical ? " (історична)" : ""}`,
+                }))}
+                onChange={setSalesAgentId}
+                ariaLabel="Маршрут ТА 1С"
+                placeholder="Оберіть маршрут"
+              />
+              {positionProblem ? <p className={styles.positionError}>{positionProblem}</p> : null}
+              {selectedPosition ? <p className={styles.positionSummary}>
+                Асортимент: {selectedPosition.assortmentName || "—"} · Логін: {selectedPosition.login || "—"}<br />
+                Маршрут: {selectedPosition.routeName || "—"}
+              </p> : null}
+            </div>
             <div className={styles.field}><label>Тип руху</label><CompactSelect value={movementType} disabled={!generalEditable}
               options={[{ value: "INSTALL", label: "Установка" }, { value: "RETURN", label: "Повернення" }]}
               onChange={setMovementType} ariaLabel="Тип руху" /></div>
@@ -402,9 +471,10 @@ export default function CreateTroDocumentModal({
             <div className={styles.accountingGrid}>
               <div className={styles.field}><label>№ документа з УП</label><FormInput value={editingDocument.tro?.upDocumentNumber || "—"} readOnly /></div>
               <div className={styles.field}><label>Виконавець</label><FormInput value={integrationPeople.executorName} readOnly /></div>
-              <div className={styles.field}><label>ТА</label><FormInput value={`${integrationPeople.salesAgentName}${integrationPeople.isRequestSalesAgent ? " (ТА заявки)" : ""}`} readOnly /></div>
+              <div className={styles.field}><label>Запитаний ТА</label><FormInput value={editingDocument.tro?.requestSalesAgent?.name || editingDocument.tro?.taName || "—"} readOnly /></div>
+              <div className={styles.field}><label>ТА в 1С</label><FormInput value={editingDocument.tro?.oneCSalesAgentName || "—"} readOnly /></div>
               <div className={styles.field}><label>Дата документа УП</label><FormInput value={editingDocument.tro?.document1cDate ? new Date(editingDocument.tro.document1cDate).toLocaleString("uk-UA") : "—"} readOnly /></div>
-              <div className={styles.field}><label>Стан в УП</label><FormInput value={({ NEW: "Новий", IN_PROGRESS: "Виконується", COMPLETED: "Завершено", CANCELLED: "Скасовано" })[editingDocument.tro?.oneCStage] || "—"} readOnly /></div>
+              <div className={styles.field}><label>Стан в УП</label><FormInput value={getOneCStageLabel(editingDocument.tro?.oneCStage)} readOnly /></div>
             </div>
             <div className={styles.checks}>
               {movementType === "INSTALL" ? <><label><FormInput type="checkbox" checked={appInstall} disabled={!accountingEditable} onChange={(event) => setAppInstall(event.target.checked)} /> Акт</label><label><FormInput type="checkbox" checked={photoInstall} disabled={!accountingEditable} onChange={(event) => setPhotoInstall(event.target.checked)} /> Фото</label></> : <><label><FormInput type="checkbox" checked={appReturn} disabled={!accountingEditable} onChange={(event) => setAppReturn(event.target.checked)} /> Акт</label><label><FormInput type="checkbox" checked={warehouseSpecReturn} disabled={!accountingEditable} onChange={(event) => setWarehouseSpecReturn(event.target.checked)} /> Специфікація</label></>}
@@ -414,7 +484,7 @@ export default function CreateTroDocumentModal({
 
         <footer className={styles.footer}>
           <button className={styles.secondary} type="button" onClick={onClose}>Закрити</button>
-          {generalEditable ? <button className={styles.primary} type="button" disabled={saving} onClick={saveGeneral}>{saving ? "Збереження…" : "Зберегти"}</button> : null}
+          {generalEditable ? <button className={styles.primary} type="button" disabled={saving || Boolean(positionProblem)} onClick={saveGeneral}>{saving ? "Збереження…" : "Зберегти"}</button> : null}
           {accountingEditable ? <><button className={styles.secondary} type="button" disabled={saving} onClick={() => saveAccounting(false)}>Зберегти дані</button><button className={styles.primary} type="button" disabled={saving} onClick={() => saveAccounting(true)}>Підтвердити виконання</button></> : null}
         </footer>
       </div>

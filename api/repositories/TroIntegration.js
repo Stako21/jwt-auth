@@ -64,7 +64,12 @@ export default class TroIntegrationRepository {
               tp.id_1c AS trade_point_guid, tp.name AS trade_point_name,
               tp.address AS trade_point_address,
               c.id_1c AS contractor_guid, c.name AS contractor_name,
-              ta.current_agent_guid AS request_agent_guid, ta.user_name AS request_agent_name
+              COALESCE(td.request_agent_guid, ta.current_agent_guid) AS request_agent_guid,
+              COALESCE(td.request_agent_name, ta.user_name) AS request_agent_name,
+              td.request_sales_agent_id, td.request_agent_login,
+              td.request_route_guid, td.request_route_name,
+              td.request_assortment_guid, td.request_assortment_name,
+              CASE WHEN td.request_sales_agent_id IS NULL THEN 'LEGACY' ELSE 'SNAPSHOT' END AS request_agent_source
        FROM documents d
        JOIN tro_document_details td ON td.document_id = d.id
        JOIN branches b ON b.id = d.branch_id
@@ -190,14 +195,30 @@ export default class TroIntegrationRepository {
     return row || null;
   }
 
-  static async findSalesAgents(connection, branchId, guid) {
+  static async findSalesAgents(connection, branchId, guid, identity = {}) {
+    const conditions = [
+      "sa.branch_id = ?", "u.branch_id = ?", "u.is_active = 1",
+      "LOWER(sa.current_agent_guid) = ?",
+    ];
+    const params = [branchId, branchId, guid];
+    if (identity.routeGuid) {
+      conditions.push("LOWER(sa.route_guid) = ?");
+      params.push(identity.routeGuid);
+    } else if (identity.login) {
+      conditions.push("LOWER(sa.login) = ?");
+      params.push(identity.login);
+    }
+    if (identity.assortmentGuid) {
+      conditions.push("LOWER(sa.assortment_guid) = ?");
+      params.push(identity.assortmentGuid);
+    }
     const [rows] = await connection.query(
-      `SELECT sa.id, sa.user_id, sa.full_name, u.user_name
+      `SELECT sa.id, sa.user_id, sa.full_name, u.user_name, sa.login,
+              sa.route_guid, sa.assortment_guid
        FROM sales_agents sa
        JOIN users u ON u.id = sa.user_id
-       WHERE sa.branch_id = ? AND u.branch_id = ? AND u.is_active = 1
-         AND LOWER(sa.current_agent_guid) = ?`,
-      [branchId, branchId, guid],
+       WHERE ${conditions.join(" AND ")}`,
+      params,
     );
     return rows;
   }
@@ -250,6 +271,13 @@ export default class TroIntegrationRepository {
            last_sync_error = NULL
        WHERE document_id = ?`,
       [stage, changedAt, documentId],
+    );
+  }
+
+  static async savePortalStatus(connection, documentId, status) {
+    await connection.query(
+      "UPDATE documents SET status = ? WHERE id = ?",
+      [status, documentId],
     );
   }
 

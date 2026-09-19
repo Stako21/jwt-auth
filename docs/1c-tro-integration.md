@@ -18,14 +18,14 @@ Authorization: Bearer <access-token>
 
 ## Модель станів
 
-`documents.status` і `tro_document_details.one_c_stage` — незалежні workflow.
+`documents.status` і `tro_document_details.one_c_stage` — окремі workflow. Єдина синхронізована термінальна дія: стан УП `CANCELLED` скасовує заявку Portal через `documents.status = REJECTED`.
 
 ```text
 Портал: NEW → NOT_COMPLETED → PLANNED → COMPLETED
 1С:     NEW → IN_PROGRESS → COMPLETED | CANCELLED
 ```
 
-Оновлення `one_c_stage` ніколи автоматично не встановлює `documents.status = COMPLETED`.
+Оновлення `one_c_stage` ніколи автоматично не встановлює `documents.status = COMPLETED`. Зокрема, `COMPLETED` в УП не завершує бухгалтерський workflow Portal. Водночас `CANCELLED` переводить заявку Portal у `REJECTED`, у тому числі після `IN_PROGRESS`.
 
 Типи заявок:
 
@@ -155,7 +155,7 @@ Query: `movement_type=INSTALL|RETURN`, `branch_id`, `limit=1..500`.
 }
 ```
 
-Допустимі `NEW`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`. Повтор незміненого стану повертає `200` без додаткової історії. Застаріле `changed_at` повертає `409 STALE_STAGE_UPDATE`.
+Допустимі `NEW`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`. Для `CANCELLED` endpoint одночасно зберігає `one_c_stage=CANCELLED` і переводить заявку Portal у `REJECTED`; відповідь містить `portal_status: "REJECTED"`. Це правило діє також для переходу `IN_PROGRESS → CANCELLED`. Повтор `CANCELLED` для вже відхиленої заявки повертає `200`, `idempotent=true`, без додаткової історії; якщо у старих даних уже записано `one_c_stage=CANCELLED`, але Portal-статус ще не `REJECTED`, повторний callback виправляє Portal-статус. Для інших станів повтор незміненого значення також ідемпотентний. Застаріле `changed_at` при фактичній зміні стану повертає `409 STALE_STAGE_UPDATE`.
 
 Основні коди: `400` некоректний запит, `401` JWT відсутній/недійсний, `403` обліковий запис або філія недоступні, `404` документ відсутній, `409` конфлікт зв'язку/стану, `422` помилка полів, `429` ліміт запитів, `500` внутрішня помилка без stack trace.
 
@@ -241,3 +241,49 @@ Authorization: Bearer <access-token>
 ```
 
 HTTP status: `422 Unprocessable Entity`.
+# Portal request position contract (portal phase, 2026-09-17)
+
+New TRO requests distinguish the portal workplace (`ta_user_id`) from the exact
+1C position selected at request time (`request_sales_agent_id`). The portal
+stores immutable snapshots of position login, employee GUID/name, route
+GUID/name, and assortment GUID/name. Existing documents remain legacy records
+with nullable request-position fields; no historical backfill is performed.
+
+`POST /api/documents` and editable TRO `PUT /api/documents/:id` accept optional
+`salesAgentId`. The server auto-selects it only when the selected TA has exactly
+one active position. Zero positions are rejected; multiple positions require an
+explicit ID. The position must be active, belong to the TA and current branch,
+and have both route GUID and current-agent GUID.
+
+For new-model requests, `GET /api/1c/tro-requests` adds fields without removing
+the existing `guid` and `name`:
+
+```json
+{
+  "request_sales_agent": {
+    "id": 3385,
+    "guid": "6cf3fb81-77da-11ee-80e7-0050568a5bd8",
+    "name": "Пилипенко Ірина Вадимівна",
+    "login": "UA013-0059",
+    "route_guid": "42b1adba-23a0-11f1-bb23-c210c7f2a6f7",
+    "route_name": "UA1302210205 ТП Телефонист Пилипенко Ірина Вадимів",
+    "assortment_guid": "d3dd4f7f-3c44-11e1-ae17-002618a12e97",
+    "assortment_name": "Lacmi",
+    "source": "SNAPSHOT"
+  }
+}
+```
+
+Legacy requests keep the previous current-user `guid`/`name` fallback and
+return the new position fields as `null` with `source: "LEGACY"`.
+
+`POST /created` remains backward compatible. It additionally accepts optional
+`sales_agent_login`, `sales_agent_route_guid`, and
+`sales_agent_assortment_guid`; route GUID has priority over login when resolving
+the actual 1C position, while employee GUID is still cross-checked. Request and
+actual positions are never copied into each other.
+
+**CURRENT 1C PROCESSING STILL IGNORES THE NEW POSITION FIELDS.** Updating the
+EPF is a separate next phase. That phase must also correct the known form bug
+where `СтрЗаявки.ГородID` is filled from `Филиал.Получить("id")` instead of
+`Город.Получить("id")`.

@@ -2389,3 +2389,111 @@ Frontend:
 - Added safe transition from legacy rows: the current source may backfill only one unambiguous canonical legacy row for the same branch/document number/user. Existing GUID documents retain their historical workplace if the former employee is no longer current; changes to another resolved workplace are rejected. Date moves retain `MOVED` history and exactly one active GUID; deletion is GUID-based.
 - Dry-run of `D:\projects\TEMP\SalesReport.json` found 2,803 unique documents, 2,768 active and 35 deleted, with all 2,803 resolved by both GUID and login and no hard conflicts. One controlled import (import id 8720) backfilled 2,543 canonical rows, added 260 new logical documents, created 7 expected replacement rows for date moves, and performed no retention or historical cleanup.
 - Post-import validation: 2,810 physical rows carry both GUID snapshots (2,803 documents plus 7 moved histories), no active GUID duplicates or GUID/user conflicts exist, every `sales_agent_id` remains NULL, and the existing API/repository returns exactly 2,768 active documents totaling 12,211,202.35 for 2026-09-12 through 2026-09-19, matching the source. Backend suite passes 70/70. No commit was created.
+## 2026-09-17 — TRO portal request-position phase
+
+- Added a nullable legacy-compatible request-position model for TRO: exact `sales_agents` reference plus immutable login, employee, route, and assortment snapshots.
+- New TRO creation requires an active position: one is auto-selected, multiple require explicit selection, zero positions or missing route/agent GUID are rejected with stable codes.
+- TRO edit preserves an existing snapshot (including later-inactive positions) unless TA/position is explicitly changed; editing legacy NEW/REVISION records resolves a current position.
+- TA options now include branch-scoped active positions; the modal supports dependent 0/1/N position behavior and separates requested TA from actual TA returned by 1C.
+- The 1C queue returns additive snapshot position fields with a LEGACY fallback. `/created` accepts optional login/route/assortment identity without changing workflow/idempotency or copying request identity into actual identity.
+- Migration `027_tro_request_sales_agent_position.js` intentionally performs no historical backfill. 1C EPF changes remain a separate phase.
+
+## 2026-09-17 — TRO 1C exact-position source phase
+
+- Updated the full exported 1C form/object module sources in `D:\projects\TEMP` without changing the EPF binary or portal application code. New request-position snapshots are parsed, the known city-ID source bug is fixed, and exact route resolution now validates route existence/deletion, login, and current-agent GUID for both INSTALL and RETURN.
+- New-format requests never fall back to the legacy route/packing resolver. Legacy requests without `route_guid` retain the old helper. Existing-document retries re-resolve and compare the selected position before retrying `/created`.
+- `/created` now sends the actual 1C route GUID and login for new-format requests. Assortment validation/callback remains intentionally disabled because the exact 1C metadata field was not verifiable; route-to-trade-point validation was likewise not invented.
+- Saved manual form-metadata instructions and a full implementation report beside the source exports. No commit was created.
+
+## 2026-09-17 — TRO 1C strict-position correction
+
+- Converted the exported 1C TRO integration sources to a strict exact-position contract: every request now requires `request_sales_agent` with route GUID, login, agent GUID, and assortment GUID.
+- Removed the old route/packing fallback entirely, simplified the shared resolver to one request-row argument, removed the `НовыйКонтракт` flag, and made position validation unconditional in form validation, INSTALL, RETURN, idempotent retries, and `/created` callbacks.
+- Safe numeric parsing is used for the portal position id. Callback always sends actual 1C route GUID/login. Assortment comparison remains deferred under `ASSORTMENT_FIELD_NOT_VERIFIED`; route-to-trade-point validation remains explicitly unimplemented because metadata is unverified.
+- Updated the external source reports in `D:\projects\TEMP`; portal code and binary EPF were not changed. No commit was created.
+
+## 2026-09-17 — TRO 1C final source hardening
+
+- Hardened only the two exported 1C TRO source modules: `request_sales_agent` rejects both undefined and JSON NULL; assortment snapshot now requires a syntactically valid UUID without attempting unverified 1C assortment resolution; `/created` callback now verifies that the document agent equals the resolved position agent before building its payload.
+- Confirmed zero legacy resolver/flag/runtime references and balanced BSL function, procedure, and try blocks. Portal and binary EPF were not changed; no commit was created.
+
+## 2026-09-17 — TRO top-role signing and route-field polish
+
+- Admin and Director can now sign every accessible TRO document in `NEW`/`REVISION`; backend authorization remains branch-scoped and the new exception is limited to the signature transition, without granting revision/rejection.
+- The TRO modal now labels the sales-agent position as `Маршрут ТА 1С`, uses `Оберіть маршрут`, and applies an explicit top-aligned full-width field layout.
+- Added a focused permission regression test. Backend suite passes 78/78; frontend lint and production build pass with existing Sass/bundle-size warnings.
+
+## 2026-09-18 — TRO 1C workplace settings and rejection cleanup
+
+- Updated only the exported 1C TRO form/object sources in `D:\projects\TEMP`: workplace settings now persist through `ХранилищеОбщихНастроек`, restore after `UP`/500 defaults, and reset the cached JWT after Save.
+- Removed `КодПричиныОтклонения` and `reason_code` from source runtime; rejection now sends only reason plus the existing responsible GUID/name. Binary EPF metadata still requires the documented manual removal of the obsolete field/control.
+- Verified zero temporary date-diagnostic strings and balanced BSL procedure/function/try blocks. Portal application code and binary EPF were not modified; no commit was created.
+
+## 2026-09-18 — TRO 1C internal settings simplification
+
+- The exported TRO 1C form source now treats `SourceSystem = "UP"` and `РазмерСтраницы = 500` as fixed internal values set before settings restore.
+- Removed both technical values from Save validation, common-settings persistence, and restore; the remaining six workplace settings keep their previous behavior.
+- The object export now independently enforces the same constants: `ПолучитьSourceSystem()` always returns `UP`, and request pagination always uses `limit = 500`; no workflow branches were changed.
+- Form metadata was not available among the exports, so removing the two visible controls remains a manual configurator step. No commit was created.
+
+## 2026-09-18 — TRO 1C batch creation source phase
+
+- Reworked the exported ordinary-form `СоздатьВыбранныеНажатие` handler into a safe batch flow: every selected row is prechecked, at most 50 ready requests are processed, one confirmation covers the batch, and every request has an isolated try/catch.
+- INSTALL/RETURN creation and `/created` callback calls remain unchanged. Successful rows are deselected; failed/not-ready rows remain selected; automatic queue refresh occurs only once after a fully successful batch.
+- Added an ordinary-form `ТаблицаЗаявкиПриПолученииДанных` handler that colors only the `РезультатОбработки` cell using stable prefixes (`Создан:`, `Ошибка:`, `Не обработана:`). Binary EPF metadata must manually bind `ТаблицаЗаявки.ПриПолученииДанных` to this handler.
+- The object module and portal were not changed. Static BSL block balances passed; no commit was created.
+
+## 2026-09-18 — TRO 1C local city filter source phase
+
+- Added a local city filter to the exported ordinary-form source using portal `city.id` as identity and `city.name` as presentation. A module-level `ВсеЗаявки` table preserves the full fetched queue while visible `Заявки` is rebuilt locally without another HTTP request.
+- City changes synchronize visible edits by `PortalID`, clear selection across the full local set, preserve item lookup in the existing shared `Позиции`, and retain the selected city across manual/automatic refresh, including the zero-remaining case.
+- Persisted city id/name settings and added a cross-city guard before warehouse assignment, create, and reject. Requests without a city id remain visible only in the all-cities view and fail validation.
+- Binary metadata must add the two processing requisites plus the `ГородФильтраID` dropdown and bind its `ПриИзменении` event. The portal and object module were not changed; no commit was created.
+
+## 2026-09-18 — TRO integration test requests
+
+- Created 66 local-development TRO requests in database `auth`, tagged with comment `TEST_TRO_ALL_ACTIVE_TA_20260918`: one INSTALL and one RETURN for each of 33 active TA users with a complete active 1C sales-agent position.
+- All generated requests have one TRO item, complete request-position snapshots, and status `NOT_COMPLETED`, making them available to the 1C integration queue. The transition was recorded in document history without sending email or Rocket.Chat notifications.
+- Active user `ta_test` (ID 247) was skipped because no complete active 1C sales-agent position exists; no synthetic GUID/route data was invented. No product code was changed and no commit was created.
+
+## 2026-09-18 — separate TRO stage-sync 1C processing sources
+
+- Created source exports and full metadata instructions for a new standalone `ИнтеграцияСтатусовТРОСПорталом` external processing; the existing TRO creation processing, Portal backend/frontend, and binary EPF were not changed.
+- The object-module core supports both manual execution and exported background `ВыполнитьЗадание()`, restores user-scoped connection settings, traverses the full status-pending cursor queue, reads 1C documents by strict type/GUID through queries, skips unchanged stages, and posts only the independent `one_c_stage` state.
+- Static review confirmed balanced BSL function/procedure/try blocks and no document writes, stage recalculation calls, workflow-completion endpoints, or UI dependencies in the background entry point. Files and full reports were saved under `D:\projects\TEMP`; no commit was created.
+
+## 2026-09-19 — TRO list 1C-stage presentation
+
+- Confirmed that the existing branch-scoped TRO list query already returns `tro_document_details.one_c_stage` as `tro_one_c_stage`, so no backend contract, query, access rule, migration, registry schema, or integration endpoint change was required.
+- TRO desktop rows and compact mobile cards now render `Стан в УП` as a separate theme-token badge while preserving the existing Portal workflow status. A shared presentation helper also supplies the same Ukrainian labels to the TRO detail modal.
+- Added five-value presentation coverage (`NEW`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, and null). Backend tests pass 80/80, frontend lint and production build pass with only the existing Sass and bundle-size warnings. No commit was created.
+
+## 2026-09-19 — TRO 1C-stage icon and registry follow-up
+
+- Refined the TRO list so desktop cells render the independent 1C stage as a compact semantic icon with accessible/native tooltip, while mobile cards render the icon plus the full Ukrainian stage label.
+- Added `Стан в УП` to the server-defined TRO registry schema, selected by default for both compact print and XLSX; registry rows translate `tro.oneCStage` independently from the existing Portal `status` column and render missing legacy values as `—`.
+- Backend tests pass 81/81, frontend lint and production build pass with only existing Sass and bundle-size warnings. No migration or commit was created.
+
+## 2026-09-19 — UP cancellation propagates to TRO request
+
+- Updated `POST /api/1c/tro-requests/:id/stage` so `stage=CANCELLED` preserves the integration stage and also moves the Portal TRO request to terminal status `REJECTED`, including the `IN_PROGRESS → CANCELLED` path.
+- The cancellation records the Portal status transition in common history and sends the normal status notification. An identical retry is idempotent; a retry also repairs legacy inconsistent rows where `one_c_stage` is already `CANCELLED` but the Portal request is not yet rejected.
+- Other 1C stages remain independent: in particular, `COMPLETED` still does not complete the Portal accounting workflow. No schema migration or commit was created.
+
+## 2026-09-19 — TRO modal item-table readability
+
+- Increased TRO item body cells in the document modal to `13px` and explicitly vertically centered `td` content, without changing the compact table header or layout.
+
+## 2026-09-19 — Sales report hierarchy search and assortment filter
+
+- Removed the branch prefix from Sales report supervisor labels and extended the report DTO with role/login/assortment data for the TA, direct supervisor, and higher manager. TA assortments come only from active branch-scoped `sales_agents` positions; SV/NTO assortments come from `user_assortments`.
+- The screen now renders the available NTO -> SV -> TA hierarchy and appends each user's assortment names in muted text. Hierarchy-aware search keeps only a matching TA, the full subtree of a matching SV, or the full subtree of a matching NTO.
+- Added a shared-control assortment filter based on visible TA positions; filtered totals are recalculated from the remaining TA branches, and filtered branches expand automatically. Existing server-side report access and branch scope are unchanged.
+- Verified all five live role-specific SQL paths against the development database, including a 6,828-row Admin result (~0.4 s), and confirmed assortment snapshots at all three hierarchy levels. Frontend lint/build and all 83 backend tests pass; no migration or commit was created.
+- Follow-up: user labels now explicitly render as `ФИО — ассортимент`; the name is the shrinking portion while the assortment suffix retains reserved row space, preventing long names from pushing it out of view.
+- Visual follow-up: removed the expanding spacer behavior between the name and assortment, so the assortment now follows the name immediately and no longer competes visually with the right-aligned sales amount.
+
+## 2026-09-19 — Admin user-list assortment column
+
+- Added an `Асортимент` column to both flat and hierarchy user tables in Admin. TA rows use `effective_assortments` from active 1C positions; all other roles use their administrative `assortments` assignments.
+- Multiple assortments render as compact comma-separated text with a full native tooltip; missing assignments render as `—`. Updated the expanded subordinate-row span and table minimum width for the seventh column.

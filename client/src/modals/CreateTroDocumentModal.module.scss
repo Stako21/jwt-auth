@@ -10,8 +10,11 @@
 .close:hover { border-color: $outline-medium; background: $select-option-hover-surface; color: $text-high; }
 .body { display: grid; gap: $space-3; min-height: 0; padding: $space-3; overflow-y: auto; }
 .generalSection { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $space-2 $space-3; }
-.field { display: grid; gap: $space-1; min-width: 0; }
-.field > label { color: $text-medium; font-size: 11px; font-weight: 700; }
+.field { display: grid; gap: $space-1; min-width: 0; align-content: start; }
+.field > label { color: $text-medium; font-size: 11px; font-weight: 700;  }
+.positionField { align-self: start; align-content: start; width: 100%; }
+.positionError { margin: 0; color: $error-color; font-size: 11px; }
+.positionSummary { margin: 0; color: $text-medium; font-size: 11px; line-height: 1.4; }
 .field textarea { width: 100%; min-height: 56px; resize: vertical; padding: $space-2; border: 1px solid $form-control-border; border-radius: $radius-md; outline: 0; background: $form-control-surface; color: $form-control-text; font: inherit; }
 .field textarea:focus { border-color: $primary-accent; box-shadow: 0 0 0 2px $form-control-focus-ring; }
 .field textarea:disabled { color: $text-medium; cursor: not-allowed; opacity: 1; }
@@ -33,6 +36,7 @@
 .itemsTable { width: 100%; min-width: 430px; margin: 0 !important; border: 0 !important; border-collapse: collapse; background: $table-shell-surface !important; color: $table-text !important; font-size: 11px !important; }
 .itemsTable th,
 .itemsTable td { padding: 6px $space-2 !important; border: 0 !important; border-bottom: 1px solid $table-border !important; background: $table-row-odd !important; color: inherit !important; line-height: 1.25; vertical-align: middle; }
+.itemsTable td { font-size: 13px !important; vertical-align: middle !important; }
 .itemsTable th { background: $table-head-surface !important; color: $table-text-strong !important; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .itemsTable tbody tr:nth-child(even) td { background: $table-row-even !important; }
 .itemsTable tbody tr:hover td { background: $table-row-hover !important; }

@@ -7,6 +7,13 @@ const MOVEMENT_TYPES = new Set(["INSTALL", "RETURN"]);
 const EDITABLE_STATUSES = new Set(["NEW", "REVISION"]);
 const ACCOUNTING_STATUSES = new Set(["NOT_COMPLETED", "PLANNED"]);
 
+export class TroPositionError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
 function text(value, maxLength) {
   const normalized = String(value || "").trim();
   return normalized.slice(0, maxLength);
@@ -86,6 +93,78 @@ async function resolveTa(conn, user, requestedTaId, branchId) {
   return ta;
 }
 
+export async function resolveTroRequestSalesAgent(conn, { branchId, taUserId, salesAgentId }) {
+  const [positions] = await conn.query(
+    `SELECT id, login, current_agent_guid, full_name, route_guid, route_name,
+            assortment_guid, assortment_name
+     FROM sales_agents
+     WHERE branch_id = ? AND user_id = ? AND is_active_1c = 1
+     ORDER BY login, id`,
+    [branchId, taUserId],
+  );
+  if (!positions.length) {
+    throw new TroPositionError("TRO_SALES_AGENT_POSITION_MISSING", "Для торгового агента не настроена активная позиция 1С");
+  }
+  const requestedId = Number(salesAgentId) || null;
+  let position;
+  if (requestedId) {
+    position = positions.find((item) => Number(item.id) === requestedId);
+    if (!position) {
+      const [[known]] = await conn.query(
+        "SELECT user_id, branch_id, is_active_1c FROM sales_agents WHERE id = ?", [requestedId],
+      );
+      const inactive = known && Number(known.user_id) === Number(taUserId)
+        && Number(known.branch_id) === Number(branchId) && !known.is_active_1c;
+      throw new TroPositionError(
+        inactive ? "TRO_SALES_AGENT_POSITION_INACTIVE" : "TRO_SALES_AGENT_POSITION_INVALID",
+        inactive ? "Позиция 1С торгового агента неактивна" : "Выбранная позиция 1С не принадлежит торговому агенту",
+      );
+    }
+  } else if (positions.length === 1) {
+    [position] = positions;
+  } else {
+    throw new TroPositionError("TRO_SALES_AGENT_POSITION_REQUIRED", "Выберите конкретную позицию 1С торгового агента");
+  }
+  if (!position.route_guid) {
+    throw new TroPositionError("TRO_SALES_AGENT_ROUTE_MISSING", "Для позиции 1С не настроен маршрут");
+  }
+  if (!position.current_agent_guid) {
+    throw new TroPositionError("TRO_SALES_AGENT_GUID_MISSING", "Для позиции 1С не настроен GUID торгового агента");
+  }
+  return {
+    salesAgentId: Number(position.id), login: position.login,
+    currentAgentGuid: position.current_agent_guid, currentAgentName: position.full_name || null,
+    routeGuid: position.route_guid, routeName: position.route_name || null,
+    assortmentGuid: position.assortment_guid || null, assortmentName: position.assortment_name || null,
+  };
+}
+
+function positionValues(position) {
+  return [position.salesAgentId, position.login, position.currentAgentGuid,
+    position.currentAgentName, position.routeGuid, position.routeName,
+    position.assortmentGuid, position.assortmentName];
+}
+
+async function attachPositions(users, branchId) {
+  if (!users.length) return users;
+  const [positions] = await pool.query(
+    `SELECT id, user_id, login, current_agent_guid, full_name, route_guid, route_name,
+            assortment_guid, assortment_name
+     FROM sales_agents WHERE branch_id = ? AND is_active_1c = 1 AND user_id IN (?)
+     ORDER BY login, id`,
+    [branchId, users.map((item) => item.id)],
+  );
+  return users.map((item) => ({
+    ...item,
+    positions: positions.filter((position) => Number(position.user_id) === Number(item.id)).map((position) => ({
+      id: position.id, login: position.login,
+      agentGuid: position.current_agent_guid, agentName: position.full_name,
+      routeGuid: position.route_guid, routeName: position.route_name,
+      assortmentGuid: position.assortment_guid, assortmentName: position.assortment_name,
+    })),
+  }));
+}
+
 export function mergeTroItemsByName(items) {
   const normalizedByName = new Map();
   items.forEach((item) => {
@@ -137,7 +216,7 @@ export async function getTroTaOptionsService(user) {
       "SELECT id, user_name AS name, city FROM users WHERE id = ? AND role = ? AND is_active = 1",
       [user.id, ROLE_IDS.TA],
     );
-    return rows;
+    return attachPositions(rows, branchId);
   }
 
   if (Number(user.role) === ROLE_IDS.SV) {
@@ -148,7 +227,7 @@ export async function getTroTaOptionsService(user) {
        ORDER BY u.user_name`,
       [user.id, ROLE_IDS.TA, branchId],
     );
-    return rows;
+    return attachPositions(rows, branchId);
   }
 
   const [rows] = await pool.query(
@@ -156,7 +235,7 @@ export async function getTroTaOptionsService(user) {
      WHERE role = ? AND branch_id = ? AND is_active = 1 ORDER BY user_name`,
     [ROLE_IDS.TA, branchId],
   );
-  return rows;
+  return attachPositions(rows, branchId);
 }
 
 export async function createTroDocumentService(user, payload) {
@@ -169,6 +248,9 @@ export async function createTroDocumentService(user, payload) {
   try {
     await conn.beginTransaction();
     const ta = await resolveTa(conn, user, payload.taUserId, branchId);
+    const position = await resolveTroRequestSalesAgent(conn, {
+      branchId, taUserId: ta.id, salesAgentId: payload.salesAgentId,
+    });
     const [[tradePoint]] = await conn.query(
       `SELECT tp.id, tp.contractor_id FROM trade_points tp
        JOIN contractors c ON c.id = tp.contractor_id
@@ -210,9 +292,12 @@ export async function createTroDocumentService(user, payload) {
         user.id, reason, text(payload.comment, 250) || null],
     );
     await conn.query(
-      `INSERT INTO tro_document_details (document_id, ta_user_id, movement_type)
-       VALUES (?, ?, ?)`,
-      [result.insertId, ta.id, movementType],
+      `INSERT INTO tro_document_details
+       (document_id, ta_user_id, request_sales_agent_id, request_agent_login,
+        request_agent_guid, request_agent_name, request_route_guid, request_route_name,
+        request_assortment_guid, request_assortment_name, movement_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [result.insertId, ta.id, ...positionValues(position), movementType],
     );
     await insertItems(conn, result.insertId, items);
     await conn.query(
@@ -233,6 +318,9 @@ export async function createTroDocumentService(user, payload) {
 async function loadTroDocument(conn, documentId, lock = false) {
   const [[doc]] = await conn.query(
     `SELECT d.*, t.ta_user_id, t.movement_type, t.up_document_number,
+       t.request_sales_agent_id, t.request_agent_login, t.request_agent_guid,
+       t.request_agent_name, t.request_route_guid, t.request_route_name,
+       t.request_assortment_guid, t.request_assortment_name,
        t.executor_name, t.accountant_user_id, t.app_install, t.photo_install,
        t.app_return, t.warehouse_spec_return, ta.user_name AS ta_name
      FROM documents d JOIN tro_document_details t ON t.document_id = d.id
@@ -285,6 +373,11 @@ async function canApprove(conn, user, doc) {
   return false;
 }
 
+export function canTopRoleSignTroDocument(role, nextStatus) {
+  return nextStatus === "NOT_COMPLETED"
+    && [ROLE_IDS.Admin, ROLE_IDS.Director].includes(Number(role));
+}
+
 export async function isTroDocumentService(documentId) {
   const [[row]] = await pool.query("SELECT document_type FROM documents WHERE id = ?", [documentId]);
   return row?.document_type === "TRO";
@@ -304,6 +397,14 @@ export async function updateTroDocumentService(user, documentId, payload) {
     const movementType = String(payload.movementType || "").toUpperCase();
     if (!MOVEMENT_TYPES.has(movementType)) throw new Error("Оберіть тип руху ТРО");
     const ta = await resolveTa(conn, user, payload.taUserId || doc.ta_user_id, doc.branch_id);
+    const taChanged = Number(ta.id) !== Number(doc.ta_user_id);
+    const explicitPosition = payload.salesAgentId !== undefined
+      && payload.salesAgentId !== null && payload.salesAgentId !== "";
+    const position = taChanged || explicitPosition || !doc.request_sales_agent_id
+      ? await resolveTroRequestSalesAgent(conn, {
+        branchId: doc.branch_id, taUserId: ta.id, salesAgentId: payload.salesAgentId,
+      })
+      : null;
     const [[tp]] = await conn.query(
       `SELECT tp.id, tp.contractor_id FROM trade_points tp JOIN contractors c ON c.id = tp.contractor_id
        WHERE tp.id = ? AND tp.branch_id = ? AND c.branch_id = ? AND tp.is_active = 1 AND c.is_active = 1`,
@@ -315,10 +416,20 @@ export async function updateTroDocumentService(user, documentId, payload) {
       `UPDATE documents SET trade_point_id = ?, contractor_id = ?, comment = ?, status = 'NEW' WHERE id = ?`,
       [tp.id, tp.contractor_id, text(payload.comment, 250) || null, documentId],
     );
-    await conn.query(
-      "UPDATE tro_document_details SET ta_user_id = ?, movement_type = ? WHERE document_id = ?",
-      [ta.id, movementType, documentId],
-    );
+    if (position) {
+      await conn.query(
+        `UPDATE tro_document_details SET ta_user_id = ?, request_sales_agent_id = ?,
+         request_agent_login = ?, request_agent_guid = ?, request_agent_name = ?,
+         request_route_guid = ?, request_route_name = ?, request_assortment_guid = ?,
+         request_assortment_name = ?, movement_type = ? WHERE document_id = ?`,
+        [ta.id, ...positionValues(position), movementType, documentId],
+      );
+    } else {
+      await conn.query(
+        "UPDATE tro_document_details SET ta_user_id = ?, movement_type = ? WHERE document_id = ?",
+        [ta.id, movementType, documentId],
+      );
+    }
     await conn.query("DELETE FROM tro_document_items WHERE document_id = ?", [documentId]);
     await insertItems(conn, documentId, items);
     await conn.query(
@@ -343,7 +454,8 @@ async function changeWorkflowStatus(user, documentId, nextStatus, action, commen
     const doc = await loadTroDocument(conn, documentId, true);
     await ensureAccess(conn, user, doc);
     if (!EDITABLE_STATUSES.has(doc.status)) throw new Error("Статус документа вже не можна змінити");
-    const approver = await canApprove(conn, user, doc);
+    const topRoleSignature = canTopRoleSignTroDocument(user.role, nextStatus);
+    const approver = topRoleSignature || await canApprove(conn, user, doc);
     const authorReject = nextStatus === "REJECTED" && Number(doc.author_user_id) === Number(user.id);
     if (!approver && !authorReject) throw new Error("Немає прав зміни статусу документа ТРО");
     await conn.query(
@@ -433,6 +545,12 @@ export async function updateTroAccountingService(user, documentId, payload) {
 export async function getTroDocumentExtension(executor, documentId) {
   const [[details]] = await executor.query(
     `SELECT t.ta_user_id AS taUserId, ta.user_name AS taName, t.movement_type AS movementType,
+       t.request_sales_agent_id AS requestSalesAgentId,
+       t.request_agent_login AS requestAgentLogin, t.request_agent_guid AS requestAgentGuid,
+       t.request_agent_name AS requestAgentName, t.request_route_guid AS requestRouteGuid,
+       t.request_route_name AS requestRouteName,
+       t.request_assortment_guid AS requestAssortmentGuid,
+       t.request_assortment_name AS requestAssortmentName,
        t.up_document_number AS upDocumentNumber, t.executor_name AS executorName,
        t.executor_guid AS executorGuid,
        t.document_1c_guid AS document1cGuid, t.document_1c_date AS document1cDate,
@@ -454,5 +572,21 @@ export async function getTroDocumentExtension(executor, documentId) {
        i.quantity FROM tro_document_items i WHERE i.document_id = ? ORDER BY i.id`,
     [documentId],
   );
-  return { ...(details || {}), items };
+  const result = { ...(details || {}), items };
+  result.requestSalesAgent = details?.requestSalesAgentId ? {
+    id: details.requestSalesAgentId,
+    login: details.requestAgentLogin,
+    guid: details.requestAgentGuid,
+    name: details.requestAgentName,
+    routeGuid: details.requestRouteGuid,
+    routeName: details.requestRouteName,
+    assortmentGuid: details.requestAssortmentGuid,
+    assortmentName: details.requestAssortmentName,
+    source: "SNAPSHOT",
+  } : {
+    id: null, login: null, guid: null, name: details?.taName || null,
+    routeGuid: null, routeName: null, assortmentGuid: null, assortmentName: null,
+    source: "LEGACY",
+  };
+  return result;
 }

@@ -166,8 +166,8 @@ export function createTroIntegrationService(
     }
   }
 
-  async function resolveAgent(connection, doc, agentGuid, agentName) {
-    const matches = await repository.findSalesAgents(connection, doc.branch_id, agentGuid);
+  async function resolveAgent(connection, doc, agentGuid, agentName, identity = {}) {
+    const matches = await repository.findSalesAgents(connection, doc.branch_id, agentGuid, identity);
     if (matches.length === 0) {
       return { id: null, warning: `Торгового агента ${agentGuid} не знайдено у довіднику` };
     }
@@ -229,7 +229,17 @@ export function createTroIntegrationService(
         city: { id: row.city_id, name: row.city_name },
         trade_point: { guid: row.trade_point_guid, name: row.trade_point_name, address: row.trade_point_address },
         contractor: { guid: row.contractor_guid, name: row.contractor_name },
-        request_sales_agent: { guid: row.request_agent_guid, name: row.request_agent_name },
+        request_sales_agent: {
+          id: row.request_sales_agent_id || null,
+          guid: row.request_agent_guid,
+          name: row.request_agent_name,
+          login: row.request_agent_login || null,
+          route_guid: row.request_route_guid || null,
+          route_name: row.request_route_name || null,
+          assortment_guid: row.request_assortment_guid || null,
+          assortment_name: row.request_assortment_name || null,
+          source: row.request_agent_source || "LEGACY",
+        },
         items: byDocument.get(Number(row.id)) || [],
         comment: row.comment,
         status: row.status,
@@ -247,6 +257,10 @@ export function createTroIntegrationService(
       const responsibleName = clean(payload.responsible_name, 150);
       const salesAgentGuid = guid(payload.sales_agent_guid, "sales_agent_guid");
       const salesAgentName = clean(payload.sales_agent_name, 150);
+      const salesAgentLogin = payload.sales_agent_login === undefined
+        ? null : clean(payload.sales_agent_login, 50).toLowerCase();
+      const salesAgentRouteGuid = guid(payload.sales_agent_route_guid, "sales_agent_route_guid", false);
+      const salesAgentAssortmentGuid = guid(payload.sales_agent_assortment_guid, "sales_agent_assortment_guid", false);
       const sourceSystem = clean(payload.source_system || "UP", 32).toUpperCase();
       const warehouseGuid = guid(payload.warehouse_guid, "warehouse_guid", false);
       if (!portalNumber || !documentNumber || !responsibleName || !salesAgentName || !sourceSystem) {
@@ -275,6 +289,7 @@ export function createTroIntegrationService(
               doc,
               salesAgentGuid,
               salesAgentName,
+              { login: salesAgentLogin, routeGuid: salesAgentRouteGuid, assortmentGuid: salesAgentAssortmentGuid },
             );
             await repository.updateCreatedMetadata(connection, {
               documentId: doc.id,
@@ -299,7 +314,11 @@ export function createTroIntegrationService(
           if (existing && Number(existing.document_id) !== Number(doc.id)) {
             throw new IntegrationError(409, "ONE_C_DOCUMENT_ALREADY_LINKED", "GUID документа 1С вже використовується");
           }
-          const agent = await resolveAgent(connection, doc, salesAgentGuid, salesAgentName);
+          const agent = await resolveAgent(connection, doc, salesAgentGuid, salesAgentName, {
+            login: salesAgentLogin,
+            routeGuid: salesAgentRouteGuid,
+            assortmentGuid: salesAgentAssortmentGuid,
+          });
           await repository.saveCreated(connection, {
             documentId: doc.id,
             documentGuid,
@@ -425,7 +444,7 @@ export function createTroIntegrationService(
       if (!STAGES.has(nextStage)) {
         throw new IntegrationError(422, "INVALID_ONE_C_STAGE", "Невідомий стан документа 1С");
       }
-      return repository.transaction(async (connection) => {
+      const result = await repository.transaction(async (connection) => {
         const doc = await repository.lockDocument(connection, Number(documentId));
         assertDocument(doc, accessible);
         if (!doc.document_1c_guid
@@ -433,20 +452,50 @@ export function createTroIntegrationService(
           || String(doc.source_system).toUpperCase() !== sourceSystem) {
           throw new IntegrationError(409, "ONE_C_LINK_MISMATCH", "Зв'язок з документом 1С не відповідає запиту");
         }
-        if (doc.one_c_stage === nextStage) {
+        const stageChanged = doc.one_c_stage !== nextStage;
+        const cancelPortalRequest = nextStage === "CANCELLED" && doc.status !== "REJECTED";
+        const portalStatusBefore = doc.status;
+        if (!stageChanged && !cancelPortalRequest) {
           return { idempotent: true, portal_status: doc.status, one_c_stage: doc.one_c_stage };
         }
-        if (doc.one_c_stage_updated_at && changedAt < new Date(doc.one_c_stage_updated_at)) {
+        if (stageChanged
+          && doc.one_c_stage_updated_at
+          && changedAt < new Date(doc.one_c_stage_updated_at)) {
           throw new IntegrationError(409, "STALE_STAGE_UPDATE", "Отримано застарілу зміну стану 1С");
         }
-        await repository.saveStage(connection, doc.id, nextStage, changedAt);
+        if (stageChanged) {
+          await repository.saveStage(connection, doc.id, nextStage, changedAt);
+        }
+        if (cancelPortalRequest) {
+          await repository.savePortalStatus(connection, doc.id, "REJECTED");
+        }
+        const comments = [];
+        if (stageChanged) {
+          comments.push(`Стан документа в УП змінено: ${stageLabel(doc.one_c_stage || "NEW")} → ${stageLabel(nextStage)}.`);
+        }
+        if (cancelPortalRequest) {
+          comments.push("Заявку в Portal скасовано через скасування документа в УП.");
+        }
         await repository.addHistory(connection, {
           documentId: doc.id, userId: user.id, action: "ONE_C_STAGE",
-          oldStatus: null, newStatus: null,
-          comment: `Стан документа в УП змінено: ${stageLabel(doc.one_c_stage || "NEW")} → ${stageLabel(nextStage)}.`,
+          oldStatus: cancelPortalRequest ? portalStatusBefore : null,
+          newStatus: cancelPortalRequest ? "REJECTED" : null,
+          comment: comments.join(" "),
         });
-        return { idempotent: false, portal_status: doc.status, one_c_stage: nextStage };
+        return {
+          idempotent: false,
+          portal_status: cancelPortalRequest ? "REJECTED" : portalStatusBefore,
+          one_c_stage: nextStage,
+          notification_old_status: cancelPortalRequest ? portalStatusBefore : null,
+        };
       });
+      if (result.notification_old_status) {
+        notify(user, Number(documentId), result.notification_old_status, "REJECTED").catch((error) =>
+          console.error("1C cancelled status notification failed:", error));
+      }
+      const response = { ...result };
+      delete response.notification_old_status;
+      return response;
     },
   };
 }
