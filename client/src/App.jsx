@@ -15,6 +15,7 @@ import {
 } from "./components/Reports/reportRegistry";
 import SettingsPage from "./pages/SettingsPage";
 import { DataLoader } from "./components/DataLoader/DataLoader";
+import WarehouseDashboard from "./pages/WarehouseDashboard.jsx";
 
 function renderBalanceRoutes(activeBalancePages, setLastUpdateTime) {
   return activeBalancePages.map((page) => (
@@ -94,9 +95,12 @@ const AppContent = () => {
   const isAdmin = userInfo?.role === ROLE_IDS.Admin;
   const isDirector = userInfo?.role === ROLE_IDS.Director;
   const isPicker = userInfo?.role === ROLE_IDS.Picker;
+  const isWarehouseDashboard =
+    Number(userInfo?.role) === ROLE_IDS.WarehouseDashboard;
 
   const defaultLoggedPath = useMemo(() => {
     if (isAdmin) return "/admin-page";
+    if (isWarehouseDashboard) return "/warehouse-dashboard";
     if (isPicker) return "/bill-of-lading";
 
     const userCityPage = activeBalancePages.find(
@@ -106,23 +110,35 @@ const AppContent = () => {
     if (userCityPage) return `/balance/${userCityPage.slug}`;
     if (activeBalancePages[0]) return `/balance/${activeBalancePages[0].slug}`;
     return "/documents";
-  }, [activeBalancePages, isAdmin, isPicker, userInfo]);
+  }, [activeBalancePages, isAdmin, isPicker, isWarehouseDashboard, userInfo]);
 
   return (
     <>
-      <Header
-        lastUpdateTime={lastUpdateTime}
-        isOpen={isOpen}
-        setIsOpen={setIsOpen}
-      />
+      {!isWarehouseDashboard ? (
+        <Header
+          lastUpdateTime={lastUpdateTime}
+          isOpen={isOpen}
+          setIsOpen={setIsOpen}
+        />
+      ) : null}
 
-      {isUserLogged && configLoading ? (
+      {isUserLogged && configLoading && !isWarehouseDashboard ? (
         <DataLoader label="Завантаження конфігурації…" fullPage />
       ) : (
-        <main className={isUserLogged ? "appMain" : "authMain"}>
+        <main
+          className={
+            !isUserLogged
+              ? "authMain"
+              : isWarehouseDashboard
+                ? "dashboardMain"
+                : "appMain"
+          }
+        >
           <Routes>
           {isUserLogged ? (
-            isAdmin ? (
+            isWarehouseDashboard ? (
+              <Route path="/warehouse-dashboard" element={<WarehouseDashboard />} />
+            ) : isAdmin ? (
               <>
                 {renderDocumentRoutes()}
                 <Route

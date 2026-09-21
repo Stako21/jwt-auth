@@ -28,6 +28,7 @@ Implemented in the current workspace:
 - import path resolution through `IMPORT_DIR` with legacy fallback to `client/public/Sorce`
 - installation/return TRO documents with an imported branch-scoped TRO directory, multi-position name/quantity rows, TA/SV/NTO approval rules, accountant planning/completion fields, status notifications, and document history
 - separate return/exchange and TRO document workspaces with dedicated menu entries, routes, server-filtered tables, creation actions, and status filter sets
+- a dedicated Full HD warehouse ranking dashboard for the current 08:00–08:00 shift, with isolated screen accounts, many-to-many warehouse access, automatic refresh, and invoice/row/weight totals without earnings data
 
 ## Run
 
@@ -180,9 +181,10 @@ client/
 - The root `package.json` still has no project-level scripts.
 - Some legacy routes/code still exist while the branch-config refactor is being finished.
 - Do not assume migrations have been applied just because migration files exist.
-- TRO/1C integration endpoints require a dedicated portal account whose login is
-  listed in `ONE_C_INTEGRATION_LOGINS`. When this setting is empty, `/api/1c/*`
-  is closed. See `docs/1c-tro-integration.md` for the protocol.
+- TRO/1C integration uses separate technical accounts managed by an administrator.
+  They authenticate through `POST /api/1c/auth/sign-in`, have explicit request/status
+  capabilities and one or more city scopes, and cannot use ordinary portal APIs.
+  See `docs/1c-tro-integration.md` for the protocol.
 - Important deployment limitation: the repository still does not contain a full migration history for the legacy schema. `bootstrap:env` can create the DB, run current branch-config migrations, and seed the admin user, but a truly clean production bootstrap still requires either:
   - importing the legacy base schema first
   - or continuing the project until all remaining legacy tables are migrated into code
@@ -194,3 +196,11 @@ client/
 - Admin and Director manage effective-dated rates under `Налаштування -> Налаштування складу`. A backdated change that affects imported rows requires explicit confirmation and is audited.
 - Collected-bills retention is configured on `report-bill-of-lading`, cannot be below 180 days, and is shared by the Picker earnings analytics dataset.
 - Migration `016_bill_of_lading_query_performance.js` indexes the latest-import check. The operational report requests only the selected DB date range and defaults to today's 08:00–08:00 report day.
+
+## Warehouse Ranking Dashboard
+
+- Role `WarehouseDashboard` (`9`) is an isolated television-screen account. After ordinary portal login it is redirected directly to `/warehouse-dashboard` and cannot use ordinary business APIs.
+- Admin manages these accounts and their allowed warehouses in `Адмін -> Складські екрани`.
+- Migration `029_warehouse_dashboard_accounts.js` adds `user_warehouse_access`; it has been applied to the configured development database.
+- The dashboard ranks workers primarily by collected invoices for the current Kyiv 08:00–08:00 shift. Equal invoice totals share the same rank; rows and weight only order equal-rank workers and remain visible as supporting metrics.
+- The dashboard endpoint intentionally returns no rate, amount, or earnings fields. Data refreshes every minute and becomes visibly stale after ten minutes without an import update.

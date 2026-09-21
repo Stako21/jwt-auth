@@ -83,10 +83,11 @@ export function createTroIntegrationService(
 ) {
   const cursorSecret = options.cursorSecret || process.env.ACCESS_TOKEN_SECRET;
 
-  function cursorScope(kind, accessibleBranchIds, movementType = null) {
+  function cursorScope(kind, accessibleBranchIds, accessibleCityIds, movementType = null) {
     return crypto.createHash("sha256").update(JSON.stringify({
       kind,
       branchIds: [...accessibleBranchIds].map(Number).sort((left, right) => left - right),
+      cityIds: [...accessibleCityIds].map(Number).sort((left, right) => left - right),
       movementType,
     })).digest("base64url");
   }
@@ -146,23 +147,34 @@ export function createTroIntegrationService(
     return { rows: page, pagination: { next_cursor: nextCursor, has_more: hasMore } };
   }
 
-  async function branchIds(user, requestedBranchId) {
-    const accessible = await repository.getAccessibleBranchIds(user.id, user.branchId);
-    if (!requestedBranchId) return accessible;
+  async function accessScope(user, requestedBranchId) {
+    const accessible = Array.isArray(user.branchIds)
+      ? user.branchIds.map(Number)
+      : await repository.getAccessibleBranchIds(user.id, user.branchId);
+    const cityIds = Array.isArray(user.cityIds) ? user.cityIds.map(Number) : [];
+    if (!requestedBranchId) return { branchIds: accessible, cityIds };
     const requested = Number(requestedBranchId);
     if (!accessible.includes(requested)) {
       throw new IntegrationError(403, "BRANCH_ACCESS_DENIED", "Філія недоступна");
     }
-    return [requested];
+    return { branchIds: [requested], cityIds };
   }
 
-  function assertDocument(doc, accessibleBranchIds) {
+  function normalizeScope(scope) {
+    return Array.isArray(scope) ? { branchIds: scope, cityIds: [] } : scope;
+  }
+
+  function assertDocument(doc, rawScope) {
+    const { branchIds: accessibleBranchIds, cityIds: accessibleCityIds } = normalizeScope(rawScope);
     if (!doc) throw new IntegrationError(404, "DOCUMENT_NOT_FOUND", "Документ не знайдено");
     if (doc.document_type !== "TRO" || !MOVEMENTS.has(doc.movement_type)) {
       throw new IntegrationError(422, "INVALID_DOCUMENT_TYPE", "Документ не є заявкою ТРО");
     }
     if (!accessibleBranchIds.includes(Number(doc.branch_id))) {
       throw new IntegrationError(403, "BRANCH_ACCESS_DENIED", "Філія недоступна");
+    }
+    if (accessibleCityIds.length && !accessibleCityIds.includes(Number(doc.city))) {
+      throw new IntegrationError(403, "CITY_ACCESS_DENIED", "Місто документа недоступне");
     }
   }
 
@@ -189,9 +201,10 @@ export function createTroIntegrationService(
       if (movementType && !MOVEMENTS.has(movementType)) {
         throw new IntegrationError(422, "INVALID_MOVEMENT_TYPE", "Невідомий movement_type");
       }
-      const accessibleBranchIds = await branchIds(user, query.branch_id);
+      const scopeAccess = normalizeScope(await accessScope(user, query.branch_id));
+      const { branchIds: accessibleBranchIds, cityIds: accessibleCityIds } = scopeAccess;
       const pageLimit = limit(query.limit);
-      const scope = cursorScope("ready", accessibleBranchIds, movementType);
+      const scope = cursorScope("ready", accessibleBranchIds, accessibleCityIds, movementType);
       const { rows, pagination } = await paginate({
         kind: "ready",
         scope,
@@ -199,10 +212,12 @@ export function createTroIntegrationService(
         pageLimit,
         getCeiling: () => repository.getReadyCeiling({
           branchIds: accessibleBranchIds,
+          cityIds: accessibleCityIds,
           movementType,
         }),
         getRows: ({ after, ceiling, limit: fetchLimit }) => repository.listReady({
           branchIds: accessibleBranchIds,
+          cityIds: accessibleCityIds,
           movementType,
           after,
           ceiling,
@@ -248,7 +263,7 @@ export function createTroIntegrationService(
     },
 
     async created(user, documentId, payload) {
-      const accessible = await branchIds(user);
+      const accessible = normalizeScope(await accessScope(user));
       const portalNumber = clean(payload.portal_document_number, 20);
       const documentGuid = guid(payload.document_1c_guid, "document_1c_guid");
       const documentNumber = clean(payload.document_1c_number, 20);
@@ -335,13 +350,13 @@ export function createTroIntegrationService(
           });
           await repository.addHistory(connection, {
             documentId: doc.id,
-            userId: user.id,
+            userId: null,
             action: "ONE_C_CREATED",
             oldStatus: doc.status,
             newStatus: "PLANNED",
             comment: `Створено документ УП ${documentNumber}. Виконавець: ${responsibleName}. ТА: ${salesAgentName}.`,
           });
-          return { idempotent: false, portal_status: "PLANNED", one_c_stage: "NEW", warning: agent.warning };
+          return { idempotent: false, portal_status: "PLANNED", one_c_stage: "NEW", warning: agent.warning, notification_branch_id: doc.branch_id };
         });
       } catch (error) {
         if (error?.code === "ER_DUP_ENTRY") {
@@ -350,14 +365,16 @@ export function createTroIntegrationService(
         throw error;
       }
       if (!result.idempotent) {
-        notify(user, Number(documentId), "NOT_COMPLETED", "PLANNED").catch((error) =>
+        notify({ ...user, id: 0, role: 1, branchId: result.notification_branch_id }, Number(documentId), "NOT_COMPLETED", "PLANNED").catch((error) =>
           console.error("1C created status notification failed:", error));
       }
-      return result;
+      const response = { ...result };
+      delete response.notification_branch_id;
+      return response;
     },
 
     async rejected(user, documentId, payload) {
-      const accessible = await branchIds(user);
+      const accessible = normalizeScope(await accessScope(user));
       const reason = clean(payload.reason, 250);
       const reasonCode = clean(payload.reason_code, 64);
       const responsibleGuid = guid(payload.responsible_guid, "responsible_guid");
@@ -394,30 +411,34 @@ export function createTroIntegrationService(
           responsibleName,
         });
         await repository.addHistory(connection, {
-          documentId: doc.id, userId: user.id, action: "ONE_C_REJECTED",
+          documentId: doc.id, userId: null, action: "ONE_C_REJECTED",
           oldStatus: doc.status, newStatus: "REJECTED", comment,
         });
-        return { idempotent: false, portal_status: "REJECTED" };
+        return { idempotent: false, portal_status: "REJECTED", notification_branch_id: doc.branch_id };
       });
       if (!result.idempotent) {
-        notify(user, Number(documentId), "NOT_COMPLETED", "REJECTED").catch((error) =>
+        notify({ ...user, id: 0, role: 1, branchId: result.notification_branch_id }, Number(documentId), "NOT_COMPLETED", "REJECTED").catch((error) =>
           console.error("1C rejected status notification failed:", error));
       }
-      return result;
+      const response = { ...result };
+      delete response.notification_branch_id;
+      return response;
     },
 
     async listPending(user, query = {}) {
-      const accessibleBranchIds = await branchIds(user, query.branch_id);
+      const scopeAccess = normalizeScope(await accessScope(user, query.branch_id));
+      const { branchIds: accessibleBranchIds, cityIds: accessibleCityIds } = scopeAccess;
       const pageLimit = limit(query.limit);
-      const scope = cursorScope("status-pending", accessibleBranchIds);
+      const scope = cursorScope("status-pending", accessibleBranchIds, accessibleCityIds);
       const { rows, pagination } = await paginate({
         kind: "status-pending",
         scope,
         rawCursor: query.cursor,
         pageLimit,
-        getCeiling: () => repository.getPendingCeiling({ branchIds: accessibleBranchIds }),
+        getCeiling: () => repository.getPendingCeiling({ branchIds: accessibleBranchIds, cityIds: accessibleCityIds }),
         getRows: ({ after, ceiling, limit: fetchLimit }) => repository.listPending({
           branchIds: accessibleBranchIds,
+          cityIds: accessibleCityIds,
           after,
           ceiling,
           limit: fetchLimit,
@@ -432,11 +453,12 @@ export function createTroIntegrationService(
         source_system: row.source_system,
         one_c_stage: row.one_c_stage,
         one_c_stage_updated_at: row.one_c_stage_updated_at,
+        city: { id: row.city_id, name: row.city_name },
       })), pagination };
     },
 
     async stage(user, documentId, payload) {
-      const accessible = await branchIds(user);
+      const accessible = normalizeScope(await accessScope(user));
       const documentGuid = guid(payload.document_1c_guid, "document_1c_guid");
       const sourceSystem = clean(payload.source_system || "UP", 32).toUpperCase();
       const nextStage = clean(payload.stage, 32).toUpperCase();
@@ -477,7 +499,7 @@ export function createTroIntegrationService(
           comments.push("Заявку в Portal скасовано через скасування документа в УП.");
         }
         await repository.addHistory(connection, {
-          documentId: doc.id, userId: user.id, action: "ONE_C_STAGE",
+          documentId: doc.id, userId: null, action: "ONE_C_STAGE",
           oldStatus: cancelPortalRequest ? portalStatusBefore : null,
           newStatus: cancelPortalRequest ? "REJECTED" : null,
           comment: comments.join(" "),
@@ -487,14 +509,16 @@ export function createTroIntegrationService(
           portal_status: cancelPortalRequest ? "REJECTED" : portalStatusBefore,
           one_c_stage: nextStage,
           notification_old_status: cancelPortalRequest ? portalStatusBefore : null,
+          notification_branch_id: doc.branch_id,
         };
       });
       if (result.notification_old_status) {
-        notify(user, Number(documentId), result.notification_old_status, "REJECTED").catch((error) =>
+        notify({ ...user, id: 0, role: 1, branchId: result.notification_branch_id }, Number(documentId), result.notification_old_status, "REJECTED").catch((error) =>
           console.error("1C cancelled status notification failed:", error));
       }
       const response = { ...result };
       delete response.notification_old_status;
+      delete response.notification_branch_id;
       return response;
     },
   };

@@ -114,6 +114,12 @@ table {
   background: $color-transparent;
 }
 
+.dashboardMain {
+  width: 100%;
+  min-height: 100vh;
+  background: $surface-main;
+}
+
 body.appShellCollapsed .appMain {
   padding-left: $sidebar-width-collapsed;
 }

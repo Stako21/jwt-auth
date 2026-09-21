@@ -6,13 +6,17 @@ import {
   rejectTroRequest,
   updateTroStage,
 } from "../controllers/oneCTroRequestsController.js";
+import { requireIntegrationCapability } from "../middlewares/oneCIntegrationAccount.js";
 
 const router = Router();
 
-router.get("/tro-requests/status-pending", listStatusPending);
-router.get("/tro-requests", listTroRequests);
-router.post("/tro-requests/:id/created", markTroRequestCreated);
-router.post("/tro-requests/:id/rejected", rejectTroRequest);
-router.post("/tro-requests/:id/stage", updateTroStage);
+const processRequests = requireIntegrationCapability("canProcessRequests");
+const syncStatuses = requireIntegrationCapability("canSyncStatuses");
+
+router.get("/tro-requests/status-pending", syncStatuses, listStatusPending);
+router.get("/tro-requests", processRequests, listTroRequests);
+router.post("/tro-requests/:id/created", processRequests, markTroRequestCreated);
+router.post("/tro-requests/:id/rejected", processRequests, rejectTroRequest);
+router.post("/tro-requests/:id/stage", syncStatuses, updateTroStage);
 
 export default router;

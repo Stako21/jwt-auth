@@ -6,7 +6,7 @@ import UserValidator from "../validators/User.js";
 import * as DebugController from "../controllers/DebugController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import * as SchedulerController from "../controllers/SchedulerController.js";
-import { ensureRole } from "../utils/roles.js";
+import { denyRole, ensureRole, ROLE_IDS } from "../utils/roles.js";
 import { denyOneCIntegrationAccount } from "../middlewares/oneCIntegrationAccount.js";
 
 const router = Router();
@@ -25,7 +25,12 @@ router.post("/logout", AuthValidator.logOut, AuthController.logOut);
 router.post("/refresh", AuthValidator.refresh, AuthController.refresh);
 router.use(authMiddleware, denyOneCIntegrationAccount);
 router.get("/me", AuthController.me);
-router.get("/branches", authMiddleware, AuthController.getBranches);
+router.get(
+  "/branches",
+  authMiddleware,
+  denyRole([ROLE_IDS.WarehouseDashboard]),
+  AuthController.getBranches,
+);
 router.post(
   "/switch-branch",
   authMiddleware,

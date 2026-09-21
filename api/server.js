@@ -11,12 +11,15 @@ import regionNotificationsRoutes from "./routes/regionNotifications.js";
 import configRoutes from "./routes/config.js";
 import balanceRoutes from "./routes/balances.js";
 import oneCTroRequestRoutes from "./routes/oneCTroRequests.js";
+import integrationAccountRoutes from "./routes/integrationAccounts.js";
+import warehouseDashboardRoutes from "./routes/warehouseDashboard.js";
+import { signInIntegrationAccount } from "./controllers/integrationAccountsController.js";
 import securityHeaders from "./middlewares/securityHeaders.js";
 import { createRateLimit } from "./middlewares/rateLimit.js";
 import authMiddleware from "./middlewares/authMiddleware.js";
 import {
   denyOneCIntegrationAccount,
-  ensureOneCIntegrationAccount,
+  integrationAuthMiddleware,
 } from "./middlewares/oneCIntegrationAccount.js";
 import { startScheduler } from "./services/scheduler.js";
 import { denyRole, ROLE_IDS } from "./utils/roles.js";
@@ -54,6 +57,7 @@ function isAllowedOrigin(origin) {
 
 const app = express();
 const pickerRestricted = denyRole([ROLE_IDS.Picker]);
+const dashboardRestricted = denyRole([ROLE_IDS.WarehouseDashboard]);
 
 app.use(cookieParser());
 app.use(express.json());
@@ -105,21 +109,24 @@ const oneCRateLimit = createRateLimit({
 });
 
 app.use("/api/auth", authRateLimit, AuthRootRouter);
+app.post("/api/1c/auth/sign-in", authRateLimit, signInIntegrationAccount);
 app.use(
   "/api/1c",
   oneCRateLimit,
-  authMiddleware,
-  ensureOneCIntegrationAccount,
+  integrationAuthMiddleware,
   oneCTroRequestRoutes,
 );
-app.use("/api/config", authMiddleware, denyOneCIntegrationAccount, configRoutes);
-app.use("/api/balances", authMiddleware, denyOneCIntegrationAccount, pickerRestricted, balanceRoutes);
-app.use("/api/reports", authMiddleware, denyOneCIntegrationAccount, reportRoutes);
+app.use("/api/integration-accounts", integrationAccountRoutes);
+app.use("/api/warehouse-dashboard", warehouseDashboardRoutes);
+app.use("/api/config", authMiddleware, denyOneCIntegrationAccount, dashboardRestricted, configRoutes);
+app.use("/api/balances", authMiddleware, denyOneCIntegrationAccount, pickerRestricted, dashboardRestricted, balanceRoutes);
+app.use("/api/reports", authMiddleware, denyOneCIntegrationAccount, dashboardRestricted, reportRoutes);
 app.use(
   "/api/region-notifications",
   authMiddleware,
   denyOneCIntegrationAccount,
   pickerRestricted,
+  dashboardRestricted,
   regionNotificationsRoutes,
 );
 app.use(
@@ -128,9 +135,10 @@ app.use(
   authMiddleware,
   denyOneCIntegrationAccount,
   pickerRestricted,
+  dashboardRestricted,
   documentRoutes,
 );
-app.use("/api/directories", authMiddleware, denyOneCIntegrationAccount, pickerRestricted, directoryRoutes);
+app.use("/api/directories", authMiddleware, denyOneCIntegrationAccount, pickerRestricted, dashboardRestricted, directoryRoutes);
 
 const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server started successfully on port ${PORT}`);

@@ -1,0 +1,66 @@
+@use "../theme.scss" as *;
+
+.dashboard {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: clamp(9px, 1vh, 16px);
+  width: 100vw;
+  height: 100vh;
+  padding: clamp(14px, 1.4vw, 26px);
+  overflow: hidden;
+  color: $text-high;
+  background: $surface-main;
+}
+
+.header { display: flex; align-items: center; justify-content: space-between; gap: $space-4; }
+.eyebrow { margin: 0 0 2px; color: $primary-accent-light; font-size: clamp(.65rem, .7vw, .82rem); font-weight: 800; letter-spacing: .16em; }
+.shift { display: flex; gap: $space-2; margin: 0; color: $text-medium; font-size: clamp(.82rem, .92vw, 1.08rem); }
+.headerActions { display: flex; align-items: center; gap: $space-2; }
+.clock { min-width: 120px; text-align: right; }
+.clock strong { display: block; color: $text-high; font-size: clamp(1.35rem, 1.65vw, 2rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.clock span { display: block; margin-top: $space-1; color: $text-muted; font-size: clamp(.72rem, .85vw, 1rem); }
+.iconButton { width: 40px; height: 40px; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-container; color: $text-medium; cursor: pointer; }
+.iconButton:hover { border-color: $primary-accent-border; color: $primary-accent-light; }
+
+.controlRow { display: flex; align-items: center; justify-content: space-between; gap: $space-4; padding: $space-3 $space-4; border: 1px solid $outline-dark; border-radius: $radius-lg; background: $surface-glass-strong; }
+.warehouseChoice { display: flex; align-items: center; gap: $space-3; min-width: 340px; }
+.warehouseChoice > span { color: $text-muted; font-size: clamp(.75rem, .8vw, .95rem); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.warehouseChoice > strong { color: $text-high; font-size: clamp(1.05rem, 1.3vw, 1.55rem); }
+.warehouseChoice > :last-child { min-width: 280px; }
+.freshness { display: flex; align-items: center; gap: $space-2; color: $report-success; }
+.freshness span { font-size: clamp(.72rem, .8vw, .95rem); font-weight: 700; }
+.freshness small { display: block; margin-top: 2px; color: $text-muted; font-size: .8em; font-weight: 500; }
+.stale { color: $report-warning; }
+
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(10px, 1vw, 18px); }
+.summary article { display: flex; align-items: center; justify-content: space-between; min-height: clamp(64px, 7vh, 92px); padding: $space-3 $space-4; border: 1px solid $outline-dark; border-radius: $radius-lg; background: $surface-container-low; }
+.summary span { color: $text-muted; font-size: clamp(.8rem, 1vw, 1.2rem); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.summary strong { color: $primary-accent-light; font-size: clamp(1.8rem, 2.8vw, 3.4rem); line-height: 1; font-variant-numeric: tabular-nums; }
+
+.tableShell { position: relative; min-height: 0; overflow: hidden; border: 1px solid $table-border; border-radius: $radius-xl; background: $table-shell-surface; box-shadow: $shadow-card; }
+.rankingTable { width: 100%; border-collapse: collapse; table-layout: fixed; color: $table-text; }
+.rankingTable th { height: 30px; padding: 0 clamp(12px, 1.3vw, 24px); border-bottom: 1px solid $table-border; background: $table-head-surface; color: $table-text-muted; font-size: clamp(.7rem, .78vw, .9rem); line-height: 1.1; text-align: right; vertical-align: middle; text-transform: uppercase; letter-spacing: .08em; }
+.rankingTable th:first-child { width: 11%; text-align: center; }
+.rankingTable th:nth-child(2) { width: 45%; text-align: left; }
+.rankingTable td { height: clamp(38px, 4.7vh, 58px); padding: 0 clamp(12px, 1.3vw, 24px); border-bottom: 1px solid $table-border; background: $table-row-odd; font-size: clamp(1rem, 1.35vw, 1.65rem); text-align: right; vertical-align: middle; }
+.rankingTable tr:nth-child(even) td { background: $table-row-even; }
+.rankingTable td:first-child { text-align: center; }
+.rankingTable td:nth-child(2) { color: $table-text-strong; font-weight: 700; text-align: left; }
+.rankingTable tr[data-rank="1"] td { background: $primary-accent-surface-strong; }
+.rankingTable tr[data-rank="2"] td { background: $primary-accent-surface-medium; }
+.rankingTable tr[data-rank="3"] td { background: $primary-accent-surface-soft; }
+.rank { display: inline-grid; place-items: center; width: clamp(36px, 2.8vw, 54px); aspect-ratio: 1; border: 1px solid $primary-accent-border; border-radius: 50%; color: $primary-accent-light; font-size: clamp(1rem, 1.35vw, 1.7rem); font-weight: 850; }
+.primaryMetric { color: $primary-accent-light; font-size: clamp(1.4rem, 2vw, 2.45rem) !important; font-weight: 850; }
+.message { display: grid; place-items: center; height: 100%; padding: $space-5; color: $text-medium; font-size: clamp(1.2rem, 1.8vw, 2.2rem); text-align: center; }
+.loading { position: absolute; right: $space-3; bottom: $space-3; padding: $space-2 $space-3; border: 1px solid $outline-dark; border-radius: $radius-md; background: $surface-glass-strong; color: $text-muted; font-size: .8rem; }
+
+@media (max-width: 900px) {
+  .dashboard { height: auto; min-height: 100vh; overflow: auto; }
+  .header, .controlRow { align-items: stretch; flex-direction: column; }
+  .headerActions { justify-content: flex-end; }
+  .clock { margin-right: auto; text-align: left; }
+  .warehouseChoice { min-width: 0; }
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tableShell { overflow-x: auto; }
+  .rankingTable { min-width: 720px; }
+}

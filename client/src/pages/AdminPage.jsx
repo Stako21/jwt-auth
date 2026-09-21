@@ -13,6 +13,8 @@ import { ImportSourcesConfig } from "../components/Configuration/ImportSourcesCo
 import { SchedulerConfig } from "../components/Configuration/SchedulerConfig";
 import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton";
 import ThemeSelector from "../components/ThemeSelector/ThemeSelector.jsx";
+import { IntegrationAccounts } from "../components/IntegrationAccounts/IntegrationAccounts.jsx";
+import { WarehouseDashboardAccounts } from "../components/WarehouseDashboardAccounts/WarehouseDashboardAccounts.jsx";
 import "../components/Configuration/configurationCompact.css";
 import style from "./AdminPage.module.scss";
 
@@ -25,6 +27,8 @@ const ALLOWED_ADMIN_TABS = new Set([
   "settings",
   "scheduler",
   "configuration",
+  "integration-accounts",
+  "warehouse-dashboards",
 ]);
 const CONFIGURATION_SECTIONS = [
   ["branches", "Філії"],
@@ -134,6 +138,8 @@ export default function AdminPage() {
           ["settings", "Сповіщення", "fa-bell"],
           ["scheduler", "Планувальник", "fa-clock"],
           ["configuration", "Конфігурація", "fa-sliders"],
+          ["integration-accounts", "Технічні записи", "fa-key"],
+          ["warehouse-dashboards", "Складські екрани", "fa-tv"],
         ].map(([tab, label, icon]) => (
           <button
             key={tab}
@@ -261,6 +267,9 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {activeTab === "integration-accounts" && <IntegrationAccounts />}
+        {activeTab === "warehouse-dashboards" && <WarehouseDashboardAccounts />}
       </section>
 
       <ScrollToTopButton />

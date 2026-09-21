@@ -16,7 +16,11 @@ export function getUserBranchId(user) {
   return Number(user?.branchId || user?.branch_id || 1);
 }
 
-const VALID_REPORT_ROLE_IDS = new Set(Object.values(ROLE_IDS).map(Number));
+const VALID_REPORT_ROLE_IDS = new Set(
+  Object.values(ROLE_IDS)
+    .map(Number)
+    .filter((roleId) => roleId !== ROLE_IDS.WarehouseDashboard),
+);
 let reportAllowedRolesColumnExistsCache = null;
 const reportDefinitionColumnExistsCache = new Map();
 const balancePageColumnExistsCache = new Map();

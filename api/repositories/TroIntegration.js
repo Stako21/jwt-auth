@@ -10,13 +10,17 @@ export default class TroIntegrationRepository {
       .filter((value) => Number.isInteger(value) && value > 0);
   }
 
-  static buildReadyWhere({ branchIds, movementType, after, ceiling }) {
+  static buildReadyWhere({ branchIds, cityIds = [], movementType, after, ceiling }) {
     const params = [...branchIds];
     const where = [
       "d.document_type = 'TRO'",
       "d.status = 'NOT_COMPLETED'",
       `d.branch_id IN (${branchIds.map(() => "?").join(", ")})`,
     ];
+    if (cityIds.length) {
+      where.push(`d.city IN (${cityIds.map(() => "?").join(", ")})`);
+      params.push(...cityIds);
+    }
     if (movementType) {
       where.push("td.movement_type = ?");
       params.push(movementType);
@@ -35,8 +39,8 @@ export default class TroIntegrationRepository {
     return { where, params };
   }
 
-  static async getReadyCeiling({ branchIds, movementType }) {
-    const { where, params } = this.buildReadyWhere({ branchIds, movementType });
+  static async getReadyCeiling({ branchIds, cityIds, movementType }) {
+    const { where, params } = this.buildReadyWhere({ branchIds, cityIds, movementType });
     const [[row]] = await pool.query(
       `SELECT d.created_at, d.id
        FROM documents d
@@ -49,9 +53,10 @@ export default class TroIntegrationRepository {
     return row ? { createdAt: row.created_at, id: Number(row.id) } : null;
   }
 
-  static async listReady({ branchIds, movementType, after, ceiling, limit }) {
+  static async listReady({ branchIds, cityIds, movementType, after, ceiling, limit }) {
     const { where, params } = this.buildReadyWhere({
       branchIds,
+      cityIds,
       movementType,
       after,
       ceiling,
@@ -99,7 +104,7 @@ export default class TroIntegrationRepository {
     return rows;
   }
 
-  static buildPendingWhere({ branchIds, after, ceiling }) {
+  static buildPendingWhere({ branchIds, cityIds = [], after, ceiling }) {
     const where = [
       "d.document_type = 'TRO'",
       `d.branch_id IN (${branchIds.map(() => "?").join(", ")})`,
@@ -108,6 +113,10 @@ export default class TroIntegrationRepository {
       "(td.one_c_stage IS NULL OR td.one_c_stage IN ('NEW', 'IN_PROGRESS'))",
     ];
     const params = [...branchIds];
+    if (cityIds.length) {
+      where.push(`d.city IN (${cityIds.map(() => "?").join(", ")})`);
+      params.push(...cityIds);
+    }
 
     if (ceiling) {
       where.push("(d.created_at < ? OR (d.created_at = ? AND d.id <= ?))");
@@ -122,8 +131,8 @@ export default class TroIntegrationRepository {
     return { where, params };
   }
 
-  static async getPendingCeiling({ branchIds }) {
-    const { where, params } = this.buildPendingWhere({ branchIds });
+  static async getPendingCeiling({ branchIds, cityIds }) {
+    const { where, params } = this.buildPendingWhere({ branchIds, cityIds });
     const [[row]] = await pool.query(
       `SELECT d.created_at, d.id
        FROM documents d
@@ -136,15 +145,16 @@ export default class TroIntegrationRepository {
     return row ? { createdAt: row.created_at, id: Number(row.id) } : null;
   }
 
-  static async listPending({ branchIds, after, ceiling, limit }) {
-    const { where, params } = this.buildPendingWhere({ branchIds, after, ceiling });
+  static async listPending({ branchIds, cityIds, after, ceiling, limit }) {
+    const { where, params } = this.buildPendingWhere({ branchIds, cityIds, after, ceiling });
     params.push(limit);
     const [rows] = await pool.query(
       `SELECT d.id, d.document_number, td.movement_type, td.document_1c_guid,
               td.source_system, td.one_c_stage, td.one_c_stage_updated_at,
-              d.created_at AS cursor_created_at
+              d.created_at AS cursor_created_at, d.city AS city_id, ci.name AS city_name
        FROM documents d
        JOIN tro_document_details td ON td.document_id = d.id
+       LEFT JOIN cities ci ON ci.id = d.city AND ci.branch_id = d.branch_id
        WHERE ${where.join(" AND ")}
        ORDER BY d.created_at, d.id
        LIMIT ?`,
@@ -171,7 +181,7 @@ export default class TroIntegrationRepository {
   static async lockDocument(connection, documentId) {
     const [[row]] = await connection.query(
       `SELECT d.id, d.document_number, d.document_type, d.status, d.author_user_id,
-              d.branch_id, td.ta_user_id, td.movement_type, td.up_document_number,
+              d.branch_id, d.city, td.ta_user_id, td.movement_type, td.up_document_number,
               td.executor_name, td.executor_guid, td.document_1c_guid, td.document_1c_date,
               td.source_system, td.one_c_sales_agent_id, td.one_c_sales_agent_guid,
               td.one_c_sales_agent_name,

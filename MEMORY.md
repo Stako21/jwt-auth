@@ -2497,3 +2497,22 @@ Frontend:
 
 - Added an `Асортимент` column to both flat and hierarchy user tables in Admin. TA rows use `effective_assortments` from active 1C positions; all other roles use their administrative `assortments` assignments.
 - Multiple assortments render as compact comma-separated text with a full native tooltip; missing assignments render as `—`. Updated the expanded subordinate-row span and table minimum width for the seventh column.
+
+## 2026-09-19 — Separate city-scoped technical accounts for TRO/1C
+
+- Replaced the environment allow-list/ordinary-user integration identity with separate `integration_accounts` and many-to-many `integration_account_cities`. Admin now has a compact `Технічні записи` tab for creating, disabling, password-resetting, assigning multiple cities, and granting request-processing and/or status-sync capabilities. City overlap between accounts is intentionally allowed.
+- Added `POST /api/1c/auth/sign-in` with a purpose-bound 30-minute JWT. Active account, capabilities, active cities, and branches are reloaded on every integration request; technical principals remain excluded from ordinary portal APIs.
+- Ready and status-pending queues and every callback now enforce city scope; cursor signatures include cities. Integration history rows use nullable `user_id`, while real 1C responsible snapshots remain in event comments/metadata. Status-pending DTO now includes `city`.
+- Applied migration `028_integration_accounts.js` to the approved development database. Backend tests pass 87/87; frontend lint and production build pass with only existing Sass/bundle-size warnings.
+
+## 2026-09-20 — 1C source exports switched to technical-account sign-in
+
+- Fixed both TRO request and central status-sync 1C source modules under `D:\projects\TEMP`: authorization now posts `{ login, password }` to `/api/1c/auth/sign-in` and reads `data.accessToken` / `data.accessTokenExpiration` from the new response envelope.
+- The integration sign-in DTO now includes `accessTokenExpiration: 1800000` so both 1C modules retain their existing proactive token-refresh behavior. Verified the `test_one_acc` database record is active, has request-processing permission and two assigned cities.
+- Source verification finds zero old `/api/auth/sign-in` calls and balanced Function/Procedure/Try blocks in both modules. Backend tests pass 87/87. No commit was created.
+- Rebased `ИнтеграцияСтатусовТРОСПорталом_МодульОбъекта.txt` on the user's newer 901-line source and reapplied only the technical-account auth changes. The previous TEMP version is preserved as `ИнтеграцияСтатусовТРОСПорталом_МодульОбъекта.before-tech-auth-20260920.txt`; status queue, pagination, and stage callback logic were left intact.
+- 2026-09-20: Added `documentation/JSON_IMPORT_STRUCTURES.md`, a parser-verified reference with minimal examples for all seven JSON imports plus the two directly served static JSON reports. It separately records the latest `SalesAgent.json` and strict `SalesReport.json` contract changes and flags the stale legacy-shaped `client/public/Sorce/SalesReport.json` snapshot.
+- 2026-09-21: Implemented the Full HD warehouse-worker ranking dashboard. Added isolated role 9 (`WarehouseDashboard`), migration `029_warehouse_dashboard_accounts.js` with many-to-many `user_warehouse_access` (applied to the confirmed development DB), admin account/warehouse management, strict ordinary-API denial for screen users, direct post-login routing to `/warehouse-dashboard`, current Kyiv 08:00–08:00 aggregation, equal-rank invoice scoring with rows/weight tie ordering, one-minute refresh/stale-state UI, and a server DTO that deliberately contains no earnings/rate/amount fields. New focused tests pass 3/3; frontend lint and production build pass.
+- 2026-09-21: Compacted the warehouse TV dashboard header by removing the large `Рейтинг комплектувальників` title, tightening outer/header spacing, clock, and utility controls, and explicitly vertically centering all ranking-table cell content.
+- 2026-09-21: Reduced the warehouse dashboard ranking-table header height and font scale while keeping header labels vertically centered.
+- 2026-09-21: Removed the ranking table's forced `height: 100%`, which had caused the browser to stretch `thead`; the table header now has a fixed compact 30px height independent of data rows.

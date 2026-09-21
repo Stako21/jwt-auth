@@ -8,6 +8,7 @@ import {
 } from "react";
 import { AuthContext } from "./AuthContext";
 import { fetchAppConfig } from "../services/config.api";
+import { ROLE_IDS } from "../utils/roles";
 
 const AppConfigContext = createContext({
   appConfig: null,
@@ -27,8 +28,12 @@ export function AppConfigProvider({ children }) {
   const [loading, setLoading] = useState(false);
 
   const loadConfig = useCallback(async () => {
-    if (!isUserLogged) {
+    if (
+      !isUserLogged ||
+      Number(userInfo?.role) === ROLE_IDS.WarehouseDashboard
+    ) {
       setAppConfig(null);
+      setLoading(false);
       return;
     }
 
@@ -42,7 +47,7 @@ export function AppConfigProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [isUserLogged, userInfo?.branchId]);
+  }, [isUserLogged, userInfo?.branchId, userInfo?.role]);
 
   useEffect(() => {
     loadConfig();

@@ -5,9 +5,18 @@ import { getTroPeople } from "../../client/src/components/Documents/troPeople.js
 import {
   denyOneCIntegrationAccount,
   ensureOneCIntegrationAccount,
+  requireIntegrationCapability,
 } from "../middlewares/oneCIntegrationAccount.js";
 
-const USER = { id: 900, branchId: 1, userName: "one_c_test" };
+const USER = {
+  principalType: "integration",
+  integrationAccountId: 900,
+  userName: "one_c_test",
+  branchIds: [1],
+  cityIds: [3],
+  canProcessRequests: true,
+  canSyncStatuses: true,
+};
 const CREATED_PAYLOAD = {
   portal_document_number: "ТРО-ZP-000125",
   document_1c_guid: "11111111-1111-4111-8111-111111111111",
@@ -72,9 +81,10 @@ function fakeRepository(initialDocuments = [document()]) {
     history,
     get deleted() { return deleted; },
     async getAccessibleBranchIds() { return [1]; },
-    async getReadyCeiling({ branchIds, movementType }) {
+    async getReadyCeiling({ branchIds, cityIds = [], movementType }) {
       const rows = [...documents.values()].filter((item) =>
         branchIds.includes(item.branch_id)
+        && (!cityIds.length || cityIds.includes(item.city))
         && item.document_type === "TRO"
         && item.status === "NOT_COMPLETED"
         && (!movementType || item.movement_type === movementType))
@@ -85,9 +95,10 @@ function fakeRepository(initialDocuments = [document()]) {
       const last = rows.at(-1);
       return last ? { createdAt: last.created_at, id: last.id } : null;
     },
-    async listReady({ branchIds, movementType, after, ceiling, limit }) {
+    async listReady({ branchIds, cityIds = [], movementType, after, ceiling, limit }) {
       return [...documents.values()].filter((item) =>
         branchIds.includes(item.branch_id)
+        && (!cityIds.length || cityIds.includes(item.city))
         && item.document_type === "TRO"
         && item.status === "NOT_COMPLETED"
         && (!movementType || item.movement_type === movementType)
@@ -115,9 +126,10 @@ function fakeRepository(initialDocuments = [document()]) {
         }));
     },
     async getItems() { return []; },
-    async getPendingCeiling({ branchIds }) {
+    async getPendingCeiling({ branchIds, cityIds = [] }) {
       const rows = [...documents.values()].filter((item) =>
         branchIds.includes(item.branch_id) && item.document_1c_guid
+        && (!cityIds.length || cityIds.includes(item.city))
         && item.status !== "REJECTED" && [null, "NEW", "IN_PROGRESS"].includes(item.one_c_stage))
         .sort((left, right) => compareCursorTuple(left, {
           createdAt: right.created_at,
@@ -126,9 +138,10 @@ function fakeRepository(initialDocuments = [document()]) {
       const last = rows.at(-1);
       return last ? { createdAt: last.created_at, id: last.id } : null;
     },
-    async listPending({ branchIds, after, ceiling, limit }) {
+    async listPending({ branchIds, cityIds = [], after, ceiling, limit }) {
       return [...documents.values()].filter((item) =>
         branchIds.includes(item.branch_id) && item.document_1c_guid
+        && (!cityIds.length || cityIds.includes(item.city))
         && item.status !== "REJECTED" && [null, "NEW", "IN_PROGRESS"].includes(item.one_c_stage)
         && (!after || compareCursorTuple(item, after) > 0)
         && (!ceiling || compareCursorTuple(item, ceiling) <= 0))
@@ -204,6 +217,18 @@ test("GET returns NOT_COMPLETED documents and excludes NEW", async () => {
   assert.equal(result.data[0].status, "NOT_COMPLETED");
   assert.deepEqual(result.data[0].city, { id: 3, name: "Черкаси" });
   assert.deepEqual(result.pagination, { next_cursor: null, has_more: false });
+});
+
+test("integration city scope filters queues and protects callbacks", async () => {
+  const foreign = document({ id: 126, city: 4, document_number: "ТРО-DP-000126" });
+  const repo = fakeRepository([document(), foreign]);
+  const service = createTroIntegrationService(repo);
+  const ready = await service.listReady(USER);
+  assert.deepEqual(ready.data.map((item) => item.portal_document_id), [125]);
+  await assert.rejects(
+    service.created(USER, 126, { ...CREATED_PAYLOAD, portal_document_number: foreign.document_number }),
+    (error) => error instanceof IntegrationError && error.status === 403 && error.code === "CITY_ACCESS_DENIED",
+  );
 });
 
 test("GET returns immutable request position snapshots for new-model TRO", async () => {
@@ -434,7 +459,10 @@ test("CANCELLED after IN_PROGRESS also rejects the portal request", async () => 
   assert.equal(repo.documents.get(125).one_c_stage, "CANCELLED");
   assert.equal(repeated.idempotent, true);
   assert.equal(repo.history.filter((item) => item.action === "ONE_C_STAGE").length, 2);
-  assert.deepEqual(notifications, [[USER, 125, "PLANNED", "REJECTED"]]);
+  assert.equal(notifications.length, 1);
+  assert.deepEqual(notifications[0].slice(1), [125, "PLANNED", "REJECTED"]);
+  assert.equal(notifications[0][0].role, 1);
+  assert.equal(notifications[0][0].branchId, 1);
 });
 
 test("repeated CANCELLED repairs a portal request that was not cancelled", async () => {
@@ -479,7 +507,7 @@ test("rejected keeps the document and repeated identical request is idempotent",
   assert.equal(saved.ta_user_id, before.ta);
   assert.equal(saved.executor_name, null);
   assert.equal(repo.history.length, 1);
-  assert.equal(repo.history[0].userId, USER.id);
+  assert.equal(repo.history[0].userId, null);
   assert.equal(
     repo.history[0].comment,
     "Заявку відхилено в УП.\nВідповідальний: Администратор.\nПричина: Некоректні дані торгової точки.\nКод причини: TRADE_POINT_ERROR.",
@@ -644,16 +672,15 @@ function invoke(middleware, user) {
   return { nextCalled, statusCode, body };
 }
 
-test("only configured integration account can use /api/1c and it is denied elsewhere", () => {
-  const previous = process.env.ONE_C_INTEGRATION_LOGINS;
-  process.env.ONE_C_INTEGRATION_LOGINS = "one_c_test";
-  try {
-    assert.equal(invoke(ensureOneCIntegrationAccount, USER).nextCalled, true);
-    assert.equal(invoke(ensureOneCIntegrationAccount, { ...USER, userName: "ordinary" }).statusCode, 403);
-    assert.equal(invoke(denyOneCIntegrationAccount, USER).statusCode, 403);
-    assert.equal(invoke(denyOneCIntegrationAccount, { ...USER, userName: "ordinary" }).nextCalled, true);
-  } finally {
-    if (previous === undefined) delete process.env.ONE_C_INTEGRATION_LOGINS;
-    else process.env.ONE_C_INTEGRATION_LOGINS = previous;
-  }
+test("integration principals can use /api/1c and are denied ordinary APIs", () => {
+  assert.equal(invoke(ensureOneCIntegrationAccount, USER).nextCalled, true);
+  assert.equal(invoke(ensureOneCIntegrationAccount, { userName: "ordinary" }).statusCode, 403);
+  assert.equal(invoke(denyOneCIntegrationAccount, USER).statusCode, 403);
+  assert.equal(invoke(denyOneCIntegrationAccount, { userName: "ordinary" }).nextCalled, true);
+});
+
+test("integration capabilities separate request processing from status sync", () => {
+  const requestOnly = { ...USER, canProcessRequests: true, canSyncStatuses: false };
+  assert.equal(invoke(requireIntegrationCapability("canProcessRequests"), requestOnly).nextCalled, true);
+  assert.equal(invoke(requireIntegrationCapability("canSyncStatuses"), requestOnly).statusCode, 403);
 });

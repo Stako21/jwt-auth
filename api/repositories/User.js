@@ -1,4 +1,5 @@
 import pool from "../db.cjs";
+import { ROLE_IDS } from "../utils/roles.js";
 
 class UserRepository {
   static async insertUser(
@@ -140,8 +141,9 @@ class UserRepository {
       FROM users
       WHERE is_active = 1
         AND branch_id = ?
+        AND role <> ?
       `,
-      [branchId],
+      [branchId, ROLE_IDS.WarehouseDashboard],
     );
 
     return rows;
@@ -340,9 +342,10 @@ class UserRepository {
        AND p.branch_id = u.branch_id
       WHERE u.is_active = 1
         AND u.branch_id = ?
+        AND u.role <> ?
       ORDER BY u.role, u.user_name
       `,
-      [branchId],
+      [branchId, ROLE_IDS.WarehouseDashboard],
     );
     return [rows];
   }

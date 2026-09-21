@@ -7,6 +7,7 @@ export const ROLE_LABELS = {
   6: "Бухгалтер",
   7: "Склад",
   8: "Комплектувальник (Picker)",
+  9: "Складський екран",
 };
 
 export const ROLE_IDS = {
@@ -18,6 +19,7 @@ export const ROLE_IDS = {
   Accountant: 6,
   Warehouse: 7,
   Picker: 8,
+  WarehouseDashboard: 9,
 };
 
 export function roleName(id) {
