@@ -56,13 +56,6 @@ class AuthController {
         }
       }
 
-      if (user_name) {
-        const existingByUserName = await UserRepository.getUserByUserName(user_name);
-        if (existingByUserName) {
-          throw new Conflict("Користувач з таким user_name вже існує");
-        }
-      }
-
       if (userGuid) {
         const existingByGuid = await UserRepository.getUserByGuid(
           userGuid,

@@ -246,16 +246,6 @@ class UserController {
         }
       }
 
-      if (user_name) {
-        const existingByUserName = await UserRepository.getUserByUserName(
-          user_name,
-        );
-        if (existingByUserName && Number(existingByUserName.id) !== Number(id)) {
-          throw new Conflict("Користувач з таким user_name вже існує");
-        }
-      }
-
-
       if (userGuid) {
         const existingByGuid = await UserRepository.getUserByGuid(
           userGuid,

@@ -2535,3 +2535,8 @@ Frontend:
 - Changed normalized SalesReport planning so an otherwise valid document whose historical `salesAgentGuid`/`agentLogins` cannot resolve to a portal workplace is skipped with a detailed `UNRESOLVED_AGENT` diagnostic instead of blocking the whole source file. The diagnostic preserves document GUID/number plus the source agent GUID/name/logins; no current login is guessed and historical sales are never reassigned to a new employee.
 - Resolvable documents still execute atomically. An import containing skipped unresolved documents returns `completed_with_warnings` / `partial_import`, while GUID/login ambiguity, multiple-workplace login conflicts, document-owner changes, duplicate active GUIDs, and ambiguous legacy backfill remain hard failures. Successfully processed source files retain the existing delete-after-success behavior so the same batch is not retried continuously.
 - All 93 backend tests pass when executed sequentially in-process; the ordinary parallel Node runner is blocked only by the local Windows sandbox's process-spawn policy. No migration or frontend rebuild is required for this backend-only change.
+
+## 2026-09-23 - Duplicate user display names
+
+- Removed the incorrect create/update validation that treated `users.user_name` as globally unique. It is a display name and legitimate office accounts such as `Конечный покупатель` may repeat in different cities; login `users.NAME` and branch-scoped `user_guid` remain the identity constraints.
+- Removed the now-unused repository lookup by display name. No schema migration or frontend rebuild is required.

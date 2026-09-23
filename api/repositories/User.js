@@ -109,14 +109,6 @@ class UserRepository {
     return rows[0] || null;
   }
 
-  static async getUserByUserName(user_name) {
-    if (!user_name) return null;
-    const [rows] = await pool.query("SELECT * FROM users WHERE user_name = ?", [
-      user_name,
-    ]);
-    return rows.length > 0 ? rows[0] : null;
-  }
-
   static async getUserByGuid(userGuid, branchId) {
     if (!userGuid) return null;
     const [rows] = await pool.query(
