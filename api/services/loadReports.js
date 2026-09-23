@@ -452,6 +452,7 @@ async function runSalesReportImport(
     await connection.commit();
 
     if (source.deleteAfterSuccess) await fs.unlink(salesFile);
+    const hasWarnings = plan.counters.unresolved > 0;
     const details = {
       file: salesFile,
       branchId,
@@ -463,9 +464,11 @@ async function runSalesReportImport(
     };
     runLog.end("loader completed", details);
     return {
-      status: "completed",
-      code: "import_completed",
-      message: "Sales reports imported successfully",
+      status: hasWarnings ? "completed_with_warnings" : "completed",
+      code: hasWarnings ? "partial_import" : "import_completed",
+      message: hasWarnings
+        ? "Sales reports imported with unresolved agents skipped"
+        : "Sales reports imported successfully",
       details,
     };
   } catch (error) {

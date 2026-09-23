@@ -2522,3 +2522,16 @@ Frontend:
 - Added `GET /api/balances/:slug/pdf` and a responsive `Зберегти PDF` action on every balance page. The protected endpoint resolves the same branch-scoped active balance page as the XLSX download and re-reads the current source file when generating the PDF.
 - The PDF shows the configured warehouse/page title, `Залишок актуальний на:` timestamp from the workbook (falling back to the XLSX modification time), hierarchy indentation, and only the configured visible columns in their saved order. The configured Price helper column remains hidden, matching the screen.
 - Added focused template/hierarchy coverage and made the shared parser receive the caller's XLSX adapter, so the backend uses its own declared dependency instead of resolving `client/node_modules`. All 92 backend tests, frontend lint, production build, dependency-tree checks, and production-dependency audits pass; only the existing Sass and bundle-size warnings remain. No migration is required.
+
+## 2026-09-23 — PM2 production update runbook
+
+- Added `documentation/update-pm2-production.md` for updating the existing `balance.roshen.zp.ua` PM2 deployment to pinned release `82ec22c`.
+- The runbook covers DB/env/import/frontend backups, clean Git checkout, production environment and Chromium checks, deterministic installs, tests, migrations, build, PM2/Nginx restart, health/browser verification, and code rollback without unsafe automatic Git resets or manual migration reversal.
+- Documented the two known false-positive schema checks in the current bootstrap doctor (`scheduler_tasks.id` and lowercase legacy `users` columns) so they are not confused with actual migration failures.
+- Clarified the runbook for an SSH-only workflow: one interactive `ssh -t` session from the administrator's local Windows terminal, explicit local/remote command labels, password prompt behavior, and keeping the session open through smoke-test or rollback.
+
+## 2026-09-23 - Sales Report unresolved-agent partial import
+
+- Changed normalized SalesReport planning so an otherwise valid document whose historical `salesAgentGuid`/`agentLogins` cannot resolve to a portal workplace is skipped with a detailed `UNRESOLVED_AGENT` diagnostic instead of blocking the whole source file. The diagnostic preserves document GUID/number plus the source agent GUID/name/logins; no current login is guessed and historical sales are never reassigned to a new employee.
+- Resolvable documents still execute atomically. An import containing skipped unresolved documents returns `completed_with_warnings` / `partial_import`, while GUID/login ambiguity, multiple-workplace login conflicts, document-owner changes, duplicate active GUIDs, and ambiguous legacy backfill remain hard failures. Successfully processed source files retain the existing delete-after-success behavior so the same batch is not retried continuously.
+- All 93 backend tests pass when executed sequentially in-process; the ordinary parallel Node runner is blocked only by the local Windows sandbox's process-spawn policy. No migration or frontend rebuild is required for this backend-only change.

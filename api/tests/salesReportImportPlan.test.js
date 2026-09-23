@@ -137,11 +137,45 @@ test("route logins mapped to different users produce multi-user conflict", () =>
   assert.equal(plan.hardConflicts[0].code, "AGENT_LOGINS_MULTI_USER_CONFLICT");
 });
 
-test("unknown GUID and logins produce UNRESOLVED_AGENT for a new document", () => {
+test("unknown GUID and logins skip a new document without blocking the import", () => {
   const row = sourceRow();
   const snapshot = normalizeSalesReportSource([row]);
   const plan = buildSalesReportImportPlan({ snapshot });
-  assert.equal(plan.hardConflicts[0].code, "UNRESOLVED_AGENT");
+  assert.equal(plan.actions.length, 0);
+  assert.equal(plan.counters.unresolved, 1);
+  assert.equal(plan.hasHardConflicts, false);
+  assert.deepEqual(plan.diagnostics[0], {
+    code: "UNRESOLVED_AGENT",
+    documentGuid: row.DocumentGuid.toLowerCase(),
+    documentNumber: row.number,
+    salesAgentGuid: row.salesAgentGuid.toLowerCase(),
+    salesAgentName: row.salesAgent,
+    agentLogins: row.agentLogins,
+  });
+});
+
+test("unresolved documents do not prevent resolved documents from being planned", () => {
+  const resolved = sourceRow();
+  const unresolved = sourceRow({
+    DocumentGuid: guid(2),
+    salesAgentGuid: guid(102),
+    agentLogins: [],
+    number: "СГ0002",
+    salesAgent: "Former employee",
+  });
+  const snapshot = normalizeSalesReportSource([resolved, unresolved]);
+  const user = portalUser(1, "UA013-0047", guid(101));
+  const plan = buildSalesReportImportPlan({
+    snapshot,
+    usersByGuid: new Map([[guid(101), [user]]]),
+    agentsByLogin: new Map([["UA013-0047", [user]]]),
+  });
+
+  assert.equal(plan.actions.length, 1);
+  assert.equal(plan.actions[0].row.documentGuid, guid(1));
+  assert.equal(plan.counters.unresolved, 1);
+  assert.equal(plan.diagnostics[0].documentGuid, guid(2));
+  assert.equal(plan.hasHardConflicts, false);
 });
 
 test("existing GUID preserves its user when source agent is no longer current", () => {

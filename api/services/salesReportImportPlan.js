@@ -375,10 +375,13 @@ export function buildSalesReportImportPlan({
 
     if (!user) {
       counters.unresolved += 1;
-      hardConflicts.push({
+      diagnostics.push({
         code: "UNRESOLVED_AGENT",
         documentGuid: row.documentGuid,
         documentNumber: row.number,
+        salesAgentGuid: row.salesAgentGuid,
+        salesAgentName: row.salesAgent,
+        agentLogins: row.agentLogins,
       });
       continue;
     }
