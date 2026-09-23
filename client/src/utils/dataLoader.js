@@ -1,4 +1,5 @@
 import { parseBalanceWorkbookData } from "./balanceWorkbookParser";
+import { balanceXlsxAdapter } from "./balanceXlsxAdapter";
 
 export const loadData = async (fileName) => {
   try {
@@ -8,7 +9,7 @@ export const loadData = async (fileName) => {
     }
 
     const buffer = await response.arrayBuffer();
-    const { hierarchy } = parseBalanceWorkbookData(buffer);
+    const { hierarchy } = parseBalanceWorkbookData(buffer, {}, balanceXlsxAdapter);
     return hierarchy;
   } catch (error) {
     console.error("Error loading data:", error);

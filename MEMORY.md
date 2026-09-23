@@ -2516,3 +2516,9 @@ Frontend:
 - 2026-09-21: Compacted the warehouse TV dashboard header by removing the large `Рейтинг комплектувальників` title, tightening outer/header spacing, clock, and utility controls, and explicitly vertically centering all ranking-table cell content.
 - 2026-09-21: Reduced the warehouse dashboard ranking-table header height and font scale while keeping header labels vertically centered.
 - 2026-09-21: Removed the ranking table's forced `height: 100%`, which had caused the browser to stretch `thead`; the table header now has a fixed compact 30px height independent of data rows.
+
+## 2026-09-23 — Balance PDF export
+
+- Added `GET /api/balances/:slug/pdf` and a responsive `Зберегти PDF` action on every balance page. The protected endpoint resolves the same branch-scoped active balance page as the XLSX download and re-reads the current source file when generating the PDF.
+- The PDF shows the configured warehouse/page title, `Залишок актуальний на:` timestamp from the workbook (falling back to the XLSX modification time), hierarchy indentation, and only the configured visible columns in their saved order. The configured Price helper column remains hidden, matching the screen.
+- Added focused template/hierarchy coverage and made the shared parser receive the caller's XLSX adapter, so the backend uses its own declared dependency instead of resolving `client/node_modules`. All 92 backend tests, frontend lint, production build, dependency-tree checks, and production-dependency audits pass; only the existing Sass and bundle-size warnings remain. No migration is required.

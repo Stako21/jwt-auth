@@ -11,7 +11,7 @@
 
 .controlsRow {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto;
+  grid-template-columns: minmax(220px, 1fr) auto auto auto;
   align-items: center;
   gap: 14px;
 }
@@ -119,6 +119,46 @@
   }
 }
 
+.pdfButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  min-height: 34px;
+  padding: 0 $space-4;
+  border: 1px solid $primary-accent-border;
+  border-radius: $radius-md;
+  background: $primary-accent;
+  color: $text-on-accent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    background-color $motion-fast $motion-ease,
+    opacity $motion-fast $motion-ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: $primary-accent-hover;
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 1280px) {
+  .controlsRow {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .searchField {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 768px) {
   .panel {
     padding: 14px 14px $space-3;
@@ -138,6 +178,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .pdfButton {
+    min-width: 0;
+  }
+
   .segmentButton {
     min-width: 0;
   }
@@ -150,5 +194,9 @@
 
   .stats {
     justify-content: flex-start;
+  }
+
+  .pdfButton {
+    width: 100%;
   }
 }

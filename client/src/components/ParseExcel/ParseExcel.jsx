@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSnackbar } from "notistack";
 import { Filter } from "../Filter/Filter";
 import { Table } from "../Table/Table";
-import { fetchBalanceFile } from "../../services/balances.api";
+import { downloadBalancePdf, fetchBalanceFile } from "../../services/balances.api";
 import { parseBalanceWorkbookData } from "../../utils/balanceWorkbookParser";
+import { balanceXlsxAdapter } from "../../utils/balanceXlsxAdapter";
 import style from "./ParseExcel.module.scss";
 import { DataLoader } from "../DataLoader/DataLoader";
 
@@ -85,6 +87,24 @@ export const ParseExcel = ({
   const [isRendered, setIsRendered] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [columns, setColumns] = useState(null);
+  const [isSavingPdf, setIsSavingPdf] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
+
+  const handleSavePdf = useCallback(async () => {
+    if (!balanceSlug || isSavingPdf) return;
+    setIsSavingPdf(true);
+    try {
+      await downloadBalancePdf(balanceSlug);
+    } catch (error) {
+      console.error("Failed to download balance PDF:", error);
+      enqueueSnackbar(
+        error?.response?.data?.message || "Не вдалося зберегти PDF залишків",
+        { variant: "error" },
+      );
+    } finally {
+      setIsSavingPdf(false);
+    }
+  }, [balanceSlug, enqueueSnackbar, isSavingPdf]);
 
   const loadFile = useCallback(async () => {
     try {
@@ -106,7 +126,7 @@ export const ParseExcel = ({
         headerEndRow,
         dataStartRow,
         columnConfig,
-      });
+      }, balanceXlsxAdapter);
       setLastUpdateTime(lastUpdateTime);
       setParsedData(hierarchy);
       setColumns(parsedColumns);
@@ -154,6 +174,8 @@ export const ParseExcel = ({
         onFilterChange={setSelectedFilter}
         totalCount={totalRows}
         visibleCount={visibleRows}
+        onSavePdf={handleSavePdf}
+        isSavingPdf={isSavingPdf}
       />
 
       {!isRendered ? (

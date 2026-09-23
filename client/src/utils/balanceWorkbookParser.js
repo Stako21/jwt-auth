@@ -1,5 +1,3 @@
-import * as XLSX from "xlsx";
-
 function extractLastUpdateTime(rows) {
   const periodRow = rows.find(
     (row) => typeof row?.[0] === "string" && row[0].trim().startsWith("Период:"),
@@ -294,7 +292,7 @@ function getCompositeHeader(rows, merges, headerRow, headerEndRow, sourceIndex) 
   return parts.join(" / ");
 }
 
-function buildConfiguredHierarchy(rows, rowMeta, merges, columnOffset, options) {
+function buildConfiguredHierarchy(rows, rowMeta, merges, columnOffset, options, XLSX) {
   const columnConfig = parseColumnConfig(options.columnConfig);
   const headerRow = Number(options.headerRow);
   const headerEndRow = Number(options.headerEndRow ?? options.headerRow);
@@ -403,7 +401,10 @@ function buildConfiguredHierarchy(rows, rowMeta, merges, columnOffset, options) 
   return { hierarchy, columns };
 }
 
-export function parseBalanceWorkbookData(data, options = {}) {
+export function parseBalanceWorkbookData(data, options = {}, XLSX) {
+  if (!XLSX?.read || !XLSX?.utils) {
+    throw new Error("Бібліотека XLSX не передана до парсера залишків");
+  }
   const workbook = XLSX.read(data, { type: "array", cellStyles: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const sheetRange = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
@@ -434,7 +435,14 @@ export function parseBalanceWorkbookData(data, options = {}) {
   }
 
   if (configured) {
-    const result = buildConfiguredHierarchy(rows, rowMeta, merges, columnOffset, options);
+    const result = buildConfiguredHierarchy(
+      rows,
+      rowMeta,
+      merges,
+      columnOffset,
+      options,
+      XLSX,
+    );
     return {
       ...result,
       lastUpdateTime: extractLastUpdateTime(rows),

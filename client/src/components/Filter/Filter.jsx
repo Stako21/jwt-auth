@@ -16,6 +16,8 @@ export const Filter = ({
   onFilterChange,
   totalCount,
   visibleCount,
+  onSavePdf,
+  isSavingPdf = false,
 }) => (
   <section className={style.panel} aria-label="Пошук і фільтр залишків">
     <div className={style.controlsRow}>
@@ -53,6 +55,16 @@ export const Filter = ({
       <div className={style.stats} aria-live="polite">
         Показано: <strong>{visibleCount}</strong> / {totalCount}
       </div>
+
+      <button
+        type="button"
+        className={style.pdfButton}
+        onClick={onSavePdf}
+        disabled={isSavingPdf}
+      >
+        <i className="fa-regular fa-file-pdf" aria-hidden="true" />
+        {isSavingPdf ? "Формування…" : "Зберегти PDF"}
+      </button>
     </div>
   </section>
 );

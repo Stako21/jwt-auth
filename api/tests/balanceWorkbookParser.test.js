@@ -46,7 +46,7 @@ test("uses XLSX outline levels for numeric group names and keeps configured Pric
       ],
       priceColumnId: "column-2",
     },
-  });
+  }, XLSX);
 
   assert.equal(result.hierarchy[0].productNameCell, "КАРАМЕЛЬ 200/300");
   assert.equal(result.hierarchy[0].children.length, 1);
