@@ -10,6 +10,10 @@ import {
   getTroDocumentExtension,
   getTroGrantedBranchIds,
 } from "./TroDocumentService.js";
+import {
+  normalizeCalendarDateInput,
+  serializeCalendarDate,
+} from "../utils/calendarDate.js";
 
 const EXECUTOR_TYPE_DRIVER_PREFIX = "[[EXECUTOR_TYPE:DRIVER]]";
 const OPTIONAL_ITEM_DATE_SENTINEL = "1000-01-01";
@@ -54,38 +58,51 @@ function decodeDocumentComment(comment) {
   };
 }
 
-function normalizeOptionalDate(value) {
-  if (value === undefined || value === null) {
-    return null;
+export function normalizeDocumentItemDates(
+  manufactureDate,
+  expiryDate,
+  operation,
+) {
+  const normalizedManufactureDate = normalizeCalendarDateInput(manufactureDate);
+  const normalizedExpiryDate = normalizeCalendarDateInput(expiryDate);
+
+  if (
+    operation !== "GIVE" &&
+    (!normalizedManufactureDate || !normalizedExpiryDate)
+  ) {
+    throw new Error("Для цієї позиції дати виробництва та придатності обовʼязкові");
   }
 
-  if (typeof value === "string" && value.trim() === "") {
-    return null;
+  if (
+    normalizedManufactureDate &&
+    normalizedExpiryDate &&
+    normalizedManufactureDate > normalizedExpiryDate
+  ) {
+    throw new Error("Дата виготовлення не може бути пізніше дати придатності");
   }
 
-  return value;
+  return {
+    manufactureDate:
+      normalizedManufactureDate || OPTIONAL_ITEM_DATE_SENTINEL,
+    expiryDate: normalizedExpiryDate || OPTIONAL_ITEM_DATE_SENTINEL,
+  };
 }
 
-function getStoredItemDate(value, operation) {
-  const normalizedValue = normalizeOptionalDate(value);
-
-  if (normalizedValue !== null) {
-    return normalizedValue;
-  }
-
-  return operation === "GIVE" ? OPTIONAL_ITEM_DATE_SENTINEL : null;
-}
-
-function getResponseItemDate(value, operation) {
+export function serializeDocumentItemDate(value, operation) {
   if (!value) {
     return null;
   }
 
-  if (operation === "GIVE" && value === OPTIONAL_ITEM_DATE_SENTINEL) {
+  const serializedValue = serializeCalendarDate(value);
+
+  if (
+    operation === "GIVE" &&
+    serializedValue === OPTIONAL_ITEM_DATE_SENTINEL
+  ) {
     return null;
   }
 
-  return value;
+  return serializedValue;
 }
 
 /**
@@ -261,9 +278,11 @@ export async function createDocumentService(user, payload) {
         throw new Error("Неверное значение operation");
       }
 
-      if (operation !== "GIVE" && (!manufactureDate || !expiryDate)) {
-        throw new Error("Для цієї позиції дати виробництва та придатності обовʼязкові");
-      }
+      const storedDates = normalizeDocumentItemDates(
+        manufactureDate,
+        expiryDate,
+        operation,
+      );
 
       const [[product]] = await connection.query(
         `
@@ -306,8 +325,8 @@ export async function createDocumentService(user, payload) {
           product.group_name,
           unit,
           quantity,
-          getStoredItemDate(manufactureDate, operation),
-          getStoredItemDate(expiryDate, operation),
+          storedDates.manufactureDate,
+          storedDates.expiryDate,
           operation,
         ],
       );
@@ -1150,8 +1169,11 @@ export async function getDocumentByIdService(user, documentId) {
 
   const normalizedItems = items.map((item) => ({
     ...item,
-    manufacture_date: getResponseItemDate(item.manufacture_date, item.operation),
-    expiry_date: getResponseItemDate(item.expiry_date, item.operation),
+    manufacture_date: serializeDocumentItemDate(
+      item.manufacture_date,
+      item.operation,
+    ),
+    expiry_date: serializeDocumentItemDate(item.expiry_date, item.operation),
   }));
 
   /** -----------------------------
@@ -1444,9 +1466,11 @@ export async function updateDocumentService(user, documentId, payload) {
         throw new Error("Неверное значение operation");
       }
 
-      if (operation !== "GIVE" && (!manufactureDate || !expiryDate)) {
-        throw new Error("Для цієї позиції дати виробництва та придатності обовʼязкові");
-      }
+      const storedDates = normalizeDocumentItemDates(
+        manufactureDate,
+        expiryDate,
+        operation,
+      );
 
       const [[product]] = await connection.query(
         `
@@ -1489,8 +1513,8 @@ export async function updateDocumentService(user, documentId, payload) {
           product.group_name,
           unit,
           quantity,
-          getStoredItemDate(manufactureDate, operation),
-          getStoredItemDate(expiryDate, operation),
+          storedDates.manufactureDate,
+          storedDates.expiryDate,
           operation,
         ],
       );

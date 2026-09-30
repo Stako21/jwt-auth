@@ -8,6 +8,7 @@ import { loadTroProducts } from "./loadTroProducts.js";
 import { loadTradePoints } from "./loadTradePoints.js";
 import { retryFailedNotifications } from "./notify.retry.service.js";
 import { createTaskLogger } from "./taskLogger.js";
+import { recordImportRun } from "./importRunJournal.js";
 import pool from "../db.cjs";
 import { getSystemBranch } from "./appConfig.service.js";
 
@@ -284,6 +285,7 @@ function withLock(taskDefinition, taskHandler) {
 
   return async function runLockedTask(context = {}) {
     if (isRunning) {
+      const finishedAt = new Date();
       const result = normalizeTaskRunResult(taskDefinition.key, {
         status: "skipped",
         code: "already_running",
@@ -297,11 +299,23 @@ function withLock(taskDefinition, taskHandler) {
         trigger: context.trigger || "manual",
       });
       recordTaskRun(taskDefinition, result, context);
+      if (taskDefinition.recordsImportRuns) {
+        recordImportRun({
+          task: taskDefinition.key,
+          label: taskDefinition.label,
+          branch: taskDefinition.systemBranch,
+          trigger: context.trigger,
+          result,
+          startedAt: finishedAt,
+          finishedAt,
+        });
+      }
       await persistSchedulerTaskLastRun(taskDefinition);
       return result;
     }
 
     isRunning = true;
+    const startedAt = new Date();
     const runLog = schedulerLogger.start("task started", {
       task: taskDefinition.key,
       trigger: context.trigger || "manual",
@@ -312,6 +326,17 @@ function withLock(taskDefinition, taskHandler) {
       const result = normalizeTaskRunResult(taskDefinition.key, rawResult);
       logTaskResult(runLog, taskDefinition.key, result, context);
       recordTaskRun(taskDefinition, result, context);
+      if (taskDefinition.recordsImportRuns) {
+        recordImportRun({
+          task: taskDefinition.key,
+          label: taskDefinition.label,
+          branch: taskDefinition.systemBranch,
+          trigger: context.trigger,
+          result,
+          startedAt,
+          finishedAt: new Date(),
+        });
+      }
       await persistSchedulerTaskLastRun(taskDefinition);
       return result;
     } catch (error) {
@@ -328,6 +353,17 @@ function withLock(taskDefinition, taskHandler) {
         trigger: context.trigger || "manual",
       });
       recordTaskRun(taskDefinition, result, context);
+      if (taskDefinition.recordsImportRuns) {
+        recordImportRun({
+          task: taskDefinition.key,
+          label: taskDefinition.label,
+          branch: taskDefinition.systemBranch,
+          trigger: context.trigger,
+          result,
+          startedAt,
+          finishedAt: new Date(),
+        });
+      }
       await persistSchedulerTaskLastRun(taskDefinition);
       return result;
     } finally {
@@ -347,6 +383,7 @@ const schedulerTaskDefinitions = {
     blockedReason: null,
     systemBranch: null,
     lastRun: null,
+    recordsImportRuns: true,
   },
   loadSalesReports: {
     key: "loadSalesReports",
@@ -358,6 +395,7 @@ const schedulerTaskDefinitions = {
     blockedReason: null,
     systemBranch: null,
     lastRun: null,
+    recordsImportRuns: true,
   },
   loadOrdersByTimeReport: {
     key: "loadOrdersByTimeReport",
@@ -369,6 +407,7 @@ const schedulerTaskDefinitions = {
     blockedReason: null,
     systemBranch: null,
     lastRun: null,
+    recordsImportRuns: true,
   },
   loadBillOfLadingReport: {
     key: "loadBillOfLadingReport",
@@ -380,6 +419,7 @@ const schedulerTaskDefinitions = {
     blockedReason: null,
     systemBranch: null,
     lastRun: null,
+    recordsImportRuns: true,
   },
   loadScheduledXlsx1cSalesReports: {
     key: "loadScheduledXlsx1cSalesReports",
@@ -391,6 +431,7 @@ const schedulerTaskDefinitions = {
     blockedReason: null,
     systemBranch: null,
     lastRun: null,
+    recordsImportRuns: true,
   },
   loadProducts: {
     key: "loadProducts",
@@ -402,6 +443,7 @@ const schedulerTaskDefinitions = {
     blockedReason: null,
     systemBranch: null,
     lastRun: null,
+    recordsImportRuns: true,
   },
   loadTroProducts: {
     key: "loadTroProducts",
@@ -413,6 +455,7 @@ const schedulerTaskDefinitions = {
     blockedReason: null,
     systemBranch: null,
     lastRun: null,
+    recordsImportRuns: true,
   },
   loadTradePoints: {
     key: "loadTradePoints",
@@ -424,6 +467,7 @@ const schedulerTaskDefinitions = {
     blockedReason: null,
     systemBranch: null,
     lastRun: null,
+    recordsImportRuns: true,
   },
   retryFailedNotifications: {
     key: "retryFailedNotifications",

@@ -4,6 +4,46 @@ import {
   runSchedulerTask,
   updateSchedulerTask,
 } from "../services/scheduler.js";
+import { listImportRuns } from "../services/importRunJournal.js";
+
+const allowedRunStatuses = new Set([
+  "completed",
+  "completed_with_warnings",
+  "skipped",
+  "failed",
+]);
+
+export function getImportRuns(req, res) {
+  const { task = "", status = "", limit = "100" } = req.query || {};
+  const parsedLimit = Number(limit);
+
+  if (!Number.isInteger(parsedLimit) || parsedLimit < 1 || parsedLimit > 500) {
+    return res.status(422).json({
+      ok: false,
+      error: "limit must be an integer from 1 to 500",
+    });
+  }
+
+  if (status && !allowedRunStatuses.has(status)) {
+    return res.status(422).json({
+      ok: false,
+      error: "Unknown import run status",
+    });
+  }
+
+  const journal = listImportRuns({ task, status, limit: parsedLimit });
+  return res.status(200).json({
+    ok: true,
+    data: journal.data,
+    meta: {
+      returned: journal.data.length,
+      available: journal.available,
+      retention_days: journal.retentionDays,
+      max_entries: journal.maxEntries,
+      volatile: true,
+    },
+  });
+}
 
 export async function getTasks(req, res) {
   await refreshSchedulerTasksState();

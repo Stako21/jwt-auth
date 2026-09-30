@@ -43,6 +43,56 @@ function formatRunTimestamp(value) {
   return date.toLocaleString("uk-UA");
 }
 
+function formatImportEvent(event) {
+  const identity = [event.documentNumber, event.documentGuid]
+    .filter(Boolean)
+    .join(" · ");
+  return `${event.code || "IMPORT_EVENT"}${identity ? ` — ${identity}` : ""}`;
+}
+
+function SalesReportRunDetails({ task }) {
+  if (task.key !== "loadSalesReports" || !task.lastRun?.details) return null;
+
+  const details = task.lastRun.details;
+  const adjustments = Array.isArray(details.adjustments) ? details.adjustments : [];
+  const skippedConflicts = Array.isArray(details.skippedConflicts)
+    ? details.skippedConflicts
+    : [];
+  const diagnostics = Array.isArray(details.diagnostics) ? details.diagnostics : [];
+  const events = [
+    ...adjustments.map((event) => ({ ...event, category: "Автоматично виправлено" })),
+    ...skippedConflicts.map((event) => ({ ...event, category: "Пропущено" })),
+    ...diagnostics.map((event) => ({ ...event, category: "Діагностика" })),
+  ];
+  const hasSummary =
+    Number(details.reassignedCount || details.reassigned) > 0 ||
+    Number(details.guidReplacedCount || details.document_guid_change) > 0 ||
+    Number(details.skipped_conflicts) > 0 ||
+    Number(details.unresolved) > 0;
+
+  if (!hasSummary && events.length === 0) return null;
+
+  return (
+    <details className="mt-1">
+      <summary className="help">Деталі імпорту</summary>
+      <p className="help mb-0">
+        Перепризначено ТА: {Number(details.reassignedCount || details.reassigned || 0)};
+        замінено GUID: {Number(details.guidReplacedCount || details.document_guid_change || 0)};
+        пропущено конфліктів: {Number(details.skipped_conflicts || 0)};
+        не знайдено ТА: {Number(details.unresolved || 0)}.
+      </p>
+      {events.slice(0, 10).map((event, index) => (
+        <p className="help mb-0" key={`${event.category}-${event.code}-${index}`}>
+          {event.category}: {formatImportEvent(event)}
+        </p>
+      ))}
+      {events.length > 10 ? (
+        <p className="help mb-0">Ще подій: {events.length - 10}</p>
+      ) : null}
+    </details>
+  );
+}
+
 export function SchedulerConfig({ title = "Планувальник" }) {
   const { enqueueSnackbar } = useSnackbar();
   const [tasks, setTasks] = useState([]);
@@ -392,6 +442,7 @@ export function SchedulerConfig({ title = "Планувальник" }) {
                           ? ` о ${formatRunTimestamp(task.lastRun.finishedAt)}`
                           : ""}
                       </p>
+                      <SalesReportRunDetails task={task} />
                     </>
                   ) : (
                     <span className="tag is-success is-light">Готово</span>

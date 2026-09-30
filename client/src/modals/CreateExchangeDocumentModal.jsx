@@ -6,6 +6,10 @@ import { getUnitLabel } from "../utils/unitLabels";
 import { useSnackbar } from "notistack";
 import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
 import { UI_TIMING } from "../uiTokens.js";
+import {
+  formatCalendarDate,
+  toCalendarDateInput,
+} from "../utils/calendarDate.js";
 import styles from "./CreateReturnDocumentModal.module.scss";
 
 
@@ -120,10 +124,10 @@ export default function CreateExchangeDocumentModal({
             product: item.product_name,
             unit: item.unit,
             quantity: item.quantity,
-            manufactureDate: formatDateForInput(
+            manufactureDate: toCalendarDateInput(
               item.manufacture_date || item.manufactureDate,
             ),
-            expiryDate: formatDateForInput(item.expiry_date || item.expiryDate),
+            expiryDate: toCalendarDateInput(item.expiry_date || item.expiryDate),
           };
           if (item.operation === "TAKE") {
             take.push(formattedItem);
@@ -150,17 +154,6 @@ export default function CreateExchangeDocumentModal({
     setExecutorType("TA");
     setTakeItems([]);
     setGiveItems([]);
-  }
-
-  // Преобразуем дату из ISO формата в yyyy-MM-dd
-  function formatDateForInput(dateStr) {
-    if (!dateStr) return "";
-    try {
-      const date = new Date(dateStr);
-      return date.toISOString().slice(0, 10);
-    } catch (e) {
-      return dateStr;
-    }
   }
 
   function total(items) {
@@ -341,8 +334,8 @@ export default function CreateExchangeDocumentModal({
                 </td>
                 <td>{getUnitLabel(i.unit)}</td>
                 <td>{i.quantity}</td>
-                <td>{i.manufactureDate}</td>
-                <td>{i.expiryDate}</td>
+                <td>{formatCalendarDate(i.manufactureDate)}</td>
+                <td>{formatCalendarDate(i.expiryDate)}</td>
                 <td>
                   {!isViewOnly && (
                     <button

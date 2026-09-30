@@ -10,6 +10,10 @@ import { getUnitLabel } from "../utils/unitLabels";
 import { useSnackbar } from "notistack";
 import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
 import { UI_TIMING } from "../uiTokens.js";
+import {
+  formatCalendarDate,
+  toCalendarDateInput,
+} from "../utils/calendarDate.js";
 import styles from "./CreateReturnDocumentModal.module.scss";
 
 export default function CreateReturnDocumentModal({
@@ -117,10 +121,10 @@ export default function CreateReturnDocumentModal({
           product: item.product_name || item.productName,
           unit: item.unit,
           quantity: item.quantity,
-          manufactureDate: formatDateForInput(
+          manufactureDate: toCalendarDateInput(
             item.manufacture_date || item.manufactureDate,
           ),
-          expiryDate: formatDateForInput(item.expiry_date || item.expiryDate),
+          expiryDate: toCalendarDateInput(item.expiry_date || item.expiryDate),
         }));
         setItems(formattedItems);
       }
@@ -153,17 +157,6 @@ export default function CreateReturnDocumentModal({
     setComment("");
     setExecutorType("TA");
     setItems([]);
-  }
-
-  // Преобразуем дату из ISO формата в yyyy-MM-dd
-  function formatDateForInput(dateStr) {
-    if (!dateStr) return "";
-    try {
-      const date = new Date(dateStr);
-      return date.toISOString().slice(0, 10);
-    } catch (e) {
-      return dateStr;
-    }
   }
 
   /* ---------------- filters ---------------- */
@@ -457,8 +450,8 @@ export default function CreateReturnDocumentModal({
                       </td>
                       <td>{getUnitLabel(i.unit)}</td>
                       <td>{i.quantity}</td>
-                      <td>{i.manufactureDate}</td>
-                      <td>{i.expiryDate}</td>
+                      <td>{formatCalendarDate(i.manufactureDate)}</td>
+                      <td>{formatCalendarDate(i.expiryDate)}</td>
                       <td>
                         {!isViewOnly && <button
                           className={styles.itemActionButton}

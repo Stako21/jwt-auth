@@ -5,6 +5,16 @@ export async function fetchSchedulerTasks() {
   return response.data?.tasks || [];
 }
 
+export async function fetchImportRuns({ limit = 500 } = {}) {
+  const response = await AuthClient.get("/scheduler/import-runs", {
+    params: { limit },
+  });
+  return {
+    data: response.data?.data || [],
+    meta: response.data?.meta || {},
+  };
+}
+
 export async function runSchedulerTaskNow(taskKey) {
   const response = await AuthClient.post(`/scheduler/run/${taskKey}`);
   return response.data || null;

@@ -101,6 +101,12 @@ router.get(
   adminOnly,
   SchedulerController.getTasks,
 );
+router.get(
+  "/scheduler/import-runs",
+  authMiddleware,
+  adminOnly,
+  SchedulerController.getImportRuns,
+);
 router.post(
   "/scheduler/run/:taskKey",
   authMiddleware,

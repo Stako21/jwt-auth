@@ -123,8 +123,12 @@ export function normalizeSalesReportSource(sourceRows, { minAllowedReportDate } 
   });
 
   const guidCounts = new Map();
+  const numberToGuids = new Map();
   for (const row of rows) {
     guidCounts.set(row.documentGuid, (guidCounts.get(row.documentGuid) || 0) + 1);
+    const guids = numberToGuids.get(row.number) || new Set();
+    guids.add(row.documentGuid);
+    numberToGuids.set(row.number, guids);
   }
   const duplicates = [...guidCounts.entries()]
     .filter(([, count]) => count > 1)
@@ -135,6 +139,21 @@ export function normalizeSalesReportSource(sourceRows, { minAllowedReportDate } 
       "DUPLICATE_DOCUMENT_GUID_IN_SOURCE",
       "Source contains duplicate DocumentGuid values",
       { duplicates },
+    );
+  }
+
+  const duplicateNumbers = [...numberToGuids.entries()]
+    .filter(([, documentGuids]) => documentGuids.size > 1)
+    .map(([documentNumber, documentGuids]) => ({
+      documentNumber,
+      documentGuids: [...documentGuids],
+    }));
+
+  if (duplicateNumbers.length) {
+    throw new SalesReportImportError(
+      "DUPLICATE_DOCUMENT_NUMBER_IN_SOURCE",
+      "Source contains one document number with different DocumentGuid values",
+      { duplicateNumbers },
     );
   }
 
@@ -216,7 +235,7 @@ function createdAtValue(row) {
 function selectExistingGuidRow(rows) {
   const activeRows = rows.filter((row) => row.status === "ACTIVE");
   if (activeRows.length > 1) {
-    return { errorCode: "DUPLICATE_ACTIVE_DOCUMENT_GUID" };
+    return { errorCode: "DUPLICATE_ACTIVE_DOCUMENT_GUID", candidates: activeRows };
   }
   if (activeRows.length === 1) return { row: activeRows[0] };
 
@@ -254,6 +273,40 @@ function selectLegacyRow(rows, user) {
   return { row: null };
 }
 
+function selectActiveNumberFallback(rows) {
+  const activeRows = (rows || []).filter(
+    (row) => row.status === "ACTIVE" && row.document_guid,
+  );
+  if (!activeRows.length) return { row: null };
+  if (activeRows.length === 1) return { row: activeRows[0] };
+  return { errorCode: "ACTIVE_DOCUMENT_NUMBER_AMBIGUOUS", candidates: activeRows };
+}
+
+function existingCandidateDetails(rows) {
+  return (rows || []).map((candidate) => ({
+    id: Number(candidate.id),
+    documentGuid: cleanText(candidate.document_guid).toLowerCase() || null,
+    userId: Number(candidate.user_id) || null,
+    loginAgent: cleanText(candidate.login_agent) || null,
+    salesAgentGuid: cleanText(candidate.sales_agent_guid).toLowerCase() || null,
+    salesAgentName: cleanText(candidate.sales_agent_name) || null,
+  }));
+}
+
+function sourceAgentDetails(row) {
+  return {
+    salesAgentGuid: row.salesAgentGuid,
+    salesAgentName: row.salesAgent,
+    agentLogins: row.agentLogins,
+  };
+}
+
+function hasOtherActiveNumberRow(rows, existingId) {
+  return (rows || []).some(
+    (row) => row.status === "ACTIVE" && Number(row.id) !== Number(existingId),
+  );
+}
+
 function initialCounters(snapshot) {
   return {
     rows_total: snapshot.rowsTotal,
@@ -273,7 +326,10 @@ function initialCounters(snapshot) {
     agent_mapping_conflict: 0,
     agent_logins_multi_user_conflict: 0,
     document_user_change: 0,
+    document_guid_change: 0,
+    reassigned: 0,
     legacy_backfill_ambiguous: 0,
+    skipped_conflicts: 0,
   };
 }
 
@@ -291,22 +347,27 @@ export function buildSalesReportImportPlan({
   usersByGuid = new Map(),
   agentsByLogin = new Map(),
   existingByGuid = new Map(),
+  existingByNumber = new Map(),
   legacyByNumber = new Map(),
 }) {
   const counters = initialCounters(snapshot);
   const actions = [];
   const diagnostics = [];
-  const hardConflicts = [];
+  const skippedConflicts = [];
+  const adjustments = [];
 
   for (const row of snapshot.includedRows) {
     const existingSelection = selectExistingGuidRow(
       existingByGuid.get(row.documentGuid) || [],
     );
     if (existingSelection.errorCode) {
-      hardConflicts.push({
+      counters.skipped_conflicts += 1;
+      skippedConflicts.push({
         code: existingSelection.errorCode,
         documentGuid: row.documentGuid,
         documentNumber: row.number,
+        ...sourceAgentDetails(row),
+        candidates: existingCandidateDetails(existingSelection.candidates),
       });
       continue;
     }
@@ -318,12 +379,14 @@ export function buildSalesReportImportPlan({
         ? "agent_logins_multi_user_conflict"
         : "agent_mapping_conflict";
       counters[counter] += 1;
-      hardConflicts.push({
+      counters.skipped_conflicts += 1;
+      skippedConflicts.push({
         code: resolution.errorCode,
         documentGuid: row.documentGuid,
         documentNumber: row.number,
         guidUserIds: resolution.guidUsers?.map((user) => user.id) || [],
         loginUserIds: resolution.loginUsers?.map((user) => user.id) || [],
+        ...sourceAgentDetails(row),
       });
       continue;
     }
@@ -348,21 +411,64 @@ export function buildSalesReportImportPlan({
           });
         } else {
           counters.unresolved += 1;
-          hardConflicts.push({
+          counters.skipped_conflicts += 1;
+          skippedConflicts.push({
             code: "UNRESOLVED_AGENT",
             documentGuid: row.documentGuid,
             documentNumber: row.number,
+            ...sourceAgentDetails(row),
           });
           continue;
         }
       } else if (existing.user_id && Number(existing.user_id) !== Number(user.id)) {
+        if (hasOtherActiveNumberRow(existingByNumber.get(row.number), existing.id)) {
+          counters.skipped_conflicts += 1;
+          skippedConflicts.push({
+            code: "ACTIVE_DOCUMENT_NUMBER_CONFLICT",
+            documentGuid: row.documentGuid,
+            documentNumber: row.number,
+            existingId: Number(existing.id),
+            ...sourceAgentDetails(row),
+            candidates: existingCandidateDetails(existingByNumber.get(row.number)),
+          });
+          continue;
+        }
         counters.document_user_change += 1;
-        hardConflicts.push({
-          code: "DOCUMENT_USER_CHANGE",
+        counters.reassigned += 1;
+        counters.updated += 1;
+        if (row.isDeleted) counters.cancelled += 1;
+        adjustments.push({
+          code: "DOCUMENT_USER_REASSIGNED",
           documentGuid: row.documentGuid,
           documentNumber: row.number,
           existingUserId: Number(existing.user_id),
           sourceUserId: Number(user.id),
+          previousLogin: cleanText(existing.login_agent) || null,
+          previousSalesAgentGuid:
+            cleanText(existing.sales_agent_guid).toLowerCase() || null,
+          previousSalesAgentName: cleanText(existing.sales_agent_name) || null,
+          sourceLogin: user.loginAgent,
+          ...sourceAgentDetails(row),
+        });
+        actions.push({
+          type: "REPLACE_EXISTING",
+          reason: "DOCUMENT_USER_REASSIGNED",
+          row,
+          user,
+          existing,
+        });
+        continue;
+      }
+
+      if (hasOtherActiveNumberRow(existingByNumber.get(row.number), existing.id)) {
+        counters.skipped_conflicts += 1;
+        skippedConflicts.push({
+          code: "ACTIVE_DOCUMENT_NUMBER_CONFLICT",
+          documentGuid: row.documentGuid,
+          documentNumber: row.number,
+          existingId: Number(existing.id),
+          ...sourceAgentDetails(row),
+          candidates: existingCandidateDetails(existingByNumber.get(row.number)),
         });
         continue;
       }
@@ -386,16 +492,71 @@ export function buildSalesReportImportPlan({
       continue;
     }
 
+    const numberSelection = selectActiveNumberFallback(
+      existingByNumber.get(row.number) || [],
+    );
+    if (numberSelection.errorCode) {
+      counters.skipped_conflicts += 1;
+      skippedConflicts.push({
+        code: numberSelection.errorCode,
+        documentGuid: row.documentGuid,
+        documentNumber: row.number,
+        ...sourceAgentDetails(row),
+        candidates: existingCandidateDetails(numberSelection.candidates),
+      });
+      continue;
+    }
+
+    if (numberSelection.row) {
+      const previous = numberSelection.row;
+      const userChanged = previous.user_id && Number(previous.user_id) !== Number(user.id);
+      counters.document_guid_change += 1;
+      if (userChanged) {
+        counters.document_user_change += 1;
+        counters.reassigned += 1;
+      }
+      counters.updated += 1;
+      if (row.isDeleted) counters.cancelled += 1;
+      adjustments.push({
+        code: userChanged
+          ? "DOCUMENT_GUID_AND_USER_REASSIGNED"
+          : "DOCUMENT_GUID_REPLACED",
+        documentNumber: row.number,
+        previousDocumentGuid: cleanText(previous.document_guid).toLowerCase(),
+        documentGuid: row.documentGuid,
+        existingUserId: Number(previous.user_id) || null,
+        sourceUserId: Number(user.id),
+        previousLogin: cleanText(previous.login_agent) || null,
+        previousSalesAgentGuid:
+          cleanText(previous.sales_agent_guid).toLowerCase() || null,
+        previousSalesAgentName: cleanText(previous.sales_agent_name) || null,
+        sourceLogin: user.loginAgent,
+        ...sourceAgentDetails(row),
+      });
+      actions.push({
+        type: "REPLACE_EXISTING",
+        reason: userChanged
+          ? "DOCUMENT_GUID_AND_USER_REASSIGNED"
+          : "DOCUMENT_GUID_REPLACED",
+        row,
+        user,
+        existing: previous,
+      });
+      continue;
+    }
+
     const legacySelection = selectLegacyRow(
       legacyByNumber.get(row.number) || [],
       user,
     );
     if (legacySelection.errorCode) {
       counters.legacy_backfill_ambiguous += 1;
-      hardConflicts.push({
+      counters.skipped_conflicts += 1;
+      skippedConflicts.push({
         code: legacySelection.errorCode,
         documentGuid: row.documentGuid,
         documentNumber: row.number,
+        ...sourceAgentDetails(row),
       });
       continue;
     }
@@ -422,7 +583,8 @@ export function buildSalesReportImportPlan({
     actions,
     counters,
     diagnostics,
-    hardConflicts,
-    hasHardConflicts: hardConflicts.length > 0,
+    skippedConflicts,
+    adjustments,
+    hasSkippedConflicts: skippedConflicts.length > 0,
   };
 }

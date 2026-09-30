@@ -107,7 +107,7 @@ async function loadLookupState(connection, branchId, rows) {
     },
   );
 
-  const legacyRows = await queryInChunks(
+  const rowsByNumber = await queryInChunks(
     connection,
     rows.map((row) => row.number),
     async (chunk) => {
@@ -115,8 +115,7 @@ async function loadLookupState(connection, branchId, rows) {
         `SELECT sr.*,
                 DATE_FORMAT(sr.document_date, '%Y-%m-%d') AS document_date_iso
          FROM sales_reports sr
-         WHERE sr.branch_id = ? AND sr.document_guid IS NULL
-           AND sr.document_number IN (?)
+         WHERE sr.branch_id = ? AND sr.document_number IN (?)
          ORDER BY sr.created_at DESC, sr.id DESC`,
         [branchId, chunk],
       );
@@ -128,7 +127,8 @@ async function loadLookupState(connection, branchId, rows) {
     usersByGuid: groupRows(users, (row) => row.current_agent_guid),
     agentsByLogin: groupRows(agents, (row) => row.login),
     existingByGuid: groupRows(existingRows, (row) => row.document_guid),
-    legacyByNumber: groupRows(legacyRows, (row) => row.document_number),
+    existingByNumber: groupRows(rowsByNumber, (row) => row.document_number),
+    legacyByNumber: groupRows(rowsByNumber, (row) => row.document_number),
   };
 }
 
@@ -242,6 +242,48 @@ async function lockActiveDocument(connection, branchId, documentGuid) {
   return rows.map((row) => Number(row.id));
 }
 
+function replacementComment(action) {
+  const { existing, row, user } = action;
+  const reasons = [];
+  if (existing.document_guid !== row.documentGuid) {
+    reasons.push(`GUID документа змінено: ${existing.document_guid || "—"} → ${row.documentGuid}`);
+  }
+  if (Number(existing.user_id) !== Number(user.id)) {
+    const previousAgent = existing.sales_agent_name || existing.login_agent || "—";
+    const nextAgent = sourceAgentName(row) || user.loginAgent || "—";
+    reasons.push(`ТА змінено: ${previousAgent} → ${nextAgent}`);
+  }
+  if (existing.document_date_iso !== row.docDate) {
+    reasons.push(`дату змінено: ${existing.document_date_iso || "—"} → ${row.docDate}`);
+  }
+  return reasons.join("; ");
+}
+
+async function replaceExistingRow(
+  connection,
+  { action, importId, branchId },
+) {
+  const { row, user, existing } = action;
+  await connection.query(
+    `UPDATE sales_reports
+     SET status = 'MOVED', amount = 0, change_comment = ?, import_id = ?
+     WHERE id = ?`,
+    [replacementComment(action), importId, existing.id],
+  );
+  const newId = await insertReportRow(connection, {
+    row,
+    user,
+    importId,
+    branchId,
+    status: row.isDeleted ? "CANCELLED" : "ACTIVE",
+  });
+  await connection.query(
+    "UPDATE sales_reports SET replaced_by_id = ? WHERE id = ?",
+    [newId, existing.id],
+  );
+  return newId;
+}
+
 export async function executeSalesReportImportPlan(
   connection,
   plan,
@@ -253,6 +295,8 @@ export async function executeSalesReportImportPlan(
     movedCount: 0,
     cancelledCount: 0,
     legacyBackfilledCount: 0,
+    reassignedCount: 0,
+    guidReplacedCount: 0,
   };
 
   for (const action of plan.actions) {
@@ -281,6 +325,20 @@ export async function executeSalesReportImportPlan(
         status: row.isDeleted ? "CANCELLED" : "ACTIVE",
       });
       result.insertedCount += 1;
+      if (row.isDeleted) result.cancelledCount += 1;
+      continue;
+    }
+
+    if (action.type === "REPLACE_EXISTING") {
+      await replaceExistingRow(connection, {
+        action,
+        importId,
+        branchId,
+      });
+      result.insertedCount += 1;
+      result.movedCount += 1;
+      if (action.reason.includes("USER")) result.reassignedCount += 1;
+      if (action.reason.includes("GUID")) result.guidReplacedCount += 1;
       if (row.isDeleted) result.cancelledCount += 1;
       continue;
     }
@@ -331,7 +389,8 @@ function summarizePlan(plan) {
   return {
     ...plan.counters,
     diagnostics: plan.diagnostics,
-    hardConflicts: plan.hardConflicts,
+    skippedConflicts: plan.skippedConflicts,
+    adjustments: plan.adjustments,
   };
 }
 
@@ -398,17 +457,9 @@ async function runSalesReportImport(
       branchId,
       ...plan.counters,
       diagnosticsCount: plan.diagnostics.length,
-      hardConflictsCount: plan.hardConflicts.length,
+      skippedConflictsCount: plan.skippedConflicts.length,
     });
 
-    if (plan.hasHardConflicts) {
-      return {
-        status: "failed",
-        code: "import_plan_conflict",
-        message: "Sales reports import plan contains hard conflicts",
-        details: { file: salesFile, ...planSummary, keptSourceFile: true },
-      };
-    }
     if (dryRun) {
       return {
         status: "preview",
@@ -452,7 +503,7 @@ async function runSalesReportImport(
     await connection.commit();
 
     if (source.deleteAfterSuccess) await fs.unlink(salesFile);
-    const hasWarnings = plan.counters.unresolved > 0;
+    const hasWarnings = plan.counters.unresolved > 0 || plan.hasSkippedConflicts;
     const details = {
       file: salesFile,
       branchId,
@@ -467,7 +518,7 @@ async function runSalesReportImport(
       status: hasWarnings ? "completed_with_warnings" : "completed",
       code: hasWarnings ? "partial_import" : "import_completed",
       message: hasWarnings
-        ? "Sales reports imported with unresolved agents skipped"
+        ? "Sales reports imported with unresolved or conflicted documents skipped"
         : "Sales reports imported successfully",
       details,
     };

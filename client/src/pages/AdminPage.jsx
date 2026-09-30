@@ -11,6 +11,7 @@ import { BalancePagesConfig } from "../components/Configuration/BalancePagesConf
 import { ReportsConfig } from "../components/Configuration/ReportsConfig";
 import { ImportSourcesConfig } from "../components/Configuration/ImportSourcesConfig";
 import { SchedulerConfig } from "../components/Configuration/SchedulerConfig";
+import { ImportRunJournal } from "../components/Configuration/ImportRunJournal.jsx";
 import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton";
 import ThemeSelector from "../components/ThemeSelector/ThemeSelector.jsx";
 import { IntegrationAccounts } from "../components/IntegrationAccounts/IntegrationAccounts.jsx";
@@ -26,6 +27,7 @@ const ALLOWED_ADMIN_TABS = new Set([
   "users",
   "settings",
   "scheduler",
+  "import-journal",
   "configuration",
   "integration-accounts",
   "warehouse-dashboards",
@@ -137,6 +139,7 @@ export default function AdminPage() {
           ["users", "Користувачі", "fa-users"],
           ["settings", "Сповіщення", "fa-bell"],
           ["scheduler", "Планувальник", "fa-clock"],
+          ["import-journal", "Журнал", "fa-list-check"],
           ["configuration", "Конфігурація", "fa-sliders"],
           ["integration-accounts", "Технічні записи", "fa-key"],
           ["warehouse-dashboards", "Складські екрани", "fa-tv"],
@@ -231,6 +234,8 @@ export default function AdminPage() {
             <SchedulerConfig title="Ручний запуск планувальника" />
           </div>
         )}
+
+        {activeTab === "import-journal" && <ImportRunJournal />}
 
         {activeTab === "configuration" && (
           <div className={style.configurationWorkspace}>

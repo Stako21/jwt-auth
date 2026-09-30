@@ -2540,3 +2540,35 @@ Frontend:
 
 - Removed the incorrect create/update validation that treated `users.user_name` as globally unique. It is a display name and legitimate office accounts such as `Конечный покупатель` may repeat in different cities; login `users.NAME` and branch-scoped `user_guid` remain the identity constraints.
 - Removed the now-unused repository lookup by display name. No schema migration or frontend rebuild is required.
+
+## 2026-09-28 - Deferred hardening plan
+
+- Added `documentation/deferred-work-plan.md`; no application code, database schema, or production configuration was changed.
+- The deferred Sales Report work will make confirmed TA reassignment a history-preserving `MOVED -> ACTIVE` transition, isolate individual data conflicts so valid documents still import with warnings, and reassess the legacy `uk_active_doc` index only after equivalent application-level safeguards exist.
+- The deferred Documents work will audit manufacture/expiry-date handling end to end because the Return/Exchange modal appears to constrain or misrepresent long shelf-life dates while generated PDFs display them correctly.
+
+## 2026-09-30 - Sales Report resilient document replacement
+
+- Hardened the shared `loadSalesReports` importer used by both PM2 and Docker deployments. When 1C recreates a document with the same branch-scoped number but a different `DocumentGuid`, or reassigns an existing GUID to another resolved portal workplace, the importer now retires the prior active row as `MOVED` with zero amount, preserves its old TA/GUID snapshot, creates the current version, and links it through `replaced_by_id`.
+- Exact document-number fallback is accepted only when there is one active candidate in the branch. Ambiguous number/GUID, mapping, duplicate-active, and legacy-backfill cases are skipped with structured diagnostics; valid actions in the same file still commit and the scheduler reports `completed_with_warnings` instead of rejecting the entire batch. Repeated imports of the resulting active version remain idempotent.
+- Added plan/execution coverage for GUID replacement, TA reassignment, history ordering and snapshot preservation, ambiguity isolation, and repeat imports. All 98 backend tests pass when run sequentially in-process; project files pass `node --check` and `git diff --check`. No database migration or frontend rebuild is required.
+
+## 2026-09-30 - Sales Report import final hardening
+
+- Added migration `030_sales_report_legacy_active_index.js`: it verifies the canonical branch/GUID uniqueness index before removing the obsolete global `uk_active_doc(document_number, login_agent, active_flag)` constraint and adds `idx_sales_reports_branch_number_status` for the importer's exact branch-scoped number lookup. The migration is idempotent across installations where the legacy index is already absent and refuses to remove an unexpectedly shaped index.
+- Added source-level protection against one document number appearing under different GUIDs in the same snapshot, expanded adjustment/conflict diagnostics with source and previous TA metadata, and exposed import counters plus up to ten detailed adjustment/conflict events in the Scheduler UI.
+- Covered simultaneous TA/date changes, cancellation after reassignment, return to a former TA, amount/history behavior, duplicate source numbers, and migration variants. All 105 backend tests pass sequentially; frontend lint and an isolated production build pass with only the existing Sass/bundle-size warnings. Migration 030 is prepared but was not applied to any database.
+
+## 2026-09-30 - Return/exchange calendar-date correction
+
+- Audited real development rows with shelf lives of 388, 437, and 750 days and confirmed there was no one-year restriction. The discrepancy was a timezone bug: MySQL `DATE` objects serialized as prior-day UTC timestamps, the modals sliced the UTC date, while PDF formatting converted them back through `Europe/Kyiv`.
+- Added shared backend/frontend calendar-date helpers. Document DTOs now expose item manufacture/expiry dates as stable `YYYY-MM-DD`, legacy ISO DTOs are interpreted in the Kyiv business timezone, and return/exchange item tables show `DD.MM.YYYY`. The internal optional-GIVE sentinel remains hidden.
+- Added backend validation for real calendar dates and `manufacture_date <= expiry_date` with no maximum shelf-life interval. Coverage includes multi-year dates, leap years, impossible dates, legacy ISO values, API/modal/PDF consistency, and optional GIVE dates. All 111 backend tests, frontend lint, isolated production build, and diff checks pass; no migration is required for this date correction.
+
+## 2026-09-30 - Volatile admin import journal
+
+- Added an admin-only `Журнал` tab that lists structured scheduler import outcomes with task/status filters, automatic refresh, branch, trigger, duration, message, and expandable sanitized details.
+- Import runs are retained only in API process memory for up to seven days and 1000 entries, and are intentionally lost on API restart; no migration or persistent log table was added.
+- Only loader tasks are journaled. Secrets, authorization/session data, stack/SQL/query fields, and full server paths are removed or reduced before the DTO reaches the browser.
+- Added `GET /api/auth/scheduler/import-runs` with validated `limit`/status parameters and the existing `authMiddleware + adminOnly` boundary.
+- Added focused journal retention/filtering/sanitization tests. Frontend lint and production build passed; all backend tests passed when run sequentially because the sandbox blocks Node test-runner child-process spawning.
