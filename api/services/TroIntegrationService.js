@@ -412,7 +412,7 @@ export function createTroIntegrationService(
         throw error;
       }
       if (!result.idempotent) {
-        notify({ ...user, id: 0, role: 1, branchId: result.notification_branch_id }, Number(documentId), "NOT_COMPLETED", "PLANNED").catch((error) =>
+        notify({ ...user, id: 0, role: 1, branchId: result.notification_branch_id }, Number(documentId), "NOT_COMPLETED", "PLANNED", "TRO_PLANNED").catch((error) =>
           console.error("1C created status notification failed:", error));
       }
       const response = { ...result };
@@ -464,7 +464,7 @@ export function createTroIntegrationService(
         return { idempotent: false, portal_status: "REJECTED", notification_branch_id: doc.branch_id };
       });
       if (!result.idempotent) {
-        notify({ ...user, id: 0, role: 1, branchId: result.notification_branch_id }, Number(documentId), "NOT_COMPLETED", "REJECTED").catch((error) =>
+        notify({ ...user, id: 0, role: 1, branchId: result.notification_branch_id }, Number(documentId), "NOT_COMPLETED", "REJECTED", "TRO_REJECTED_IN_UP").catch((error) =>
           console.error("1C rejected status notification failed:", error));
       }
       const response = { ...result };
@@ -627,9 +627,9 @@ export function createTroIntegrationService(
   };
 }
 
-async function notifyStatus(user, documentId, oldStatus, newStatus) {
+async function notifyStatus(user, documentId, oldStatus, newStatus, eventCode) {
   const { notifyDocumentStatusChanged } = await import("./notify.service.js");
-  return notifyDocumentStatusChanged(user, documentId, oldStatus, newStatus);
+  return notifyDocumentStatusChanged(user, documentId, oldStatus, newStatus, eventCode);
 }
 
 const service = createTroIntegrationService(TroIntegrationRepository, notifyStatus);

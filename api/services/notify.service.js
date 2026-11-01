@@ -1,4 +1,3 @@
-import nodemailer from "nodemailer";
 import fetch from "node-fetch";
 import puppeteer from "puppeteer";
 import { renderExchangeHtml } from "../pdf/exchange.template.js";
@@ -6,47 +5,10 @@ import { renderReturnHtml } from "../pdf/return.template.js";
 import { getDocumentByIdService } from "./DocumentService.js";
 import pool from "../db.cjs";
 import FormData from "form-data";
+import { createSmtpTransport, sendTextEmail, sendTextRocket, getRoomIdByName, parseRocketApiResponse } from "./notificationTransports.js";
+import { loadNotificationRecipients } from "./notificationRecipients.service.js";
+import { inferTroEvent, TRO_EVENTS } from "./notificationPolicy.js";
 import { loadStampBase64 } from "../controllers/documentsController.js";
-
-async function parseRocketApiResponse(res, contextLabel) {
-  const rawBody = await res.text();
-  const contentType = res.headers.get("content-type") || "";
-
-  let parsedBody = null;
-
-  if (rawBody) {
-    try {
-      parsedBody = JSON.parse(rawBody);
-    } catch {
-      if (!res.ok) {
-        const trimmedBody = rawBody.trim().slice(0, 300);
-
-        throw new Error(
-          `Rocket.Chat ${contextLabel} failed (${res.status} ${res.statusText}): ${trimmedBody || "non-JSON response"}`,
-        );
-      }
-
-      throw new Error(
-        `Rocket.Chat ${contextLabel} returned invalid JSON (content-type: ${contentType || "unknown"})`,
-      );
-    }
-  }
-
-  if (!res.ok) {
-    const errorMessage =
-      parsedBody?.error ||
-      parsedBody?.message ||
-      `${res.status} ${res.statusText}`.trim();
-
-    throw new Error(`Rocket.Chat ${contextLabel} error: ${errorMessage}`);
-  }
-
-  if (!parsedBody) {
-    throw new Error(`Rocket.Chat ${contextLabel} returned an empty response`);
-  }
-
-  return parsedBody;
-}
 
 async function logNotification({
   documentId,
@@ -65,36 +27,6 @@ async function logNotification({
     `,
     [documentId, channel, eventType, eventPayload ? JSON.stringify(eventPayload) : null, target, status, errorText],
   );
-}
-
-async function loadRegionNtification(city, branchId) {
-  const [rows] = await pool.query(
-    `
-    SELECT email, rocket_channel
-    FROM region_notifications
-    WHERE city = ?
-      AND branch_id = ?
-      AND is_active = 1
-    `,
-    [city, branchId],
-  );
-
-  return {
-    emails: [
-      ...new Set(
-        rows
-          .map((r) => r.email)
-          .filter((email) => email && email.trim() !== ""),
-      ),
-    ],
-    rocketChannels: [
-      ...new Set(
-        rows
-          .map((r) => r.rocket_channel)
-          .filter((channel) => channel && channel.trim() !== ""),
-      ),
-    ],
-  };
 }
 
 export async function generatePdfBuffer(doc) {
@@ -157,15 +89,7 @@ export async function generatePdfBuffer(doc) {
 }
 
 export async function sendEmailWithPdf(doc, pdfBuffer, emails) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+  const transporter = createSmtpTransport();
 
   const mailOptions = {
     from: `"Documents" <${process.env.SMTP_USER}>`,
@@ -272,35 +196,10 @@ async function uploadPdfToRocket(roomId, pdfBuffer, doc) {
   }
 }
 
-async function getRoomIdByName(channelName) {
-  const cleanName = channelName.replace(/^#/, "");
-
-  const res = await fetch(
-    `${process.env.ROCKET_URL}/api/v1/rooms.info?roomName=${cleanName}`,
-    {
-      headers: {
-        "X-Auth-Token": process.env.ROCKET_TOKEN,
-        "X-User-Id": process.env.ROCKET_USER_ID,
-      },
-    },
-  );
-
-  const data = await parseRocketApiResponse(res, "rooms.info");
-
-  if (!data.success) {
-    throw new Error(`Rocket.Chat rooms.info error: ${data.error}`);
-  }
-
-  return data.room._id;
-}
-
 export async function notifyDocumentSigned(user, documentId) {
   const doc = await getDocumentByIdService(user, documentId);
 
-  const { emails, rocketChannels } = await loadRegionNtification(doc.city, doc.branchId);
-
-  console.log("Emails", emails);
-  console.log("rocketChannels", rocketChannels);
+  const { emails, rocketChannels } = await loadNotificationRecipients(doc.city, doc.branchId, { documentType: doc.documentType });
 
   if (emails.length === 0 && rocketChannels.length === 0) {
     console.warn(`No notification recipients for region: ${doc.city}`);
@@ -368,74 +267,56 @@ export async function notifyDocumentSigned(user, documentId) {
   }
 }
 
-function statusMessage(doc, oldStatus, newStatus) {
-  return [
-    `Документ ТРО ${doc.documentNumber}`,
-    `Статус: ${oldStatus} → ${newStatus}`,
-    `ТА: ${doc.tro?.taName || doc.author || "—"}`,
-  ].join("\n");
+export function buildTroNotificationMessage(doc, oldStatus, newStatus, eventCode = inferTroEvent(oldStatus, newStatus)) {
+  const label = TRO_EVENTS.find((event) => event.value === eventCode)?.label || "Зміна статусу";
+  return {
+    subject: `ТРО ${doc.documentNumber}: ${label}`,
+    text: [
+      `Документ ТРО ${doc.documentNumber}`,
+      eventCode === "TRO_CREATED" ? "Створено нову заявку ТРО." : `${label}. Статус: ${oldStatus} → ${newStatus}`,
+      `ТА: ${doc.tro?.taName || doc.author || "—"}`,
+    ].join("\n"),
+  };
 }
 
-export async function sendDocumentStatusEmail(doc, oldStatus, newStatus, emails) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: 587,
-    secure: false,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-  await transporter.sendMail({
-    from: `"Documents" <${process.env.SMTP_USER}>`,
-    to: emails.join(","),
-    subject: `ТРО ${doc.documentNumber}: ${oldStatus} → ${newStatus}`,
-    text: statusMessage(doc, oldStatus, newStatus),
-  });
+function deliveryMessage(doc, oldStatus, newStatus, snapshot) {
+  return typeof snapshot?.subject === "string" && typeof snapshot?.text === "string"
+    ? { subject: snapshot.subject, text: snapshot.text }
+    : buildTroNotificationMessage(doc, oldStatus, newStatus, snapshot?.eventCode);
 }
 
-export async function sendDocumentStatusRocket(doc, oldStatus, newStatus, rocketChannel) {
-  const roomId = await getRoomIdByName(rocketChannel);
-  const response = await fetch(`${process.env.ROCKET_URL}/api/v1/chat.postMessage`, {
-    method: "POST",
-    headers: {
-      "X-Auth-Token": process.env.ROCKET_TOKEN,
-      "X-User-Id": process.env.ROCKET_USER_ID,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ roomId, text: statusMessage(doc, oldStatus, newStatus) }),
-  });
-  const result = await parseRocketApiResponse(response, "chat.postMessage");
-  if (!result.success) throw new Error("Rocket.Chat did not accept the message");
+export async function sendDocumentStatusEmail(doc, oldStatus, newStatus, emails, snapshot) {
+  await sendTextEmail({ to: emails, ...deliveryMessage(doc, oldStatus, newStatus, snapshot) });
 }
 
-export async function notifyDocumentStatusChanged(user, documentId, oldStatus, newStatus) {
-  const doc = await getDocumentByIdService(user, documentId);
-  const { emails, rocketChannels } = await loadRegionNtification(doc.city, doc.branchId);
-  if (!emails.length && !rocketChannels.length) return;
-  const eventPayload = { oldStatus, newStatus };
-  let firstError = null;
+export async function sendDocumentStatusRocket(doc, oldStatus, newStatus, rocketChannel, snapshot) {
+  await sendTextRocket(rocketChannel, deliveryMessage(doc, oldStatus, newStatus, snapshot).text);
+}
 
-  if (emails.length) {
-    try {
-      await sendDocumentStatusEmail(doc, oldStatus, newStatus, emails);
-      for (const email of emails) {
-        await logNotification({ documentId, channel: "EMAIL", eventType: "STATUS_CHANGE", eventPayload, target: email, status: "SUCCESS" });
+export function createTroNotificationSender({
+  getDocument = getDocumentByIdService, loadRecipients = loadNotificationRecipients,
+  sendEmail = sendDocumentStatusEmail, sendRocket = sendDocumentStatusRocket, log = logNotification,
+} = {}) {
+  return async (user, documentId, oldStatus, newStatus, eventCode = inferTroEvent(oldStatus, newStatus)) => {
+    if (!TRO_EVENTS.some((event) => event.value === eventCode)) return;
+    const doc = await getDocument(user, documentId);
+    const { emails, rocketChannels } = await loadRecipients(doc.city, doc.branchId, { documentType: doc.documentType, eventCode });
+    if (!emails.length && !rocketChannels.length) return;
+    const eventType = eventCode === "TRO_CREATED" ? "TRO_CREATED" : "STATUS_CHANGE";
+    const eventPayload = { eventCode, oldStatus, newStatus, ...buildTroNotificationMessage(doc, oldStatus, newStatus, eventCode) };
+    let firstError = null;
+    const deliver = async (channel, target, send) => {
+      let error = null;
+      try { await send(); } catch (failure) { error = failure; firstError ||= failure; }
+      for (const address of (Array.isArray(target) ? target : [target])) {
+        await log({ documentId, channel, target: address, eventType, eventPayload,
+          status: error ? "ERROR" : "SUCCESS", errorText: error ? "Не вдалося надіслати сповіщення" : null });
       }
-    } catch (error) {
-      for (const email of emails) {
-        await logNotification({ documentId, channel: "EMAIL", eventType: "STATUS_CHANGE", eventPayload, target: email, status: "ERROR", errorText: error.message });
-      }
-      firstError = error;
-    }
-  }
-
-  for (const rocketChannel of rocketChannels) {
-    try {
-      await sendDocumentStatusRocket(doc, oldStatus, newStatus, rocketChannel);
-      await logNotification({ documentId, channel: "ROCKET", eventType: "STATUS_CHANGE", eventPayload, target: rocketChannel, status: "SUCCESS" });
-    } catch (error) {
-      await logNotification({ documentId, channel: "ROCKET", eventType: "STATUS_CHANGE", eventPayload, target: rocketChannel, status: "ERROR", errorText: error.message });
-      firstError ||= error;
-    }
-  }
-
-  if (firstError) throw firstError;
+    };
+    if (emails.length) await deliver("EMAIL", emails, () => sendEmail(doc, oldStatus, newStatus, emails, eventPayload));
+    for (const channel of rocketChannels) await deliver("ROCKET", channel, () => sendRocket(doc, oldStatus, newStatus, channel, eventPayload));
+    if (firstError) throw firstError;
+  };
 }
+
+export const notifyDocumentStatusChanged = createTroNotificationSender();

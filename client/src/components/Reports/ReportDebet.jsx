@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import cn from "classnames";
+import DateInput from "../DateInput/DateInput.jsx";
 import FormInput from "../FormControl/FormInput.jsx";
 import style from "./ReportDebet.module.scss";
 import { fetchStaticReport } from "../../services/reports.api";
@@ -22,6 +23,31 @@ function formatDate(value) {
   if (!value) return "";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("uk-UA");
+}
+
+function getDateKey(value) {
+  if (!value) return "";
+
+  const match = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getTomorrowDateKey() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return getDateKey(tomorrow);
+}
+
+function isOverdue(row) {
+  return Number(row.overdueDays) > 0;
 }
 
 function getDocumentAmount(row) {
@@ -76,6 +102,7 @@ function createGroup(id, title, meta = "") {
     address: "",
     totalDebt: 0,
     totalPrepayment: 0,
+    overdueCount: 0,
     children: new Map(),
   };
 }
@@ -83,6 +110,9 @@ function createGroup(id, title, meta = "") {
 function addRowTotals(group, row) {
   group.totalDebt += Number(row.debt) || 0;
   group.totalPrepayment += Number(row.prepayment) || 0;
+  if (isOverdue(row)) {
+    group.overdueCount += 1;
+  }
 }
 
 function sortByTitle(left, right) {
@@ -134,6 +164,7 @@ function buildCollectorGroups(rows) {
         address: getTradePointAddress(row),
         totalDebt: 0,
         totalPrepayment: 0,
+        overdueCount: 0,
         rows: [],
       });
     }
@@ -172,6 +203,7 @@ function buildContractorGroups(rows) {
         meta: ta.login,
         totalDebt: 0,
         totalPrepayment: 0,
+        overdueCount: 0,
         rows: [],
       });
     }
@@ -257,6 +289,10 @@ export function ReportDebet({ setLastUpdateTime }) {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [onlyOverdue, setOnlyOverdue] = useState(true);
+  const [documentDate, setDocumentDate] = useState("");
+  const [documentDateUnlimited, setDocumentDateUnlimited] = useState(true);
+  const [paymentDate, setPaymentDate] = useState(getTomorrowDateKey);
+  const [paymentDateUnlimited, setPaymentDateUnlimited] = useState(false);
   const [groupingMode, setGroupingMode] = useState(GROUPING_MODES.collector);
   const [openPrimaryGroups, setOpenPrimaryGroups] = useState({});
   const [openSecondaryGroups, setOpenSecondaryGroups] = useState({});
@@ -299,8 +335,22 @@ export function ReportDebet({ setLastUpdateTime }) {
     const normalizedQuery = query.trim().toLocaleLowerCase();
 
     return rows.filter((row) => {
-      if (onlyOverdue && !(Number(row.overdueDays) > 0)) {
+      if (onlyOverdue && !isOverdue(row)) {
         return false;
+      }
+
+      if (!documentDateUnlimited) {
+        const rowDocumentDate = getDateKey(row.documentDate);
+        if (!documentDate || !rowDocumentDate || rowDocumentDate !== documentDate) {
+          return false;
+        }
+      }
+
+      if (!paymentDateUnlimited) {
+        const rowPaymentDate = getDateKey(row.paymentDate);
+        if (!paymentDate || !rowPaymentDate || rowPaymentDate > paymentDate) {
+          return false;
+        }
       }
 
       if (!normalizedQuery) {
@@ -320,7 +370,15 @@ export function ReportDebet({ setLastUpdateTime }) {
 
       return haystack.includes(normalizedQuery);
     });
-  }, [onlyOverdue, query, rows]);
+  }, [
+    documentDate,
+    documentDateUnlimited,
+    onlyOverdue,
+    paymentDate,
+    paymentDateUnlimited,
+    query,
+    rows,
+  ]);
 
   const groupedRows = useMemo(() => {
     if (groupingMode === GROUPING_MODES.contractor) {
@@ -415,6 +473,52 @@ export function ReportDebet({ setLastUpdateTime }) {
             />
           </label>
 
+          <div className={cn(style.dateFilter, style.documentDateFilter)}>
+            <span>Дата документа</span>
+            <div className={style.dateControlRow}>
+              <DateInput
+                value={documentDate}
+                disabled={documentDateUnlimited}
+                required={!documentDateUnlimited}
+                onChange={(event) => setDocumentDate(event.target.value)}
+                aria-label="Дата документа"
+              />
+              <label className={style.unlimitedToggle}>
+                <FormInput
+                  type="checkbox"
+                  checked={documentDateUnlimited}
+                  onChange={(event) =>
+                    setDocumentDateUnlimited(event.target.checked)
+                  }
+                />
+                <span>Без обмежень</span>
+              </label>
+            </div>
+          </div>
+
+          <div className={cn(style.dateFilter, style.paymentDateFilter)}>
+            <span>Дата оплати</span>
+            <div className={style.dateControlRow}>
+              <DateInput
+                value={paymentDate}
+                disabled={paymentDateUnlimited}
+                required={!paymentDateUnlimited}
+                onChange={(event) => setPaymentDate(event.target.value)}
+                aria-label="Дата оплати — до вказаної дати включно"
+              />
+              <label className={style.unlimitedToggle}>
+                <FormInput
+                  type="checkbox"
+                  checked={paymentDateUnlimited}
+                  onChange={(event) =>
+                    setPaymentDateUnlimited(event.target.checked)
+                  }
+                />
+                <span>Без обмежень</span>
+              </label>
+            </div>
+          </div>
+
           <label className={style.checkboxField}>
             <FormInput
               type="checkbox"
@@ -488,7 +592,16 @@ export function ReportDebet({ setLastUpdateTime }) {
                           <span className={style.groupMarker}>
                             {openSecondaryGroups[child.id] ? "▾" : "▸"}
                           </span>
-                          {child.title}
+                          <span className={style.childTitle}>{child.title}</span>
+                          {child.overdueCount > 0 ? (
+                            <span
+                              className={style.overdueBadge}
+                              title={`Прострочених накладних: ${child.overdueCount}`}
+                              aria-label={`Прострочених накладних: ${child.overdueCount}`}
+                            >
+                              {child.overdueCount}
+                            </span>
+                          ) : null}
                         </strong>
                         {child.address ? <p>Адреса: {child.address}</p> : null}
                         {child.meta ? <p>Логін: {child.meta}</p> : null}

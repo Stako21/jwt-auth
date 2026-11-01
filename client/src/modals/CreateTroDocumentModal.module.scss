@@ -8,7 +8,7 @@
 .header p { margin: 2px 0 0; color: $text-muted; font-size: 10px; }
 .close { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: 50%; background: $color-transparent; color: $text-medium; cursor: pointer; }
 .close:hover { border-color: $outline-medium; background: $select-option-hover-surface; color: $text-high; }
-.body { display: grid; gap: $space-3; min-height: 0; padding: $space-3; overflow-y: auto; }
+.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: $space-3; min-height: 0; padding: $space-3; overflow-y: auto; }
 .generalSection { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $space-2 $space-3; }
 .field { display: grid; gap: $space-1; min-width: 0; align-content: start; }
 .field > label { color: $text-medium; font-size: 11px; font-weight: 700;  }
@@ -25,11 +25,13 @@
 .options button:hover { background: $select-option-hover-surface; }
 .itemsSection,
 .accountingSection,
-.rejectionSection { padding: $space-3; border: 1px solid $outline-dark; border-radius: $radius-lg; background: $surface-modal-section; }
+.rejectionSection,
+.executionSection { padding: $space-3; border: 1px solid $outline-dark; border-radius: $radius-lg; background: $surface-modal-section; }
 .sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: $space-3; margin-bottom: $space-2; }
 .sectionTitle h3,
 .accountingSection h3,
-.rejectionSection h3 { margin: 0; color: $text-high; font-size: 13px; }
+.rejectionSection h3,
+.executionSection h3 { margin: 0; color: $text-high; font-size: 13px; }
 .sectionTitle button { min-height: 30px; padding: 0 $space-3; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-control; color: $text-high; cursor: pointer; }
 .emptyItems { margin: 0; padding: $space-3; border: 1px dashed $outline-medium; border-radius: $radius-md; color: $text-muted; font-size: 11px; text-align: center; }
 .itemsTableScroll { width: 100%; overflow-x: auto; border: 1px solid $table-border; border-radius: $radius-md; }
@@ -56,10 +58,31 @@
 .rejectionValue { min-height: $control-height-md; margin: 0; padding: $space-2; border: 1px solid $outline-medium; border-radius: $radius-md; background: $surface-control; color: $text-medium; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; user-select: text; }
 .checks { display: flex; flex-wrap: wrap; gap: $space-2 $space-4; margin-top: $space-3; color: $text-medium; font-size: 12px; }
 .checks label { display: inline-flex; align-items: center; gap: $space-2; }
+.executionTableScroll { margin-top: $space-2; overflow-x: auto; border: 1px solid $table-border; border-radius: $radius-md; }
+.executionTable { width: 100%; min-width: 480px; border-collapse: collapse; color: $table-text; font-size: 12px; }
+.executionTable th,
+.executionTable td { padding: 6px $space-2; border-bottom: 1px solid $table-border; vertical-align: middle; text-align: left; }
+.executionTable th { background: $table-head-surface; color: $table-text-strong; font-size: 10px; white-space: nowrap; }
+.executionTable tbody tr:nth-child(odd) td { background: $table-row-odd; }
+.executionTable tbody tr:nth-child(even) td { background: $table-row-even; }
+.executionTable tbody tr:last-child td { border-bottom: 0; }
+.executionStatusCONFIRMED { color: $status-signed; }
+.executionStatusSHIPPED { color: $warning; }
+.executionStatusNOT_CONFIRMED { color: $status-rejected; }
 .footer { display: flex; flex: 0 0 auto; justify-content: flex-end; gap: $space-2; padding: $space-3 $space-4; border-top: 1px solid $outline-dark; background: $surface-modal-strong; }
 .footer button { min-height: 34px; padding: 0 $space-4; border-radius: $radius-md; cursor: pointer; font-weight: 700; }
 .secondary { border: 1px solid $outline-medium; background: $surface-control; color: $text-high; }
 .primary { border: 1px solid $primary-accent; background: $primary-accent; color: $text-on-accent; }
+.administration { min-width: 0; padding: $space-3; border: 1px solid $outline-medium; border-radius: $radius-lg; background: $surface-modal-section; }
+.administration summary { color: $text-high; font-size: 13px; font-weight: 700; cursor: pointer; }
+.adminBody { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: $space-2; margin-top: $space-3; min-width: 0; }
+.adminBody p { margin: 0; color: $text-medium; font-size: 12px; overflow-wrap: anywhere; }
+.adminButtons { display: flex; flex-wrap: wrap; gap: $space-2; max-width: 100%; }
+.adminButtons button { max-width: 100%; min-height: 42px; padding: $space-2 $space-3; border-radius: $radius-md; font-weight: 700; white-space: normal; cursor: pointer; }
+.adminButtons button:disabled { opacity: 0.6; cursor: not-allowed; }
+.adminConfirmation { display: grid; grid-template-columns: minmax(0, 1fr); gap: $space-3; width: 100%; min-width: 0; padding-top: $space-2; }
+.adminConfirmation label > span { color: $text-medium; font-size: 12px; font-weight: 700; }
+.danger { border: 1px solid $status-rejected; background: $status-rejected-surface; color: $status-rejected; }
 .footer button:disabled { cursor: wait; opacity: 0.6; }
 
 @media (max-width: $mobile-breakpoint) {
@@ -72,7 +95,8 @@
   .commentField { grid-column: auto; }
   .itemsSection,
   .accountingSection,
-  .rejectionSection { padding: $space-2; }
+  .rejectionSection,
+  .executionSection { padding: $space-2; }
   .itemsTable { min-width: 390px; }
   .footer { flex-wrap: wrap; padding: $space-2; }
   .footer button { flex: 1 1 140px; min-height: 42px; }

@@ -68,9 +68,9 @@ export async function getTroGrantedBranchIds(user) {
   return grantedBranchIds(pool, user);
 }
 
-async function notifyStatus(user, documentId, oldStatus, newStatus) {
+async function notifyStatus(user, documentId, oldStatus, newStatus, eventCode) {
   const { notifyDocumentStatusChanged } = await import("./notify.service.js");
-  return notifyDocumentStatusChanged(user, documentId, oldStatus, newStatus);
+  return notifyDocumentStatusChanged(user, documentId, oldStatus, newStatus, eventCode);
 }
 
 async function resolveTa(conn, user, requestedTaId, branchId) {
@@ -306,6 +306,9 @@ export async function createTroDocumentService(user, payload) {
       [result.insertId, user.id],
     );
     await conn.commit();
+    notifyStatus(user, result.insertId, null, "NEW", "TRO_CREATED").catch(() =>
+      console.error("TRO creation notification failed"),
+    );
     return { id: result.insertId, documentNumber, status: "NEW" };
   } catch (error) {
     await conn.rollback();
@@ -471,9 +474,12 @@ async function changeWorkflowStatus(user, documentId, nextStatus, action, commen
       [documentId, user.id, action, doc.status, nextStatus, text(comment, 250) || null],
     );
     await conn.commit();
-    notifyStatus(user, documentId, doc.status, nextStatus).catch((error) =>
-      console.error("TRO status notification failed:", error),
-    );
+    if (doc.status !== nextStatus) {
+      const eventCode = ({ SIGN: "TRO_SIGNED", REVISION: "TRO_REVISION", REJECT: "TRO_REJECTED" })[action];
+      notifyStatus(user, documentId, doc.status, nextStatus, eventCode).catch(() =>
+        console.error("TRO status notification failed"),
+      );
+    }
     return { status: nextStatus };
   } catch (error) {
     await conn.rollback();
@@ -529,8 +535,8 @@ export async function updateTroAccountingService(user, documentId, payload) {
     );
     await conn.commit();
     if (doc.status !== nextStatus) {
-      notifyStatus(user, documentId, doc.status, nextStatus).catch((error) =>
-        console.error("TRO status notification failed:", error),
+      notifyStatus(user, documentId, doc.status, nextStatus, "TRO_COMPLETED").catch(() =>
+        console.error("TRO status notification failed"),
       );
     }
     return { status: nextStatus };
@@ -560,6 +566,7 @@ export async function getTroDocumentExtension(executor, documentId) {
        t.rejected_by_1c_guid AS rejectedBy1cGuid,
        t.rejected_by_1c_name AS rejectedBy1cName,
        t.one_c_stage AS oneCStage, t.one_c_stage_updated_at AS oneCStageUpdatedAt,
+       t.one_c_observed_at AS oneCObservedAt,
        t.last_synced_at AS lastSyncedAt, t.last_sync_error AS lastSyncError,
        t.accountant_user_id AS accountantUserId, t.app_install AS appInstall,
        t.photo_install AS photoInstall, t.app_return AS appReturn,
@@ -572,7 +579,24 @@ export async function getTroDocumentExtension(executor, documentId) {
        i.quantity FROM tro_document_items i WHERE i.document_id = ? ORDER BY i.id`,
     [documentId],
   );
-  const result = { ...(details || {}), items };
+  const [executionDocuments] = await executor.query(
+    `SELECT document_1c_guid AS document_1c_guid,
+       document_number AS document_number, document_date AS document_date,
+       confirmed AS confirmed, shipped_from_warehouse AS shipped_from_warehouse
+     FROM tro_1c_execution_documents
+     WHERE portal_document_id = ?
+     ORDER BY document_date, id`,
+    [documentId],
+  );
+  const result = {
+    ...(details || {}),
+    items,
+    execution_documents: executionDocuments.map((item) => ({
+      ...item,
+      confirmed: Boolean(item.confirmed),
+      shipped_from_warehouse: Boolean(item.shipped_from_warehouse),
+    })),
+  };
   result.requestSalesAgent = details?.requestSalesAgentId ? {
     id: details.requestSalesAgentId,
     login: details.requestAgentLogin,

@@ -1,5 +1,6 @@
 ﻿import pool from "../db.cjs";
 import { notifyDocumentSigned } from "./notify.service.js";
+import { troAdministrationService } from "./troAdministration.service.js";
 import {
   getCityById,
   getUserBranchId,
@@ -958,6 +959,8 @@ export async function getDocumentsService(user, query) {
       d.branch_id AS branch_id,
       b.name AS branch_name,
       b.short_name AS branch_short_name,
+      d.city AS city_id,
+      ci.name AS city_name,
       d.document_number,
       d.document_type,
       d.document_date,
@@ -985,6 +988,7 @@ export async function getDocumentsService(user, query) {
       d.created_at
     FROM documents d
     JOIN branches b ON b.id = d.branch_id
+    LEFT JOIN cities ci ON ci.id = d.city AND ci.branch_id = d.branch_id
     JOIN trade_points tp ON tp.id = d.trade_point_id
     JOIN contractors c ON c.id = d.contractor_id
     JOIN users u ON u.id = d.author_user_id
@@ -995,6 +999,32 @@ export async function getDocumentsService(user, query) {
   `;
 
   const [rows] = await pool.query(sql, params);
+
+  const troDocumentIds = rows
+    .filter((row) => row.document_type === "TRO")
+    .map((row) => Number(row.id));
+  if (troDocumentIds.length) {
+    const [executionRows] = await pool.query(
+      `SELECT portal_document_id, document_number
+       FROM tro_1c_execution_documents
+       WHERE portal_document_id IN (?)
+       ORDER BY portal_document_id, document_date, id`,
+      [troDocumentIds],
+    );
+    const executionNumbersByDocument = new Map();
+    executionRows.forEach((row) => {
+      const numbers = executionNumbersByDocument.get(Number(row.portal_document_id)) || [];
+      numbers.push(row.document_number);
+      executionNumbersByDocument.set(Number(row.portal_document_id), numbers);
+    });
+    rows.forEach((row) => {
+      if (row.document_type === "TRO") {
+        row.tro_execution_document_numbers = (
+          executionNumbersByDocument.get(Number(row.id)) || []
+        ).join("||");
+      }
+    });
+  }
 
   return rows;
 }
@@ -1236,6 +1266,9 @@ export async function getDocumentByIdService(user, documentId) {
 
     items: isTro ? tro.items : normalizedItems,
     tro,
+    administration: isTro && Number(user.role) === 1
+      ? await troAdministrationService.options(user, documentId)
+      : undefined,
     history,
   };
 }

@@ -73,6 +73,22 @@
   tbody tr:last-child td {
     border-bottom: 0;
   }
+
+  tbody tr[data-cancellation-conflict="true"] td {
+    border-top: 1px solid $warning;
+    border-bottom: 1px solid $warning;
+  }
+
+  tbody tr[data-cancellation-conflict="true"] td:first-child {
+    box-shadow: inset 3px 0 $warning;
+  }
+
+  tbody tr[data-cancellation-conflict="true"] .noTruncate {
+    white-space: normal;
+
+    > span { display: block; }
+    > button { margin-top: 3px; }
+  }
 }
 
 .withBranch {
@@ -80,7 +96,7 @@
 }
 
 .troTable {
-  min-width: 1200px;
+  min-width: 1320px;
 }
 
 .selectionColumn {
@@ -134,7 +150,11 @@
 }
 
 .troUpColumn {
-  width: 10%;
+  width: 9%;
+}
+
+.troExecutionColumn {
+  width: 11%;
 }
 
 .troStageColumn {
@@ -179,6 +199,19 @@
     margin-top: 2px;
     color: $table-text-muted;
     font-size: 9px;
+  }
+}
+
+.executionNumbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px $space-2;
+  white-space: normal;
+
+  span {
+    color: $table-text;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 }
 
@@ -317,6 +350,13 @@
       border-color: $primary-accent;
       box-shadow: 0 0 0 1px $primary-accent-focus-ring;
     }
+
+    &[data-cancellation-conflict="true"] {
+      border-color: $warning;
+      border-left-width: 3px;
+    }
+
+    > [role="note"] { margin-top: $space-3; }
   }
 
   .cardHeader,

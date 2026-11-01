@@ -110,14 +110,41 @@
   }
 }
 
-.mobileFilterToggle {
-  display: none;
+.createActions .filterToggle {
+  position: relative;
+  flex: 0 0 38px;
+  width: 38px;
+  padding: 0;
+  border-color: $outline-green;
+  background: $surface-container-low;
+  box-shadow: none;
+  color: $text-high;
+
+  &:hover,
+  &:focus-visible {
+    border-color: $primary-accent;
+    background: $primary-accent-surface-soft;
+    color: $primary-accent-light;
+    transform: none;
+  }
+
+  .filterCount {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 $space-1;
+    background: $primary-accent-surface-strong;
+    color: $primary-accent-light;
+  }
 }
 
 .filterPanel {
   position: relative;
   z-index: 20;
-  display: grid;
+  display: none;
+  flex-shrink: 0;
   grid-template-columns:
     160px 160px minmax(320px, 1.5fr) minmax(180px, 1fr)
     minmax(135px, 0.8fr) auto;
@@ -128,6 +155,16 @@
   border: 1px solid $outline-dark;
   border-radius: $radius-lg;
   background: $surface-container-low;
+
+  &.filtersOpen {
+    display: grid;
+  }
+}
+
+.troFilterPanel {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+
+  .statusFilter { grid-column: span 2; }
 }
 
 .dateControl,
@@ -415,7 +452,8 @@
 }
 
 @media (max-width: 1550px) and (min-width: 901px) {
-  .filterPanel {
+  .filterPanel,
+  .troFilterPanel {
     grid-template-columns: 160px 160px minmax(130px, 1fr) minmax(150px, 1fr);
   }
 
@@ -425,48 +463,6 @@
 
   .filterActions {
     justify-self: end;
-  }
-}
-
-@media (max-width: $tablet-breakpoint) {
-  .mobileFilterToggle {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    height: $control-height-lg;
-    margin-bottom: $space-3;
-    padding: 0 $space-4;
-    border: 1px solid $outline-green;
-    border-radius: $radius-lg;
-    background: $surface-container-low;
-    color: $text-high;
-    cursor: pointer;
-    font-size: 14px;
-
-    > span {
-      display: inline-flex;
-      align-items: center;
-      gap: $space-2;
-    }
-  }
-
-  .filterCount {
-    min-width: 20px;
-    height: 20px;
-    padding: 0 $space-1;
-    background: $primary-accent-surface-strong;
-    color: $primary-accent-light;
-  }
-
-  .filterPanel {
-    display: none;
-    flex-shrink: 0;
-
-    &.mobileFiltersOpen {
-      display: grid;
-    }
   }
 }
 
@@ -491,7 +487,6 @@
   }
 
   .pageHeader,
-  .mobileFilterToggle,
   .filterPanel,
   .registryToolbar,
   .errorBanner {
@@ -524,13 +519,19 @@
     }
   }
 
+  .createActions .filterToggle {
+    flex-basis: $control-height-lg;
+    width: $control-height-lg;
+  }
+
   .filterPanel {
     grid-template-columns: 1fr 1fr;
     gap: $space-3;
     margin-top: -$space-1;
   }
 
-  .filterControl {
+  .filterControl,
+  .troFilterPanel .statusFilter {
     grid-column: 1 / -1;
   }
 

@@ -1,0 +1,34 @@
+@use "../../theme.scss" as *;
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+  padding: $space-3;
+  border: 1px solid $warning;
+  border-radius: $radius-md;
+  background: $report-warning-surface;
+  color: $text-high;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+
+  > i { margin-top: 3px; color: $warning; }
+  strong { color: $warning; }
+  p { margin: $space-1 0 0; white-space: normal; }
+}
+
+.indicator {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid $warning;
+  border-radius: $radius-sm;
+  background: $report-warning-surface;
+  color: $warning;
+  cursor: pointer;
+
+  &:focus-visible { outline: 2px solid $warning; outline-offset: 2px; }
+}

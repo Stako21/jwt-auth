@@ -42,17 +42,18 @@
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(220px, 320px) minmax(220px, 1fr);
+  grid-template-columns: minmax(220px, 300px) repeat(2, minmax(250px, 1fr));
   grid-template-areas:
-    "grouping overdue"
-    "search search";
+    "grouping document-date payment-date"
+    "search search overdue";
   align-items: end;
   gap: $space-3;
   width: 100%;
 }
 
 .searchField,
-.groupingField {
+.groupingField,
+.dateFilter {
   display: grid;
   gap: $space-1;
   min-width: 0;
@@ -69,6 +70,43 @@
 .searchField {
   grid-area: search;
   width: 100%;
+}
+
+.documentDateFilter {
+  grid-area: document-date;
+}
+
+.paymentDateFilter {
+  grid-area: payment-date;
+}
+
+.dateControlRow {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto;
+  align-items: center;
+  gap: $space-2;
+  min-width: 0;
+
+  > input {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.unlimitedToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  min-height: $control-height-md;
+  color: $form-control-text;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  input {
+    margin: 0;
+  }
 }
 
 .segmentedControl {
@@ -292,14 +330,39 @@
   background-color: $table-group-accent;
 
   strong {
-    display: block;
-    overflow: hidden;
+    display: flex;
+    align-items: center;
+    min-width: 0;
     color: $table-text;
     font-size: 12px;
     font-weight: 700;
     line-height: 1.25;
-    text-overflow: ellipsis;
   }
+}
+
+.childTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overdueBadge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  margin-left: $space-2;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: $negative-action;
+  color: $text-on-accent;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .tableShell {
@@ -404,6 +467,16 @@
   font-weight: 800;
 }
 
+@media (max-width: 1180px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "grouping overdue"
+      "document-date payment-date"
+      "search search";
+  }
+}
+
 @media (max-width: 768px) {
   .report {
     padding: $space-3 0;
@@ -426,6 +499,8 @@
     grid-template-columns: 1fr;
     grid-template-areas:
       "grouping"
+      "document-date"
+      "payment-date"
       "search"
       "overdue";
   }
@@ -438,6 +513,10 @@
   .checkboxField {
     justify-content: flex-start;
     white-space: normal;
+  }
+
+  .dateControlRow {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .totalBar {

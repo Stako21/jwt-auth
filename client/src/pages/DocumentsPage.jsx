@@ -2,6 +2,7 @@ import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useSnackbar } from "notistack";
 import FormInput from "../components/FormControl/FormInput.jsx";
 import FormSelect from "../components/FormControl/FormSelect.jsx";
+import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
 import DocumentTable from "../components/Documents/DocumentsTable.jsx";
 import {
   downloadSelectedDocumentsXlsx,
@@ -25,6 +26,7 @@ import DateInput from "../components/DateInput/DateInput.jsx";
 import {
   filterDocuments,
   getDocumentAuthorOptions,
+  getDocumentCityOptions,
 } from "../utils/documentFilters.js";
 import { UI_TIMING } from "../uiTokens.js";
 import { getTroTaOptions } from "../services/documents.api.js";
@@ -51,6 +53,7 @@ const TRO_STATUSES = [
   { value: "REJECTED", label: "Відхилено" },
   { value: "NOT_COMPLETED", label: "Не виконано" },
   { value: "PLANNED", label: "Заплановано" },
+  { value: "CANCELLED", label: "Скасовано" },
   { value: "COMPLETED", label: "Виконано" },
 ];
 
@@ -70,9 +73,12 @@ function initialPeriod() {
 }
 
 const EMPTY_FILTERS = Object.freeze({
+  documentQuery: "",
   statuses: [],
   contractor: "",
   authorId: "",
+  cityId: "",
+  cityLabel: "",
 });
 
 export default function DocumentsPage({ category = "return-exchange" }) {
@@ -98,7 +104,7 @@ export default function DocumentsPage({ category = "return-exchange" }) {
   const [appliedPeriod, setAppliedPeriod] = useState(initialPeriod);
   const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS }));
   const [appliedFilters, setAppliedFilters] = useState(() => ({ ...EMPTY_FILTERS }));
-  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [contractorSearch, setContractorSearch] = useState("");
   const [showContractorDropdown, setShowContractorDropdown] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -178,6 +184,17 @@ export default function DocumentsPage({ category = "return-exchange" }) {
     [documents],
   );
 
+  const cityOptions = useMemo(() => {
+    const options = getDocumentCityOptions(documents).map((city) => ({
+      value: city.id, label: city.name,
+    }));
+    // Keep the selected label visible if a new period contains no rows for that city.
+    if (filters.cityId && !options.some((option) => option.value === filters.cityId)) {
+      options.push({ value: filters.cityId, label: filters.cityLabel });
+    }
+    return [{ value: "", label: "Усі міста" }, ...options];
+  }, [documents, filters.cityId, filters.cityLabel]);
+
   const filteredContractors = useMemo(() => {
     const query = contractorSearch.trim().toLocaleLowerCase("uk");
     return [...contractors]
@@ -189,8 +206,11 @@ export default function DocumentsPage({ category = "return-exchange" }) {
   }, [contractorSearch, contractors]);
 
   const filteredDocuments = useMemo(
-    () => filterDocuments(documents, appliedFilters),
-    [appliedFilters, documents],
+    () => filterDocuments(documents, {
+      ...appliedFilters,
+      cityId: isTroPage ? appliedFilters.cityId : "",
+    }),
+    [appliedFilters, documents, isTroPage],
   );
 
   useEffect(() => {
@@ -302,9 +322,11 @@ export default function DocumentsPage({ category = "return-exchange" }) {
   };
 
   const activeFilterCount =
-    Number(filters.statuses.length > 0) +
-    Number(Boolean(filters.contractor)) +
-    Number(Boolean(filters.authorId));
+    Number(Boolean(appliedFilters.documentQuery.trim())) +
+    Number(appliedFilters.statuses.length > 0) +
+    Number(Boolean(appliedFilters.contractor)) +
+    Number(Boolean(appliedFilters.authorId)) +
+    Number(isTroPage && Boolean(appliedFilters.cityId));
 
   const applyFilters = (event) => {
     event.preventDefault();
@@ -315,7 +337,7 @@ export default function DocumentsPage({ category = "return-exchange" }) {
     setError(null);
     setAppliedPeriod({ ...period });
     setAppliedFilters({ ...filters, statuses: [...filters.statuses] });
-    setIsMobileFiltersOpen(false);
+    setIsFiltersOpen(false);
   };
 
   const resetFilters = () => {
@@ -370,6 +392,20 @@ export default function DocumentsPage({ category = "return-exchange" }) {
           ) : null}
         </div>
         <div className={style.createActions}>
+          <button
+            className={style.filterToggle}
+            type="button"
+            onClick={() => setIsFiltersOpen((open) => !open)}
+            aria-expanded={isFiltersOpen}
+            aria-controls="document-filters"
+            aria-label={isFiltersOpen ? "Сховати фільтри" : "Показати фільтри"}
+            title={isFiltersOpen ? "Сховати фільтри" : "Показати фільтри"}
+          >
+            <i className="fa-solid fa-filter" aria-hidden="true"></i>
+            {activeFilterCount > 0 ? (
+              <span className={style.filterCount}>{activeFilterCount}</span>
+            ) : null}
+          </button>
           {!isTroPage ? (
             <>
               <button type="button" onClick={() => setShowCreateReturn(true)}>
@@ -391,33 +427,46 @@ export default function DocumentsPage({ category = "return-exchange" }) {
         </div>
       </div>
 
-      <button
-        className={style.mobileFilterToggle}
-        type="button"
-        onClick={() => setIsMobileFiltersOpen((open) => !open)}
-        aria-expanded={isMobileFiltersOpen}
-        aria-controls="document-filters"
-      >
-        <span>
-          <i className="fa-solid fa-filter" aria-hidden="true"></i>
-          Фільтри
-          {activeFilterCount > 0 ? (
-            <span className={style.filterCount}>{activeFilterCount}</span>
-          ) : null}
-        </span>
-        <i
-          className={`fa-solid fa-chevron-${isMobileFiltersOpen ? "up" : "down"}`}
-          aria-hidden="true"
-        ></i>
-      </button>
-
       <form
         id="document-filters"
         className={`${style.filterPanel} ${
-          isMobileFiltersOpen ? style.mobileFiltersOpen : ""
-        }`}
+          isFiltersOpen ? style.filtersOpen : ""
+        } ${isTroPage ? style.troFilterPanel : ""}`}
         onSubmit={applyFilters}
       >
+        {isTroPage ? (
+          <label className={style.filterControl}>
+            <span className={style.filterLabel}>Пошук документа</span>
+            <FormInput
+              type="search"
+              value={filters.documentQuery}
+              placeholder="№ документа, документа УП або заказу УП"
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  documentQuery: event.target.value,
+                }))
+              }
+            />
+          </label>
+        ) : null}
+
+        {isTroPage ? (
+          <div className={style.filterControl}>
+            <span className={style.filterLabel}>Місто</span>
+            <CompactSelect
+              value={filters.cityId}
+              options={cityOptions}
+              ariaLabel="Місто документа ТРО"
+              onChange={(cityId) => {
+                const cityLabel = cityOptions.find((option) => option.value === cityId)?.label || "";
+                setFilters((current) => ({ ...current, cityId, cityLabel }));
+                setAppliedFilters((current) => ({ ...current, cityId, cityLabel }));
+              }}
+            />
+          </div>
+        ) : null}
+
         <div className={style.dateControl}>
           <div className={style.filterLabelRow}>
             <label htmlFor="documents-date-from">З</label>

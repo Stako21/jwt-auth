@@ -6,6 +6,8 @@ import DocumentRowActions from "./DocumentRowAction";
 import OneCStageBadge from "./OneCStageBadge.jsx";
 import StatusBadge from "./StatusBadge";
 import { getTroPeople } from "./troPeople.js";
+import { getTroCancellationWarning } from "./troCancellation.js";
+import TroCancellationNotice from "./TroCancellationNotice.jsx";
 import style from "./DocumentsTable.module.scss";
 
 function formatDocumentDate(value) {
@@ -39,6 +41,23 @@ function troPeople(doc) {
     oneCSalesAgentName: doc.tro_one_c_sales_agent_name,
     requestSalesAgentName: doc.tro_request_agent_name || doc.tro_ta_name,
   });
+}
+
+function troExecutionDocumentNumbers(doc) {
+  return String(doc.tro_execution_document_numbers || "")
+    .split("||")
+    .map((number) => number.trim())
+    .filter(Boolean);
+}
+
+function TroExecutionDocumentNumbers({ doc }) {
+  const numbers = troExecutionDocumentNumbers(doc);
+  if (!numbers.length) return <span>—</span>;
+  return (
+    <div className={style.executionNumbers} title={numbers.join(", ")}>
+      {numbers.map((number, index) => <span key={`${number}-${index}`}>{number}</span>)}
+    </div>
+  );
 }
 
 function troRequiredDocuments(doc) {
@@ -212,6 +231,7 @@ export default function DocumentTable({
             />
             {isTroTable ? <col className={style.troExecutorColumn} /> : null}
             {isTroTable ? <col className={style.troTaColumn} /> : null}
+            {isTroTable ? <col className={style.troExecutionColumn} /> : null}
             {isTroTable ? <col className={style.troUpColumn} /> : null}
             {isTroTable ? <col className={style.troStageColumn} /> : null}
             {isTroTable ? <col className={style.troDocumentsColumn} /> : null}
@@ -240,6 +260,7 @@ export default function DocumentTable({
               {isTroTable ? <th>Виконавець</th> : null}
               {isTroTable ? <th>ТА</th> : null}
               {isTroTable ? <th>Документ УП</th> : null}
+              {isTroTable ? <th>Заказ УП</th> : null}
               {isTroTable ? <th>Стан в УП</th> : null}
               {isTroTable ? <th>Документи</th> : null}
               <th>Дата</th>
@@ -251,6 +272,7 @@ export default function DocumentTable({
             {documents.map((doc) => (
               <tr
                 data-selected={selectedIds.has(Number(doc.id)) || undefined}
+                data-cancellation-conflict={Boolean(getTroCancellationWarning(doc)) || undefined}
                 key={doc.id}
                 onClick={(event) => handleDocumentOpen(event, doc)}
               >
@@ -264,7 +286,10 @@ export default function DocumentTable({
                 <td className={style.statusCell}>
                   <StatusBadge status={doc.status} />
                 </td>
-                <td className={style.noTruncate}>{doc.document_number}</td>
+                <td className={style.noTruncate}>
+                  <span>{doc.document_number}</span>
+                  <TroCancellationNotice document={doc} compact onOpen={() => onViewDocument?.(doc)} />
+                </td>
                 {showBranchColumn ? (
                   <td title={doc.branch_short_name || doc.branch_name || ""}>
                     {doc.branch_short_name || doc.branch_name || "—"}
@@ -293,6 +318,9 @@ export default function DocumentTable({
                     <span>{troPeople(doc).salesAgentName}</span>
                     {troPeople(doc).isRequestSalesAgent ? <small>ТА заявки</small> : null}
                   </td>
+                ) : null}
+                {isTroTable ? (
+                  <td><TroExecutionDocumentNumbers doc={doc} /></td>
                 ) : null}
                 {isTroTable ? (
                   <td className={style.personCell}>
@@ -325,6 +353,7 @@ export default function DocumentTable({
           <article
             className={style.documentCard}
             data-status={doc.status}
+            data-cancellation-conflict={Boolean(getTroCancellationWarning(doc)) || undefined}
             data-selected={selectedIds.has(Number(doc.id)) || undefined}
             key={doc.id}
             onClick={(event) => handleDocumentOpen(event, doc)}
@@ -349,6 +378,8 @@ export default function DocumentTable({
               </span>
               <time>{formatDocumentDate(doc.document_date)}</time>
             </div>
+
+            <TroCancellationNotice document={doc} />
 
             <div className={style.cardDetails}>
               <p title={doc.trade_point}>
@@ -378,7 +409,13 @@ export default function DocumentTable({
               {isTroTable ? (
                 <p>
                   <i className="fa-regular fa-file-lines" aria-hidden="true"></i>
-                  <span>Документ УП: {doc.tro_up_document_number || "—"}{doc.tro_document_1c_date ? ` · ${formatDocumentDateTime(doc.tro_document_1c_date)}` : ""}</span>
+                  <span>Документ УП: {troExecutionDocumentNumbers(doc).join(", ") || "—"}</span>
+                </p>
+              ) : null}
+              {isTroTable ? (
+                <p>
+                  <i className="fa-regular fa-file-lines" aria-hidden="true"></i>
+                  <span>Заказ УП: {doc.tro_up_document_number || "—"}{doc.tro_document_1c_date ? ` · ${formatDocumentDateTime(doc.tro_document_1c_date)}` : ""}</span>
                 </p>
               ) : null}
               {isTroTable ? (

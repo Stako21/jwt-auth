@@ -136,6 +136,11 @@ export async function updateTroAccounting(id, payload) {
   return data;
 }
 
+export async function administerTroDocument(id, action, payload) {
+  const { data } = await api.post(`/${id}/tro-admin/${action}`, payload);
+  return data;
+}
+
 export async function fetchAdminDocuments(params, signal) {
   const { data } = await api.get("/admin/actions", { params, signal });
   return data;

@@ -7,6 +7,9 @@ const router = Router();
 // Only Admin and Director can manage region notifications
 const adminOnly = ensureRole([1, 2]); // Admin: 1, Director: 2
 
+router.get("/options", adminOnly, RegionNotificationsController.getNotificationOptions);
+router.post("/test", adminOnly, RegionNotificationsController.sendTestNotification);
+
 router.get(
   "/",
   adminOnly,

@@ -3,9 +3,15 @@ import { createPortal } from "react-dom";
 import { useSnackbar } from "notistack";
 import CompactSelect from "../components/CompactSelect/CompactSelect.jsx";
 import { getOneCStageLabel } from "../components/Documents/oneCStage.js";
+import {
+  formatExecutionDocumentDate,
+  getExecutionDocumentStatus,
+} from "../components/Documents/executionDocumentStatus.js";
 import { getTroPeople } from "../components/Documents/troPeople.js";
+import TroCancellationNotice from "../components/Documents/TroCancellationNotice.jsx";
 import FormInput from "../components/FormControl/FormInput.jsx";
-import { createDocument, updateDocument, updateTroAccounting } from "../services/documents.api.js";
+import StatusBadge from "../components/Documents/StatusBadge.jsx";
+import { administerTroDocument, createDocument, updateDocument, updateTroAccounting } from "../services/documents.api.js";
 import { ROLE_IDS } from "../utils/roles.js";
 import { UI_TIMING } from "../uiTokens.js";
 import ItemModal from "./ItemModal.jsx";
@@ -66,6 +72,15 @@ export default function CreateTroDocumentModal({
   const [appReturn, setAppReturn] = useState(false);
   const [warehouseSpecReturn, setWarehouseSpecReturn] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [adminAction, setAdminAction] = useState(null);
+  const [adminReason, setAdminReason] = useState("");
+  const administration = Number(currentUser?.role) === ROLE_IDS.Admin
+    ? editingDocument?.administration : null;
+
+  useEffect(() => {
+    setAdminAction(null);
+    setAdminReason("");
+  }, [isOpen, editingDocument?.id, editingDocument?.status]);
 
   const isAccountant = Number(currentUser?.role) === ROLE_IDS.Accountant;
   const accountingEditable =
@@ -368,6 +383,23 @@ export default function CreateTroDocumentModal({
     }
   }
 
+  async function executeAdministration() {
+    if (!adminAction || !adminReason.trim() || saving) return;
+    setSaving(true);
+    try {
+      await administerTroDocument(editingDocument.id, adminAction, {
+        comment: adminReason.trim(), expectedStatus: editingDocument.status,
+      });
+      enqueueSnackbar(adminAction === "cancel" ? "Документ скасовано" : "Документ повернуто на доопрацювання", { variant: "success" });
+      await onCreated?.();
+      onClose();
+    } catch (error) {
+      enqueueSnackbar(error.response?.data?.message || "Не вдалося виконати адміністративну дію", { variant: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!isOpen) return null;
 
   return createPortal(
@@ -383,6 +415,31 @@ export default function CreateTroDocumentModal({
         </header>
 
         <div className={styles.body}>
+          <TroCancellationNotice document={editingDocument} />
+          {administration ? <details className={styles.administration}>
+            <summary>Адміністративні дії</summary>
+            <div className={styles.adminBody}>
+              <StatusBadge status={editingDocument.status} showLabel />
+              <div className={styles.adminButtons}>
+                {administration.canRevise ? <button type="button" className={styles.secondary} disabled={saving} onClick={() => setAdminAction("revision")}>Повернути на доопрацювання</button> : null}
+                {administration.canCancel ? <button type="button" className={styles.danger} disabled={saving} onClick={() => setAdminAction("cancel")}>Скасувати документ</button> : null}
+              </div>
+              {administration.revisionBlockedReason ? <p>{administration.revisionBlockedReason}</p> : null}
+              {adminAction ? <div className={styles.adminConfirmation} role="group" aria-label="Підтвердження адміністративної дії">
+                <p>{adminAction === "cancel"
+                  ? "Документ отримає статус «Скасовано» на порталі. Це не видаляє документи в УП. Зв’язок з УП, документи виконання, підписи та бухгалтерські відмітки будуть збережені."
+                  : "Документ буде повернуто на доопрацювання. Попередній підпис буде знято; після виправлення потрібне повторне підписання."}</p>
+                <label className={styles.field}>
+                  <span>Причина (обов’язково)</span>
+                  <FormInput value={adminReason} maxLength={250} disabled={saving} onChange={(event) => setAdminReason(event.target.value)} placeholder="Вкажіть причину дії" />
+                </label>
+                <div className={styles.adminButtons}>
+                  <button type="button" className={styles.secondary} disabled={saving} onClick={() => setAdminAction(null)}>Назад</button>
+                  <button type="button" className={adminAction === "cancel" ? styles.danger : styles.primary} disabled={saving || !adminReason.trim()} onClick={executeAdministration}>{saving ? "Виконання…" : adminAction === "cancel" ? "Підтвердити скасування" : "Підтвердити повернення"}</button>
+                </div>
+              </div> : null}
+            </div>
+          </details> : null}
           <section className={styles.generalSection}>
             <div className={styles.field}>
               <label>Контрагент</label>
@@ -479,6 +536,25 @@ export default function CreateTroDocumentModal({
             <div className={styles.checks}>
               {movementType === "INSTALL" ? <><label><FormInput type="checkbox" checked={appInstall} disabled={!accountingEditable} onChange={(event) => setAppInstall(event.target.checked)} /> Акт</label><label><FormInput type="checkbox" checked={photoInstall} disabled={!accountingEditable} onChange={(event) => setPhotoInstall(event.target.checked)} /> Фото</label></> : <><label><FormInput type="checkbox" checked={appReturn} disabled={!accountingEditable} onChange={(event) => setAppReturn(event.target.checked)} /> Акт</label><label><FormInput type="checkbox" checked={warehouseSpecReturn} disabled={!accountingEditable} onChange={(event) => setWarehouseSpecReturn(event.target.checked)} /> Специфікація</label></>}
             </div>
+          </section> : null}
+
+          {editingDocument ? <section className={styles.executionSection}>
+            <h3>Виконання в УП</h3>
+            {editingDocument.tro?.execution_documents?.length ? (
+              <div className={styles.executionTableScroll}>
+                <table className={styles.executionTable}>
+                  <thead><tr><th>Документ</th><th>Дата</th><th>Стан</th></tr></thead>
+                  <tbody>{editingDocument.tro.execution_documents.map((item) => {
+                    const status = getExecutionDocumentStatus(item);
+                    return <tr key={item.document_1c_guid}>
+                      <td>{item.document_number}</td>
+                      <td>{formatExecutionDocumentDate(item.document_date)}</td>
+                      <td><span className={styles[`executionStatus${status.code}`]}>{status.label}</span></td>
+                    </tr>;
+                  })}</tbody>
+                </table>
+              </div>
+            ) : <p className={styles.emptyItems}>Документи виконання ще не створені</p>}
           </section> : null}
         </div>
 

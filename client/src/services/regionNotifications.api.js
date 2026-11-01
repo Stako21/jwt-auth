@@ -2,6 +2,16 @@ import { createAuthenticatedApi } from "./createAuthenticatedApi";
 
 const api = createAuthenticatedApi("/region-notifications");
 
+export async function fetchNotificationOptions() {
+  const { data } = await api.get("/options");
+  return data;
+}
+
+export async function sendTestNotification(destination) {
+  const { data } = await api.post("/test", destination);
+  return data;
+}
+
 export async function fetchRegionNotifications() {
   const { data } = await api.get("/");
   return data;

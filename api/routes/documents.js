@@ -16,6 +16,7 @@ import {
   getSelectedDocumentRegistry,
   getDocumentRegistryColumns,
   exportSelectedDocumentsXlsx,
+  administerTroDocument,
 } from "../controllers/documentsController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import { ensureRole, ROLE_IDS } from "../utils/roles.js";
@@ -35,6 +36,8 @@ router.post("/export/registry", authMiddleware, getSelectedDocumentRegistry);
 router.post("/export/xlsx", authMiddleware, exportSelectedDocumentsXlsx);
 router.put("/:id", authMiddleware, updateDocument);
 router.put("/:id/tro-accounting", authMiddleware, updateTroAccounting);
+router.post("/:id/tro-admin/revision", authMiddleware, ensureRole(ROLE_IDS.Admin), administerTroDocument("revision"));
+router.post("/:id/tro-admin/cancel", authMiddleware, ensureRole(ROLE_IDS.Admin), administerTroDocument("cancel"));
 router.post("/:id/sign", authMiddleware, signDocument);
 router.post("/:id/prepare", authMiddleware, prepareDocument);
 router.post("/:id/revision", authMiddleware, revisionDocument);

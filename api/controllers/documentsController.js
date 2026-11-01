@@ -37,6 +37,20 @@ import {
   getDocumentRegistryFileName,
 } from "../services/documentRegistry.service.js";
 import ErrorsUtils from "../utils/Errors.js";
+import { troAdministrationService } from "../services/troAdministration.service.js";
+
+export function administerTroDocument(action) {
+  return async (req, res) => {
+    try {
+      res.json(await troAdministrationService.execute(req.user, req.params.id, action, req.body));
+    } catch (error) {
+      res.status(error.status || 500).json({
+        code: error.code || "TRO_ADMIN_FAILED",
+        message: error.status ? error.message : "Не вдалося виконати адміністративну дію",
+      });
+    }
+  };
+}
 
 // Controller to handle document creation
 export async function createDocument(req, res) {
