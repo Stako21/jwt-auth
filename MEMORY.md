@@ -2476,7 +2476,7 @@ Frontend:
 
 ## 2026-09-19 — UP cancellation propagates to TRO request
 
-- Updated `POST /api/1c/tro-requests/:id/stage` so `stage=CANCELLED` preserves the integration stage and also moves the Portal TRO request to terminal status `REJECTED`, including the `IN_PROGRESS → CANCELLED` path.
+- Historical behavior at this checkpoint mapped `stage=CANCELLED` to Portal `REJECTED`; this was superseded on 2026-10-06 by complete independence between `one_c_stage` and `documents.status`.
 - The cancellation records the Portal status transition in common history and sends the normal status notification. An identical retry is idempotent; a retry also repairs legacy inconsistent rows where `one_c_stage` is already `CANCELLED` but the Portal request is not yet rejected.
 - Other 1C stages remain independent: in particular, `COMPLETED` still does not complete the Portal accounting workflow. No schema migration or commit was created.
 
@@ -2573,6 +2573,103 @@ Frontend:
 - Added `GET /api/auth/scheduler/import-runs` with validated `limit`/status parameters and the existing `authMiddleware + adminOnly` boundary.
 - Added focused journal retention/filtering/sanitization tests. Frontend lint and production build passed; all backend tests passed when run sequentially because the sandbox blocks Node test-runner child-process spawning.
 
+## 2026-10-02 - Planned admin TRO revision override
+
+- Added a deferred design item for an Administrator-only `Повернути на доопрацювання` action on eligible TRO documents before any 1C processing. The target is always `REVISION`, with a mandatory reason, cleared prior signature, branch-access validation, transaction/locking, and explicit history attribution—not a free-form status picker.
+- `COMPLETED`, `PLANNED`, documents linked/processed/rejected through 1C, and accounting-touched documents are explicitly outside this operation. Their status and integration metadata must not be changed or cleared by the portal admin override; correcting them requires a separate coordinated procedure.
+- Added a second deferred item for notification routing and a `Надіслати тест` action in `Адмін -> Сповіщення`. Each notification row will select `RETURN`, `EXCHANGE`, and/or `TRO` via checkboxes; existing rows must migrate to all three types, backend filtering occurs before recipient deduplication, and existing failed `notification_log` retries retain their original delivery intent. The test action will use the currently entered (including unsaved) email/Rocket.Chat destination through real transports, with validation, city/branch authorization, throttling, masked structured logging, and no document/history/retry side effects.
+- Added a deferred phase for a separate `Акт приймання-передачі МЦ` document type. Implementation is intentionally blocked on an explicit business contract covering fields/items, actors, roles, signatures/statuses, numbering, print/export, notifications, and possible 1C integration; its specific data and workflow must remain isolated from TRO and Return/Exchange services/tables.
+- No application code or database schema was changed in this planning slice.
+
+## 2026-10-05 - Debet report date filters and overdue counters
+
+- Added calendar-date filters to `ReportDebet`: document date is an exact match and defaults to unrestricted; payment date is an inclusive upper bound, defaults to the next local calendar day, and excludes rows without a payment date while active. Both use the shared `DateInput` and explicit `Без обмежень` toggles.
+- Added theme-token-driven red overdue counters to the nested cards that directly contain invoice tables: contractor cards in Collector grouping and collector cards in Contractor grouping. Counts reflect the rows remaining after search, date, and overdue filters.
+- Updated the filter grid for desktop, sidebar-reduced/tablet, and phone widths. Frontend lint and production build pass; the build reports only the existing Sass legacy API and bundle-size warnings.
+
+## 2026-10-06 — TRO execution-document synchronization
+
+- Added migration `031_tro_1c_execution_documents.js` with authoritative per-request 1C execution rows and a separate `one_c_observed_at` stale barrier.
+- Extended the existing integration `/stage` transaction with optional full `execution_documents` snapshots, strict validation, conflict protection, exact idempotency, and stage-history preservation.
+- Full TRO DTO and modal now expose a read-only `Виконання в УП` table with centralized confirmed/shipped/not-confirmed labels.
+- Added the v2 source export for the separate 1C status processor; it resolves INSTALL/RETURN execution documents strictly through the parent reference, posts every observed snapshot, and completes only when the parent is complete and all active execution documents are confirmed.
+- Migration was initially created without applying it; the subsequent 2026-10-06 correction pass applied it to the approved local DEV database. No commit was created.
+
+## 2026-10-06 — TRO execution sync independence correction
+
+- Removed the former automatic `one_c_stage=CANCELLED -> documents.status=REJECTED` transition. All 1C stages are now independent from the Portal business workflow; CANCELLED records only an `ONE_C_STAGE` history event with null business-status fields.
+- CANCELLED with an execution snapshot remains atomic and exactly idempotent. Manual/integration rejection through the dedicated `/rejected` workflow remains unchanged.
+- Removed three diagnostic `Сообщить()` calls from the v2 1C status-source export; kept only the user-facing `Сообщить("ОК")` after the explicit save-settings command.
+- Applied migrations 030 and 031 through the standard runner to local DEV database `auth` on `Stako_PC`; migration 031 preserved 95 TRO documents and 95 detail rows and created an empty execution table with the expected unique index and cascading FK.
+- Backend integration tests pass 43/43; frontend lint/build and backend syntax checks pass. No commit was created.
+
+## 2026-10-06 — TRO list execution-document columns and search
+
+- Renamed the former TRO-list `Документ УП` parent-number column to `Заказ УП` and inserted a preceding `Документ УП` column populated with every current execution-document number from `tro_1c_execution_documents`.
+- Added the same distinction to mobile cards. Multiple execution numbers remain individually visible in the desktop cell.
+- Added a TRO filter-panel document search matching the Portal document number, any execution-document number, or the parent UP order number.
+- The list service loads execution numbers in one scoped secondary query rather than a length-limited `GROUP_CONCAT`. Added a filter regression test; backend TRO tests, frontend lint, and production build pass.
+
+## 2026-10-16 — TRO parent deletion stage synchronization
+
+- Updated only the existing v2 1C status-processor text source: both INSTALL/RETURN parent queries select `ПометкаУдаления`, and the centralized aggregate-stage function accepts it as an optional third argument with highest-priority `CANCELLED` handling.
+- Preserved existing identity checks, GUID/not-found errors, active execution snapshots, deleted-execution filtering, completion/shipping rules, HTTP/auth/pagination, and scheduled-job logic. Portal backend/frontend, database, migrations, and binary EPF were not changed in this slice; existing unrelated work was preserved. No commit was created.
+- Static audit verified four exact source edits in two functions, 27 untouched functions/procedures, balanced functions 19/19, procedures 10/10, try blocks 6/6, conditions 70/70, loops 5/5, and parentheses 246/246. All eight requested scenarios pass code review; manual 1C import/runtime testing remains required.
+- Results: `TRO-PARENT-DELETION-SYNC-REPORT.md` and `TRO-PARENT-DELETION-SYNC-CODEX-RESULT.md`.
+
+## 2026-10-16 — TRO cancellation conflicts and final Portal cancellation
+
+- Updated the business rule at the user's request: a planned TRO becomes distinct Portal `CANCELLED` / `Скасовано` only when `/stage` reports `CANCELLED` with an explicit authoritative empty execution snapshot. This transition and its single `ONE_C_CANCELLED` history event share the existing transaction; omitted/legacy snapshots never finalize cancellation, and completed documents remain unchanged.
+- `CANCELLED` parents with any active execution (including confirmed executions) keep their business status and remain in the scoped status-pending queue until the executions disappear or the parent is restored. Existing planned/cancelled rows without stored executions are also repolled to confirm absence rather than updated directly in the database.
+- Added token-based desktop row/mobile-card highlights, a desktop warning button, and a shared persistent mobile/modal notice listing the parent and remaining active execution numbers. As explicitly chosen by the user, there is no new migration or deletion flag: the message says the parent is cancelled or marked for deletion.
+- Added the cancelled Portal status to filters, badges, history, and print/XLSX registry labels. The v2 1C text source, binary EPF, API payload shape, source snapshots, client/dist, and database are unchanged in this slice; no commit was created.
+- Validation: all 134 backend tests pass sequentially, including cancellation/continued polling/restoration/legacy/stale guards and warning presentation; frontend lint and isolated production build pass (existing Sass deprecation/bundle-size warnings). Backend syntax and scoped diff checks pass; global diff check still reports pre-existing CRLF whitespace in untouched DocumentService.js.
+
+## 2026-10-16 — TRO document city filter
+
+- Added a TRO-only `Місто` CompactSelect with `Усі міста`, apply/reset integration, and active-filter counting. It combines with existing document/status/contractor/author filters and retains the selected city label when the chosen period contains no documents for it; return/exchange filtering remains unaffected.
+- Document list DTOs now include `city_id` and `city_name` via `LEFT JOIN cities` on both city ID and document branch. Options are deduplicated from already authorized period documents; equal city names from different branches are disambiguated by branch label. No hardcoded city list, migration, or access-boundary change was introduced.
+- Adapted the TRO filter grid to include the new field without desktop overlap and kept the one-column phone status panel inside its grid. Existing selection pruning makes print/XLSX selection follow the filtered results.
+- Validation: all three document-filter tests pass, including combined filters and duplicate city names; backend syntax, frontend lint, and an isolated production build pass (existing Sass/bundle-size warnings). Existing unrelated work and client/dist/source data were preserved; no commit was created.
+
+## 2026-10-16 — Immediate TRO city selection and compact document filters
+
+- TRO city selection now updates both the draft city and applied city immediately, including `Усі міста`; it preserves the previously applied values of every other filter and period until `Показати` is submitted.
+- Both document workspaces start with filters collapsed at every viewport size. A compact accessible filter-icon button beside the creation actions opens/closes the panel and shows the count of actually applied filters; phone controls retain their shared touch target size. Applying the remaining fields closes the panel.
+- Validation: frontend lint, all three existing document-filter tests, and an isolated production build pass (existing Sass/bundle-size warnings). Only DocumentsPage JSX/SCSS and collaboration notes changed in this slice; no backend, database, source assets, generated client/dist, or commit changes.
+
+## 2026-10-16 — Notification roadmap: grouped documents and individual TRO events
+
+- Refined deferred-work-plan section 4 per the user: exactly two document groups (`Повернення/Обмін` and `ТРО`), with a separate recipient-level checkbox for each TRO event.
+- Audited current sending paths and recorded seven planned event codes: new Portal creation, signature, revision, Portal rejection, first UP creation/planning, UP rejection, and accounting completion. Portal creation is new; the other six already call the notification service. UP stage-only changes, the cancellation conflict, and final Portal cancellation currently do not send email/Rocket.Chat and are outside this agreed baseline.
+- The plan preserves existing delivery on migration (both groups and six existing events; new creation initially off for existing rows), applies group/event filtering before deduplication, preserves failed-delivery retry intent, and requires post-commit text-only creation notifications with appropriate retry handling. The separate test-send action remains planned.
+- Documentation-only slice: updated the plan and collaboration notes. No application code, migration, database, or delivery action was changed or executed; no commit was created.
+
+## 2026-10-18 — Notification groups, TRO event subscriptions and test sending
+
+- Implemented recipient-level `document_groups` (`RETURN_EXCHANGE`, `TRO`) and seven independent TRO event subscriptions. The server supplies the UI choices/defaults; role and current-branch/city validation remains authoritative. Existing destinations are normalized and deduplicated only after group/event filtering.
+- Added idempotent migration 032 with JSON policies. Existing recipients keep both groups and the six prior events, with new Portal creation off; new form rows default to all seven. Migration was prepared and unit-tested with a substitute pool, not run against a database. Until applied, existing delivery uses a legacy fallback and settings APIs return a clear migration-required error.
+- Added post-commit Portal TRO creation notifications and explicit event identities at signature/revision/rejection, UP-created/UP-rejected, and accounting-completion calls. Final cancellation, UP stage-only changes, and cancellation-conflict warnings do not introduce email/chat events.
+- Test sending uses unsaved destination fields, shared real SMTP/Rocket.Chat transport code, independent channel outcomes, masked structured audit, and a per-process initiator/branch cooldown/in-flight guard. It does not change settings, documents, history, or retry logs. No real delivery was executed during this task.
+- Working TRO logs now retain an event code and message snapshot; retry keeps original destinations/message intent and treats creation as text, while retaining old STATUS_CHANGE/SIGNED_PDF compatibility.
+- Validation: all 150 backend tests pass, frontend lint/build pass, and an intercepted-API browser check passes for 1440/768/390 px, including group/event retention, saving/editing, and test results. The notification form scrolls inside the bounded Admin panel on tablets/phones. Build output and browser fixtures were temporary; client/dist/source snapshots and unrelated changes were preserved. No commit was created.
+
+## 2026-10-18 — Notification migration 032 applied to approved local DEV
+
+- Following explicit user authorization, verified the configured target as local MySQL `localhost:3306`, database `auth`, server `Stako_PC`; migration 032 was the only pending migration.
+- Ran the standard `npm run migrate` from api. Migration 032 added JSON `document_groups` and `tro_events` columns and was registered in `schema_migrations`; all earlier migrations were skipped.
+- Verified both existing settings remain present and a SHA-256 fingerprint of all pre-existing fields is unchanged. The application settings service reads both rows with both document groups, all six legacy TRO events, and Portal creation disabled. No pending migrations remain.
+- No production/remote DB, real email/Rocket.Chat send, or application source change was involved in this migration step. Updated README, AGENTS, and the deferred-work plan to reflect local readiness; no commit was created.
+
+## 2026-10-22 — Admin TRO revision and cancellation at every stage
+
+- Implemented separate Admin-only TRO revision/cancellation routes and service with visible-branch checks, a required 1–250-character reason, expected-status concurrency checks, document row locking, transactional history and idempotent repeats. Director and other roles gain no new actions; non-TRO documents are rejected.
+- Administrative revision returns unprocessed NEW/NOT_COMPLETED/Portal-REJECTED/unlinked-CANCELLED requests to REVISION, clears the old signature, records ADMIN_REVISION and uses the existing TRO_REVISION subscription after commit. PLANNED/COMPLETED, every UP processing marker, active execution rows and accounting markers block revision without clearing their data.
+- At the user's explicit request, administrative cancellation is allowed at every stage, including completed, UP-linked and active-execution documents. It records ADMIN_CANCEL with the real administrator and reason, preserving signatures, accounting data, UP stage/link and execution snapshots. Cancellation adds no email/chat event and does not delete UP documents or change automatic cancellation/pending-queue rules. Late UP callbacks cannot restore the cancelled Portal status.
+- Added a collapsed administrative section to the TRO modal, including view-only mode, with server-owned action capabilities, status, explicit confirmation, required shared reason input and safe blocked-revision explanations. Corrected mobile grid overflow discovered during visual inspection. Existing UP conflict warnings now explicitly acknowledge an already cancelled Portal request.
+- Validation: all 165 backend tests pass, including 12 new administration tests, two late-integration regression tests and the cancelled-warning case. Frontend lint, isolated production build and mocked-API browser checks at 1440/768/390 px pass; screenshots inspected, inner-scroller overflow and role hiding checked. Existing Sass legacy-API/bundle-size warnings remain.
+- Updated AGENTS, README, deferred plan and integration protocol. No migration, business-data update, real notification, production operation, generated client/dist change or commit; temporary browser/build fixtures were removed and the preview server stopped. Existing unrelated working-tree changes were retained.
+
 ## 2026-10-31 — Bulk administrative TRO actions and additive status resynchronization
 
 - Added Admin `Дії з документами` with server-filtered date/status/search, 100-row pagination, desktop selection/mobile cards, explicit document-number confirmation, required reason and per-document results. Admin-only GET/POST `/api/documents/admin/actions` accepts explicit unique IDs and expected statuses. Each operation reuses the existing locked, visible-branch-scoped TRO administration service; cancellation preserves integration/accounting/signature data. At the user's explicit choice, revision keeps all existing UP/execution/accounting restrictions.
@@ -2591,3 +2688,10 @@ Frontend:
 - User approved committing and pushing the document-actions work. Created product commit `5e62038` with bulk TRO administration, additive status registration, required execution-snapshot backend support/migration 031, migration 033, relevant UI and tests. Unrelated notification/report/source-data changes remain in the working tree. Collaboration documentation is isolated into a separate commit.
 - Validated the exact staged product tree in a temporary checkout with shared installed dependencies: 158 tests across 16 files pass, frontend lint and production build pass. Fixed the new cursor-pagination test to supply an explicit test secret instead of depending on local `.env`; its 58-test suite passes with no application secrets. The other 21 tests from the prior 179-test working-tree run belong to unrelated unstaged features. Existing build warnings remain.
 - No database migration or document action was repeated during publication preparation. Temporary checkout/build output is removed after validation; business snapshots and unrelated work remain intact.
+
+## 2026-11-01 — Full application release including all remaining improvements
+
+- User requested inclusion of every remaining application improvement and confirmed that `ИнтеграцияСтатусовТРОСПорталом` is already updated in 1C. Product commit `2ddd10e` includes all remaining backend/frontend changes: TRO execution details/warnings, individual Admin actions, document city/search/filter UX, notification group/event/test/retry functionality with migration 032, Debet date/overdue UX, their tests and the editable v2 status processor. No application-code differences remain outside the release.
+- Verified the exact full application index in an isolated checkout with no local `.env`: 179/179 tests across 19 files, frontend lint and production build passed. Syntax checks passed for 17 changed backend files. Existing Sass legacy-API and bundle-size warnings remain. Removed two whitespace-only indents in the imported 1C source without changing its behavior; the user-confirmed EPF installation was not independently exercised.
+- Included remaining dated guides, guide assets and audit reports in a separate documentation commit. Updated the PM2 runbook to resolve/pin the published release SHA instead of the obsolete 82ec22c, require migrations 031/032/033 before API startup, and cover the full release in smoke checks. Added `documentation/release-2026-11-01.md` as the current release overview and marked the old JSON-contract overview as historical.
+- Operational XLSX/report snapshot changes/deletions and archived `documentation/old-setings*.txt` server logs remain local, outside the code release. No production operation, additional migration, notification or business document change was performed. Temporary validation checkout/build output is removed after checks; installed dependencies and working business files are preserved.

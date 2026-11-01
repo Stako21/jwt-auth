@@ -27,17 +27,31 @@ Implemented in the current workspace:
 - scheduler task settings and persisted `lastRun`
 - import path resolution through `IMPORT_DIR` with legacy fallback to `client/public/Sorce`
 - installation/return TRO documents with an imported branch-scoped TRO directory, multi-position name/quantity rows, TA/SV/NTO approval rules, accountant planning/completion fields, status notifications, and document history
+- Admin-only TRO correction before UP processing and explicit cancellation at any stage, including completed/UP-linked requests, with a required reason, confirmation, branch checks and audit history; cancellation preserves integration/accounting data
 - Admin `Дії з документами` for bulk TRO cancellation, restricted revision, and additive registration for another UP status check; requires migration 033
+- notification recipient settings with two document groups, seven independent TRO events, and test sending of unsaved email/Rocket.Chat destinations (requires migration 032)
 - separate return/exchange and TRO document workspaces with dedicated menu entries, routes, server-filtered tables, creation actions, and status filter sets
 - a dedicated Full HD warehouse ranking dashboard for the current 08:00–08:00 shift, with isolated screen accounts, many-to-many warehouse access, automatic refresh, and invoice/row/weight totals without earnings data
 
 ## Administrative document actions
+
+The full application release also includes TRO execution-document details and cancellation warnings, administrative actions inside the TRO modal, city/document filters, notification group/event settings and Debet date/overdue improvements. On 2026-11-01 the user confirmed the status-processing EPF is already updated in 1C; its editable source is `ИнтеграцияСтатусовТРОСПорталом_МодульОбъекта_v2.txt`. Production installation was not independently tested during this local release preparation. See [the PM2 deployment procedure](documentation/update-pm2-production.md): apply pending migrations 031/032/033 against the approved target DB before starting the new API, and rebuild the frontend on the server. Business-data snapshots are not part of the code update.
 
 `Адмін -> Дії з документами` lists TRO requests within the administrator's visible branches, with server-side date/status/search filters and 100-row pages. Select documents on the current page, choose an action, review the document numbers and enter a reason. Each document reports its own result; a denied or concurrently changed document does not block the rest. Revision retains the existing UP/accounting restrictions. Cancellation preserves signatures, accounting fields and integration snapshots.
 
 `Реєстрація на синхронізацію` adds selected UP-linked requests to the existing `status-pending` queue without resetting either workflow or altering documents already pending. This permits another check of UP-completed requests. Registration survives API restarts and is consumed only by an accepted full execution snapshot observed at or after registration; GETs, omitted snapshots and failed callbacks keep it pending. If the refreshed state remains naturally pending, ordinary synchronization continues. Portal-COMPLETED requests are still never cancelled automatically; use explicit administrative cancellation when needed. Physical deletion of the parent in UP still produces a synchronization error in the existing EPF.
 
 Apply `api/migrations/033_tro_status_sync_requests.js` through the existing migration runner against an approved target database **before deploying this API version**. It adds one nullable timestamp column and does not register or change existing documents. Applied with user approval on 2026-10-31 to local DEV `auth` at `Stako_PC` (`localhost:3306`); all 102 existing TRO detail rows retained their previous fields and received an empty registration timestamp. Other deployments must apply it separately to their approved database. The existing v2 status-processing source already sends full snapshots; no EPF change is required.
+
+## Notification settings
+
+`Адмін -> Сповіщення` supports `Повернення/Обмін` and `ТРО`, plus separate TRO events for creation, signature, revision, Portal rejection, UP creation/planning, UP rejection, and accounting completion. Return/exchange notifications retain their signed PDFs; TRO events are text messages.
+
+Apply `api/migrations/032_notification_event_settings.js` through the existing migration runner only after confirming the target database. It adds JSON policy columns to `region_notifications`, preserves both groups and the six existing events for current recipients, and leaves the new Portal-creation event off for them. New settings default to both groups and all seven events. The migration was applied and verified on local DEV `auth` at `Stako_PC` on 2026-10-18 with user approval. Other deployments must apply it separately to their confirmed target database.
+
+`Надіслати тест` uses the current city/email/channel fields without saving the form. It reports each channel independently, uses the server's SMTP/Rocket.Chat environment settings, and creates no document/history/retry entries. Tests are limited to one request per 30 seconds per initiator/branch in the current API process. SMTP/Rocket.Chat integration testing with real recipients remains an operator action; automated checks use substitute transports.
+
+Failed working deliveries keep their original recipients and message snapshots for retry even when recipient settings change. Deploying the API before migration 032 preserves legacy delivery; the new settings screen requires that migration and reports it explicitly if missing.
 
 ## Run
 
