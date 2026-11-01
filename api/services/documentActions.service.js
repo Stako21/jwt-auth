@@ -6,7 +6,7 @@ import { getUserVisibleBranchIds } from "./appConfig.service.js";
 import { troAdministrationService, TroAdministrationError } from "./troAdministration.service.js";
 
 const STATUSES = new Set(["NEW", "REVISION", "NOT_COMPLETED", "PLANNED", "COMPLETED", "REJECTED", "CANCELLED"]);
-const MAX_SELECTION = 100;
+const MAX_SELECTION = 1000;
 
 function assertAdmin(user) {
   if (Number(user?.role) !== ROLE_IDS.Admin || user?.principalType === "integration") {
@@ -36,8 +36,11 @@ export function createDocumentActionsService({
       if (dateFrom && dateTo && dateFrom > dateTo) throw new TroAdministrationError(422, "INVALID_DATE_RANGE", "Перевірте період");
       const page = Number(query.page || 1);
       if (!Number.isSafeInteger(page) || page < 1 || page > 1000000) throw new TroAdministrationError(422, "INVALID_PAGE", "Некоректна сторінка");
+      const view = query.view || "all";
+      if (!["all", "sync-pending"].includes(view)) throw new TroAdministrationError(422, "INVALID_DOCUMENT_VIEW", "Невідомий список документів");
       const where = ["d.document_type = 'TRO'", `d.branch_id IN (${branches.map(() => "?").join(",")})`];
       const params = [...branches];
+      if (view === "sync-pending") where.push("td.document_1c_guid IS NOT NULL", TRO_STATUS_PENDING_SQL);
       if (dateFrom) { where.push("d.document_date >= ?"); params.push(dateFrom); }
       if (dateTo) { where.push("d.document_date < DATE_ADD(?, INTERVAL 1 DAY)"); params.push(dateTo); }
       if (query.status) {
@@ -77,21 +80,25 @@ export function createDocumentActionsService({
     async execute(user, payload = {}) {
       assertAdmin(user);
       const { action, documents, comment } = payload;
-      if (!["cancel", "revision", "sync"].includes(action)) throw new TroAdministrationError(422, "TRO_INVALID_ACTION", "Невідома дія");
+      if (!["cancel", "revision", "sync", "unsync"].includes(action)) throw new TroAdministrationError(422, "TRO_INVALID_ACTION", "Невідома дія");
       if (typeof comment !== "string" || !comment.trim() || comment.trim().length > 250) {
         throw new TroAdministrationError(422, "TRO_REASON_REQUIRED", "Вкажіть причину (від 1 до 250 символів)");
       }
       if (!Array.isArray(documents) || !documents.length || documents.length > MAX_SELECTION
-        || documents.some((item) => !item || !Number.isSafeInteger(item.id) || item.id <= 0 || !STATUSES.has(item.expectedStatus))
+        || documents.some((item) => !item || !Number.isSafeInteger(item.id) || item.id <= 0 || !STATUSES.has(item.expectedStatus)
+          || (action === "unsync" && (typeof item.expectedSyncRequestedAt !== "string" || !Number.isFinite(Date.parse(item.expectedSyncRequestedAt)))))
         || new Set(documents.map((item) => item.id)).size !== documents.length) {
-        throw new TroAdministrationError(422, "TRO_INVALID_SELECTION", "Оберіть від 1 до 100 різних документів із поточними статусами");
+        throw new TroAdministrationError(422, "TRO_INVALID_SELECTION", "Оберіть від 1 до 1000 різних документів із поточними статусами");
       }
       const results = [];
       // Each document has its own locked transaction and branch revalidation.
       // A conflict must not prevent independent selected documents from completing.
       for (const item of documents) {
         try {
-          const result = await administration.execute(user, item.id, action, { comment, expectedStatus: item.expectedStatus });
+          const result = await administration.execute(user, item.id, action, {
+            comment, expectedStatus: item.expectedStatus,
+            ...(action === "unsync" ? { expectedSyncRequestedAt: item.expectedSyncRequestedAt } : {}),
+          });
           results.push({ id: item.id, outcome: result.idempotent ? "unchanged" : "completed", ...result });
         } catch (error) {
           results.push({ id: item.id, outcome: "failed", code: error.status ? error.code : "TRO_ADMIN_FAILED",

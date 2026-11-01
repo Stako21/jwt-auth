@@ -20,6 +20,7 @@ const ACTION_LABELS = {
   ADMIN_REVISION: { label: "На доопрацювання адміністратором", tone: "warning" },
   ADMIN_CANCEL: { label: "Скасовано адміністратором", tone: "negative" },
   ADMIN_SYNC_REQUEST: { label: "Зареєстровано на синхронізацію", tone: "info" },
+  ADMIN_SYNC_UNREGISTER: { label: "Знято з ручної реєстрації на синхронізацію", tone: "info" },
   REJECT: { label: "Відхилено", tone: "negative" },
   UPDATE: { label: "Оновлено", tone: "info" },
   ACCOUNTING_UPDATE: { label: "Дані бухгалтера", tone: "info" },

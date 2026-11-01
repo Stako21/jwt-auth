@@ -24,7 +24,7 @@ function fixture(initial = document(), { executions = [], failHistory = false, l
     }
     if (sql.includes("SELECT id FROM tro_1c_execution_documents")) return [executions];
     if (sql.includes("UPDATE tro_document_details SET status_sync_requested_at")) {
-      stored.status_sync_requested_at = new Date("2026-10-31T10:00:00Z");
+      stored.status_sync_requested_at = sql.includes("= NULL") ? null : new Date("2026-10-31T10:00:00Z");
       return [{ affectedRows: 1 }];
     }
     if (sql.includes("UPDATE documents")) {
@@ -257,4 +257,77 @@ test("sync enforces Admin, link, branch, expected status and atomic history", as
   const results = await Promise.all([1, 2].map(() => concurrent.service.execute(ADMIN, 125, "sync", request("COMPLETED"))));
   assert.deepEqual(results.map((result) => result.idempotent), [false, true]);
   assert.equal(concurrent.history.length, 1);
+});
+
+const REGISTERED_AT = "2026-11-01T16:00:00.123Z";
+const removalRequest = (overrides = {}) => ({ ...request("COMPLETED"), expectedSyncRequestedAt: REGISTERED_AT, ...overrides });
+const registeredDocument = (overrides = {}) => document({ status: "COMPLETED", one_c_stage: "COMPLETED",
+  document_1c_guid: "guid", source_system: "UP", status_sync_requested_at: REGISTERED_AT, ...overrides });
+
+test("unregister removes only the manual marker, preserves document data and records one audited idempotent action", async () => {
+  const row = registeredDocument({ app_install: 1, completed_at: "2026-10-30", up_document_number: "UP001" });
+  const f = fixture(row);
+  assert.deepEqual(await f.service.execute(ADMIN, 125, "unsync", removalRequest()), {
+    status: "COMPLETED", idempotent: false, still_pending: false,
+  });
+  assert.deepEqual(f.doc, { ...row, status_sync_requested_at: null });
+  assert.deepEqual(f.history, [[125, 7, "ADMIN_SYNC_UNREGISTER", "COMPLETED", "COMPLETED", "Помилково підписано"]]);
+  const again = await f.service.execute(ADMIN, 125, "unsync", removalRequest());
+  assert.equal(again.idempotent, true);
+  assert.equal(f.history.length, 1);
+  assert.equal(f.notifications.length, 0);
+  assert.equal(f.queries.some(({ sql }) => /UPDATE documents|DELETE/.test(sql)), false);
+});
+
+test("unregister preserves natural pending states and cancellation conflicts", async () => {
+  for (const [stage, status, executions] of [
+    [null, "PLANNED", []], ["NEW", "PLANNED", []], ["IN_PROGRESS", "COMPLETED", []],
+    ["CANCELLED", "PLANNED", []], ["CANCELLED", "COMPLETED", [{ id: 9 }]],
+  ]) {
+    const row = registeredDocument({ one_c_stage: stage, status });
+    const f = fixture(row, { executions });
+    const result = await f.service.execute(ADMIN, 125, "unsync", removalRequest({ expectedStatus: status }));
+    assert.equal(result.still_pending, true);
+    assert.deepEqual(f.doc, { ...row, status_sync_requested_at: null });
+    assert.equal(f.notifications.length, 0);
+  }
+  const f = fixture(registeredDocument({ status_sync_requested_at: null, one_c_stage: "IN_PROGRESS" }));
+  const result = await f.service.execute(ADMIN, 125, "unsync", removalRequest());
+  assert.equal(result.idempotent, true);
+  assert.equal(result.still_pending, true);
+  assert.equal(f.history.length, 0);
+  const unlinked = fixture(registeredDocument({ document_1c_guid: null, one_c_stage: "IN_PROGRESS" }));
+  assert.equal((await unlinked.service.execute(ADMIN, 125, "unsync", removalRequest())).still_pending, false);
+});
+
+test("unregister enforces Admin, visible TRO branch, expected workflow and exact registration timestamp", async () => {
+  for (const user of [{ ...ADMIN, role: 2 }, { ...ADMIN, principalType: "integration" }]) {
+    const f = fixture(registeredDocument());
+    await assert.rejects(f.service.execute(user, 125, "unsync", removalRequest()), { status: 403 });
+    assert.equal(f.connections, 0);
+  }
+  for (const row of [registeredDocument({ branch_id: 9 }), registeredDocument({ document_type: "RETURN" })]) {
+    const f = fixture(row);
+    await assert.rejects(f.service.execute(ADMIN, 125, "unsync", removalRequest()), { status: 404 });
+    assert.deepEqual(f.doc, row);
+  }
+  const f = fixture(registeredDocument());
+  await assert.rejects(f.service.execute(ADMIN, 125, "unsync", removalRequest({ expectedStatus: "PLANNED" })), { code: "TRO_CONCURRENT_CHANGE" });
+  await assert.rejects(f.service.execute(ADMIN, 125, "unsync", removalRequest({ expectedSyncRequestedAt: "2026-11-01T15:59:59Z" })), { code: "TRO_SYNC_REGISTRATION_CHANGED" });
+  for (const invalid of [null, undefined, "bad", 123]) {
+    await assert.rejects(f.service.execute(ADMIN, 125, "unsync", removalRequest({ expectedSyncRequestedAt: invalid })), { status: 422 });
+  }
+  assert.equal(f.doc.status_sync_requested_at, REGISTERED_AT);
+  assert.equal(f.history.length, 0);
+});
+
+test("unregister rolls back on history failure and serializes parallel removals", async () => {
+  const row = registeredDocument();
+  const failed = fixture(row, { failHistory: true });
+  await assert.rejects(failed.service.execute(ADMIN, 125, "unsync", removalRequest()), /history write failed/);
+  assert.deepEqual(failed.doc, row);
+  const f = fixture(row);
+  const results = await Promise.all([1, 2].map(() => f.service.execute(ADMIN, 125, "unsync", removalRequest())));
+  assert.deepEqual(results.map(result => result.idempotent), [false, true]);
+  assert.equal(f.history.length, 1);
 });

@@ -17,6 +17,7 @@ import { signInIntegrationAccount } from "./controllers/integrationAccountsContr
 import securityHeaders from "./middlewares/securityHeaders.js";
 import { createRateLimit } from "./middlewares/rateLimit.js";
 import authMiddleware from "./middlewares/authMiddleware.js";
+import { documentActionsJson } from "./middlewares/documentActionsJson.js";
 import {
   denyOneCIntegrationAccount,
   integrationAuthMiddleware,
@@ -60,6 +61,7 @@ const pickerRestricted = denyRole([ROLE_IDS.Picker]);
 const dashboardRestricted = denyRole([ROLE_IDS.WarehouseDashboard]);
 
 app.use(cookieParser());
+app.use("/api/documents/admin/actions", documentActionsJson);
 app.use(express.json());
 app.use(securityHeaders);
 app.use(

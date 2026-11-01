@@ -67,8 +67,8 @@ function initialPeriod() {
   return {
     from: dateKey(new Date(now.getFullYear(), now.getMonth(), 1)),
     to: dateKey(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
-    withoutFrom: false,
-    withoutTo: false,
+    withoutFrom: true,
+    withoutTo: true,
   };
 }
 
@@ -104,7 +104,7 @@ export default function DocumentsPage({ category = "return-exchange" }) {
   const [appliedPeriod, setAppliedPeriod] = useState(initialPeriod);
   const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS }));
   const [appliedFilters, setAppliedFilters] = useState(() => ({ ...EMPTY_FILTERS }));
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
   const [contractorSearch, setContractorSearch] = useState("");
   const [showContractorDropdown, setShowContractorDropdown] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());

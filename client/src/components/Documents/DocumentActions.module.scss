@@ -13,7 +13,7 @@
   color: $text-medium;
 }
 
-.header > button, .toolbar > button, .pagination > button,
+.header > button, .tabs > button, .toolbar > button, .pagination > button,
 .filters > button, .confirmation footer > button {
   min-height: $control-height-sm;
   padding: $space-1 $space-3;
@@ -40,6 +40,31 @@
   justify-content: space-between;
   h2 { margin: 0; color: $text-high; font-size: 1rem; }
   p { margin: $space-1 0 0; color: $text-muted; }
+}
+.tabs {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: $space-2;
+  button[aria-selected="true"] {
+    border-color: $primary-accent-border;
+    background: $primary-accent-surface-medium;
+    color: $primary-accent-light;
+  }
+}
+.panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  gap: $space-3;
+}
+.notice {
+  flex: 0 0 auto;
+  margin: 0;
+  color: $text-muted;
+  font-size: 0.75rem;
 }
 .filters {
   @include filter-panel.shell($space-3, $radius-lg);

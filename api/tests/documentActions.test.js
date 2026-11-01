@@ -22,7 +22,7 @@ test("batch validates explicit unique bounded IDs, status, action and reason bef
   for (const change of [
     { documents: [] }, { documents: [125] }, { documents: [{ id: "125", expectedStatus: "COMPLETED" }] },
     { documents: [{ id: 0, expectedStatus: "COMPLETED" }] }, { documents: [{ id: 125 }] },
-    { documents: Array.from({ length: 101 }, (_, i) => ({ id: i + 1, expectedStatus: "NEW" })) },
+    { documents: Array.from({ length: 1001 }, (_, i) => ({ id: i + 1, expectedStatus: "NEW" })) },
     { documents: [{ id: 125, expectedStatus: "NEW" }, { id: 125, expectedStatus: "NEW" }] },
     { action: "delete" }, { comment: " " }, { comment: "x".repeat(251) },
   ]) await assert.rejects(service.execute(ADMIN, payload(change)), { status: 422 });
@@ -50,15 +50,37 @@ test("batch continues after per-document access, restriction and concurrency err
   assert.equal(result.results[5].outcome, "completed");
 });
 
+test("batch accepts exactly 1000 explicit documents and forwards removal concurrency tokens", async () => {
+  const calls = [];
+  const service = createDocumentActionsService({ administration: {
+    async execute(user, id, action, request) {
+      calls.push({ user, id, action, request });
+      return { status: "COMPLETED", idempotent: false };
+    },
+  } });
+  const expectedSyncRequestedAt = "2026-11-01T16:00:00.123Z";
+  const documents = Array.from({ length: 1000 }, (_, i) => ({ id: i + 1, expectedStatus: "COMPLETED", expectedSyncRequestedAt }));
+  const result = await service.execute(ADMIN, payload({ action: "unsync", documents }));
+  assert.equal(result.completed, 1000);
+  assert.equal(calls.length, 1000);
+  assert.deepEqual(calls[999], { user: ADMIN, id: 1000, action: "unsync",
+    request: { comment: payload().comment, expectedStatus: "COMPLETED", expectedSyncRequestedAt } });
+  for (const invalid of [undefined, null, "invalid", 123]) {
+    await assert.rejects(service.execute(ADMIN, payload({ action: "unsync",
+      documents: [{ id: 1, expectedStatus: "COMPLETED", expectedSyncRequestedAt: invalid }] })), { status: 422 });
+  }
+  assert.equal(calls.length, 1000);
+});
+
 test("list applies branch isolation, period, literal search and stable pagination on the server", async () => {
   const queries = [];
   const db = { async query(sql, params) {
     queries.push({ sql, params });
-    return sql.includes("COUNT(*)") ? [[{ total: 240 }]] : [[{ id: 125, document_date: new Date("2026-10-30T22:00:00Z") }]];
+    return sql.includes("COUNT(*)") ? [[{ total: 2400 }]] : [[{ id: 125, document_date: new Date("2026-10-30T22:00:00Z") }]];
   } };
   const service = createDocumentActionsService({ db, visibleBranches: async () => [2, 4] });
   const result = await service.list(ADMIN, { dateFrom: "2026-10-01", dateTo: "2026-10-31", status: "COMPLETED", search: "УП_%", page: 2 });
-  assert.deepEqual(result, { data: [{ id: 125, document_date: "2026-10-31" }], total: 240, page: 2, pageSize: 100 });
+  assert.deepEqual(result, { data: [{ id: 125, document_date: "2026-10-31" }], total: 2400, page: 2, pageSize: 1000 });
   for (const { sql, params } of queries) {
     assert.match(sql, /d\.document_type = 'TRO' AND d\.branch_id IN \(\?,\?\)/);
     assert.match(sql, /ci\.branch_id = d\.branch_id/);
@@ -70,7 +92,28 @@ test("list applies branch isolation, period, literal search and stable paginatio
     assert.deepEqual(params.slice(0, 5), [2, 4, "2026-10-01", "2026-10-31", "COMPLETED"]);
   }
   assert.match(queries[1].sql, /ORDER BY d\.document_date DESC, d\.id DESC LIMIT \? OFFSET \?/);
-  assert.deepEqual(queries[1].params.slice(-2), [100, 100]);
+  assert.deepEqual(queries[1].params.slice(-2), [1000, 1000]);
+});
+
+test("pending view filters the complete manual and natural queue before count and pagination without widening branches", async () => {
+  const queries = [];
+  const db = { async query(sql, params) {
+    queries.push({ sql, params });
+    return sql.includes("COUNT(*)") ? [[{ total: 0 }]] : [[]];
+  } };
+  const service = createDocumentActionsService({ db, visibleBranches: async () => [2, 4] });
+  await service.list(ADMIN, { view: "sync-pending", dateFrom: "", dateTo: "" });
+  for (const { sql, params } of queries) {
+    assert.match(sql, /WHERE d\.document_type = 'TRO' AND d\.branch_id IN \(\?,\?\) AND td\.document_1c_guid IS NOT NULL/);
+    assert.match(sql, /td\.status_sync_requested_at IS NOT NULL/);
+    assert.match(sql, /td\.one_c_stage IN \('NEW', 'IN_PROGRESS'\)/);
+    assert.match(sql, /te\.portal_document_id = d\.id/);
+    assert.doesNotMatch(sql, /d\.document_date >=|d\.document_date < DATE_ADD/);
+    assert.deepEqual(params.slice(0, 2), [2, 4]);
+  }
+  assert.deepEqual(queries[1].params.slice(-2), [1000, 0]);
+  await assert.rejects(service.list(ADMIN, { view: "unknown" }), { code: "INVALID_DOCUMENT_VIEW" });
+  assert.equal(queries.length, 2);
 });
 
 test("list supports independently open dates and rejects malformed filters or empty scope", async () => {

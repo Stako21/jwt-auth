@@ -94,11 +94,14 @@ export function createTroAdministrationService({
 
     async execute(user, id, action, payload = {}) {
       const branches = await scope(user, id);
-      if (!["revision", "cancel", "sync"].includes(action)) throw new TroAdministrationError(400, "TRO_INVALID_ACTION", "Невідома адміністративна дія");
+      if (!["revision", "cancel", "sync", "unsync"].includes(action)) throw new TroAdministrationError(400, "TRO_INVALID_ACTION", "Невідома адміністративна дія");
       const comment = typeof payload.comment === "string" ? payload.comment.trim() : "";
       if (!comment || comment.length > 250) throw new TroAdministrationError(422, "TRO_REASON_REQUIRED", "Вкажіть причину (від 1 до 250 символів)");
       if (typeof payload.expectedStatus !== "string" || !payload.expectedStatus) {
         throw new TroAdministrationError(422, "TRO_EXPECTED_STATUS_REQUIRED", "Оновіть документ перед виконанням дії");
+      }
+      if (action === "unsync" && (typeof payload.expectedSyncRequestedAt !== "string" || !Number.isFinite(Date.parse(payload.expectedSyncRequestedAt)))) {
+        throw new TroAdministrationError(422, "TRO_SYNC_REGISTRATION_REQUIRED", "Оновіть список зареєстрованих документів перед зняттям з реєстрації");
       }
       const nextStatus = action === "revision" ? "REVISION" : "CANCELLED";
       const conn = await db.getConnection();
@@ -108,6 +111,32 @@ export function createTroAdministrationService({
       try {
         await conn.beginTransaction();
         const doc = await load(conn, id, branches, true);
+        if (action === "unsync") {
+          const [[execution]] = await conn.query(
+            "SELECT id FROM tro_1c_execution_documents WHERE portal_document_id = ? LIMIT 1", [doc.id],
+          );
+          const stillPending = Boolean(doc.document_1c_guid) && isTroNaturallyStatusPending(doc, Boolean(execution));
+          if (!doc.status_sync_requested_at) {
+            await conn.commit();
+            return { status: doc.status, idempotent: true, still_pending: stillPending };
+          }
+          if (doc.status !== payload.expectedStatus) {
+            throw new TroAdministrationError(409, "TRO_CONCURRENT_CHANGE", "Статус документа вже змінився. Оновіть документ і повторіть дію");
+          }
+          if (new Date(doc.status_sync_requested_at).getTime() !== Date.parse(payload.expectedSyncRequestedAt)) {
+            throw new TroAdministrationError(409, "TRO_SYNC_REGISTRATION_CHANGED", "Реєстрація документа вже змінилася. Оновіть список і повторіть дію");
+          }
+          await conn.query(
+            "UPDATE tro_document_details SET status_sync_requested_at = NULL WHERE document_id = ?", [doc.id],
+          );
+          await conn.query(
+            `INSERT INTO document_history (document_id, user_id, action, old_status, new_status, comment)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [doc.id, user.id, "ADMIN_SYNC_UNREGISTER", doc.status, doc.status, comment],
+          );
+          await conn.commit();
+          return { status: doc.status, idempotent: false, still_pending: stillPending };
+        }
         if (action === "sync") {
           if (!doc.document_1c_guid || String(doc.source_system).toUpperCase() !== "UP") {
             throw new TroAdministrationError(409, "TRO_ONE_C_LINK_REQUIRED", "Документ не має зв'язку з УП");
