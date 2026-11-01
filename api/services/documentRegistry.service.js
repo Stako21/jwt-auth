@@ -13,6 +13,7 @@ const STATUS_LABELS = Object.freeze({
   SIGNED: "Підписано",
   NOT_COMPLETED: "Не виконано",
   PLANNED: "Заплановано",
+  CANCELLED: "Скасовано",
   COMPLETED: "Виконано",
 });
 

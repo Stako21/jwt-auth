@@ -135,3 +135,13 @@ export async function updateTroAccounting(id, payload) {
   const { data } = await api.put(`/${id}/tro-accounting`, payload);
   return data;
 }
+
+export async function fetchAdminDocuments(params, signal) {
+  const { data } = await api.get("/admin/actions", { params, signal });
+  return data;
+}
+
+export async function executeAdminDocumentActions(payload) {
+  const { data } = await api.post("/admin/actions", payload);
+  return data;
+}

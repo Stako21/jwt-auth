@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createTroIntegrationService, IntegrationError } from "../services/TroIntegrationService.js";
+import TroIntegrationRepository from "../repositories/TroIntegration.js";
+import { isTroNaturallyStatusPending } from "../utils/troStatusSync.js";
 import { getTroPeople } from "../../client/src/components/Documents/troPeople.js";
+import { getExecutionDocumentStatus } from "../../client/src/components/Documents/executionDocumentStatus.js";
 import {
   denyOneCIntegrationAccount,
   ensureOneCIntegrationAccount,
@@ -35,6 +38,22 @@ const REJECTED_PAYLOAD = {
   responsible_guid: "44444444-4444-4444-8444-444444444444",
   responsible_name: "Администратор",
 };
+const EXECUTION_DOCUMENTS = [
+  {
+    document_1c_guid: "55555555-5555-4555-8555-555555555555",
+    document_number: "СГ0003111",
+    document_date: "2026-09-08T10:27:29+03:00",
+    confirmed: true,
+    shipped_from_warehouse: true,
+  },
+  {
+    document_1c_guid: "66666666-6666-4666-8666-666666666666",
+    document_number: "СГ0003110",
+    document_date: "2026-09-08T10:27:31+03:00",
+    confirmed: false,
+    shipped_from_warehouse: true,
+  },
+];
 
 function document(overrides = {}) {
   return {
@@ -59,6 +78,7 @@ function document(overrides = {}) {
     warehouse_guid: null,
     one_c_stage: null,
     one_c_stage_updated_at: null,
+    one_c_observed_at: null,
     rejected_by_1c_guid: null,
     rejected_by_1c_name: null,
     created_at: "2026-09-06T09:00:00.000Z",
@@ -74,11 +94,15 @@ function compareCursorTuple(left, right) {
 
 function fakeRepository(initialDocuments = [document()]) {
   const documents = new Map(initialDocuments.map((item) => [item.id, item]));
+  const executionDocuments = new Map();
   const history = [];
   let deleted = false;
+  let executionWrites = 0;
   return {
     documents,
+    executionDocuments,
     history,
+    get executionWrites() { return executionWrites; },
     get deleted() { return deleted; },
     async getAccessibleBranchIds() { return [1]; },
     async getReadyCeiling({ branchIds, cityIds = [], movementType }) {
@@ -130,7 +154,7 @@ function fakeRepository(initialDocuments = [document()]) {
       const rows = [...documents.values()].filter((item) =>
         branchIds.includes(item.branch_id) && item.document_1c_guid
         && (!cityIds.length || cityIds.includes(item.city))
-        && item.status !== "REJECTED" && [null, "NEW", "IN_PROGRESS"].includes(item.one_c_stage))
+        && (item.status_sync_requested_at || isTroNaturallyStatusPending(item, (executionDocuments.get(item.id) || []).length > 0)))
         .sort((left, right) => compareCursorTuple(left, {
           createdAt: right.created_at,
           id: right.id,
@@ -142,7 +166,7 @@ function fakeRepository(initialDocuments = [document()]) {
       return [...documents.values()].filter((item) =>
         branchIds.includes(item.branch_id) && item.document_1c_guid
         && (!cityIds.length || cityIds.includes(item.city))
-        && item.status !== "REJECTED" && [null, "NEW", "IN_PROGRESS"].includes(item.one_c_stage)
+        && (item.status_sync_requested_at || isTroNaturallyStatusPending(item, (executionDocuments.get(item.id) || []).length > 0))
         && (!after || compareCursorTuple(item, after) > 0)
         && (!ceiling || compareCursorTuple(item, ceiling) <= 0))
         .sort((left, right) => compareCursorTuple(left, {
@@ -153,7 +177,10 @@ function fakeRepository(initialDocuments = [document()]) {
         .map((item) => ({ ...item, cursor_created_at: item.created_at }));
     },
     async transaction(work) { return work({}); },
-    async lockDocument(_connection, id) { return documents.get(Number(id)) || null; },
+    async lockDocument(_connection, id) {
+      const item = documents.get(Number(id));
+      return item ? { ...item } : null;
+    },
     async findDocumentByExternalGuid(_connection, source, guid) {
       const match = [...documents.values()].find((item) =>
         item.source_system === source && item.document_1c_guid === guid);
@@ -192,8 +219,44 @@ function fakeRepository(initialDocuments = [document()]) {
     async saveStage(_connection, id, stage, changedAt) {
       Object.assign(documents.get(id), { one_c_stage: stage, one_c_stage_updated_at: changedAt });
     },
-    async savePortalStatus(_connection, id, status) {
-      Object.assign(documents.get(id), { status });
+    async getExecutionDocuments(_connection, id) {
+      return (executionDocuments.get(id) || []).map((item, index) => ({
+        id: index + 1,
+        portal_document_id: id,
+        source_system: item.sourceSystem,
+        document_1c_guid: item.documentGuid,
+        document_number: item.documentNumber,
+        document_date: item.documentDate,
+        confirmed: item.confirmed,
+        shipped_from_warehouse: item.shippedFromWarehouse,
+      }));
+    },
+    async findExecutionDocumentConflicts(_connection, sourceSystem, guids, documentId) {
+      const conflicts = [];
+      for (const [ownerId, rows] of executionDocuments.entries()) {
+        if (ownerId === documentId) continue;
+        for (const row of rows) {
+          if (row.sourceSystem === sourceSystem && guids.includes(row.documentGuid)) {
+            conflicts.push({ document_1c_guid: row.documentGuid, portal_document_id: ownerId });
+          }
+        }
+      }
+      return conflicts;
+    },
+    async syncExecutionDocuments(_connection, id, sourceSystem, rows) {
+      executionWrites += 1;
+      executionDocuments.set(id, rows.map((item) => ({ ...item, sourceSystem })));
+    },
+    async saveStageObservation(_connection, id, stage, changedAt, stageChanged) {
+      const item = documents.get(id);
+      if (stageChanged) {
+        item.one_c_stage = stage;
+        item.one_c_stage_updated_at = changedAt;
+      }
+      item.one_c_observed_at = changedAt;
+    },
+    async acknowledgeStatusSyncRequest(_connection, id) {
+      documents.get(id).status_sync_requested_at = null;
     },
     async reject(_connection, values) {
       Object.assign(documents.get(values.documentId), {
@@ -202,6 +265,12 @@ function fakeRepository(initialDocuments = [document()]) {
         rejected_by_1c_name: values.responsibleName,
       });
     },
+    async cancelPlanned(_connection, id, branchId) {
+      const item = documents.get(id);
+      assert.equal(item.branch_id, branchId);
+      assert.equal(item.status, "PLANNED");
+      item.status = "CANCELLED";
+    },
     async addHistory(_connection, entry) { history.push(entry); },
     async getLastHistoryComment(_connection, id, action) {
       return [...history].reverse().find((item) => item.documentId === id && item.action === action)?.comment ?? null;
@@ -209,6 +278,42 @@ function fakeRepository(initialDocuments = [document()]) {
     async delete() { deleted = true; },
   };
 }
+
+test("late UP stage and idempotent created callbacks cannot undo administrative cancellation", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  repo.documents.get(125).status = "CANCELLED";
+  const historyBefore = repo.history.length;
+  const created = await service.created(USER, 125, CREATED_PAYLOAD);
+  assert.equal(created.idempotent, true);
+  assert.equal(created.portal_status, "CANCELLED");
+  assert.equal(repo.history.length, historyBefore);
+  for (const [index, stage] of ["IN_PROGRESS", "COMPLETED", "CANCELLED"].entries()) {
+    const result = await service.stage(USER, 125, {
+      document_1c_guid: CREATED_PAYLOAD.document_1c_guid, source_system: "UP",
+      stage, changed_at: `2026-10-22T10:3${index}:00+03:00`,
+      execution_documents: stage === "CANCELLED" ? [] : EXECUTION_DOCUMENTS,
+    });
+    assert.equal(result.portal_status, "CANCELLED");
+    assert.equal(repo.documents.get(125).status, "CANCELLED");
+  }
+  await assert.rejects(service.rejected(USER, 125, REJECTED_PAYLOAD), { code: "DOCUMENT_ALREADY_LINKED" });
+  assert.equal(repo.documents.get(125).status, "CANCELLED");
+  assert.equal(repo.history.some((item) => item.action === "ONE_C_CANCELLED"), false);
+});
+
+test("ready traversal and late first created callback cannot process a withdrawn or cancelled request", async () => {
+  for (const status of ["REVISION", "CANCELLED"]) {
+    const repo = fakeRepository([document({ status })]);
+    const service = createTroIntegrationService(repo);
+    assert.equal((await service.listReady(USER)).data.length, 0);
+    await assert.rejects(service.created(USER, 125, CREATED_PAYLOAD), { code: "INVALID_PORTAL_STATUS" });
+    assert.equal(repo.documents.get(125).status, status);
+    assert.equal(repo.documents.get(125).document_1c_guid, null);
+    assert.equal(repo.history.length, 0);
+  }
+});
 
 test("GET returns NOT_COMPLETED documents and excludes NEW", async () => {
   const repo = fakeRepository([document(), document({ id: 126, status: "NEW", document_number: "ТРО-ZP-000126" })]);
@@ -332,6 +437,12 @@ test("frontend presents 1C responsible and sales agent separately", () => {
   });
 });
 
+test("frontend execution status gives confirmation precedence over shipment", () => {
+  assert.equal(getExecutionDocumentStatus({ confirmed: true, shipped_from_warehouse: true }).label, "Підтверджено");
+  assert.equal(getExecutionDocumentStatus({ confirmed: false, shipped_from_warehouse: true }).label, "Відвантажено зі складу");
+  assert.equal(getExecutionDocumentStatus({ confirmed: false, shipped_from_warehouse: false }).label, "Не підтверджено");
+});
+
 test("different GUID cannot replace an existing link", async () => {
   const repo = fakeRepository();
   const service = createTroIntegrationService(repo);
@@ -421,7 +532,170 @@ test("stage changes only integration stage and is idempotent", async () => {
   assert.equal(repo.history.filter((item) => item.action === "ONE_C_STAGE").length, 1);
 });
 
-test("CANCELLED after IN_PROGRESS also rejects the portal request", async () => {
+test("stage atomically stores multiple execution documents and exact retry does not write", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  const payload = {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP",
+    stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:30:00+03:00",
+    execution_documents: EXECUTION_DOCUMENTS,
+  };
+  const first = await service.stage(USER, 125, payload);
+  const writesAfterFirst = repo.executionWrites;
+  const historyAfterFirst = repo.history.length;
+  const repeated = await service.stage(USER, 125, payload);
+
+  assert.equal(repo.executionDocuments.get(125).length, 2);
+  assert.equal(first.stage_changed, true);
+  assert.equal(first.execution_documents_changed, true);
+  assert.equal(repeated.idempotent, true);
+  assert.equal(repo.executionWrites, writesAfterFirst);
+  assert.equal(repo.history.length, historyAfterFirst);
+});
+
+test("execution snapshot updates and removes missing rows without fake stage history", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:30:00+03:00",
+    execution_documents: EXECUTION_DOCUMENTS,
+  });
+  const historyBefore = repo.history.length;
+  const result = await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:31:00+03:00",
+    execution_documents: [{ ...EXECUTION_DOCUMENTS[1], confirmed: true }],
+  });
+
+  assert.equal(result.stage_changed, false);
+  assert.equal(result.execution_documents_changed, true);
+  assert.equal(repo.executionDocuments.get(125).length, 1);
+  assert.equal(repo.executionDocuments.get(125)[0].confirmed, true);
+  assert.equal(repo.history.length, historyBefore);
+});
+
+test("authoritative empty execution snapshot clears rows", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:30:00+03:00",
+    execution_documents: EXECUTION_DOCUMENTS,
+  });
+  await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:31:00+03:00",
+    execution_documents: [],
+  });
+  assert.deepEqual(repo.executionDocuments.get(125), []);
+});
+
+test("legacy stage payload without execution_documents preserves stored rows", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:30:00+03:00",
+    execution_documents: EXECUTION_DOCUMENTS,
+  });
+  await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "COMPLETED",
+    changed_at: "2026-09-08T10:31:00+03:00",
+  });
+  assert.equal(repo.executionDocuments.get(125).length, 2);
+});
+
+test("execution snapshot validates arrays, unique GUIDs and boolean flags", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  const base = {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:30:00+03:00",
+  };
+  await assert.rejects(service.stage(USER, 125, {
+    ...base, execution_documents: {},
+  }), (error) => error.status === 422 && error.code === "INVALID_EXECUTION_DOCUMENTS");
+  await assert.rejects(service.stage(USER, 125, {
+    ...base, execution_documents: [EXECUTION_DOCUMENTS[0], EXECUTION_DOCUMENTS[0]],
+  }), (error) => error.status === 422 && error.code === "DUPLICATE_EXECUTION_DOCUMENT_GUID");
+  await assert.rejects(service.stage(USER, 125, {
+    ...base,
+    execution_documents: [{ ...EXECUTION_DOCUMENTS[0], confirmed: "true" }],
+  }), (error) => error.status === 422 && error.code === "INVALID_EXECUTION_DOCUMENT_FLAGS");
+});
+
+test("execution snapshot rejects stale observations and cross-request GUID conflicts", async () => {
+  const repo = fakeRepository([document(), document({
+    id: 126,
+    document_number: "ТРО-ZP-000126",
+    document_1c_guid: "77777777-7777-4777-8777-777777777777",
+    source_system: "UP",
+    one_c_stage: "IN_PROGRESS",
+  })]);
+  repo.executionDocuments.set(126, [{
+    sourceSystem: "UP",
+    documentGuid: EXECUTION_DOCUMENTS[0].document_1c_guid,
+    documentNumber: "СГ0003111",
+    documentDate: new Date(EXECUTION_DOCUMENTS[0].document_date),
+    confirmed: true,
+    shippedFromWarehouse: true,
+  }]);
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  await assert.rejects(service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:30:00+03:00",
+    execution_documents: [EXECUTION_DOCUMENTS[0]],
+  }), (error) => error.code === "EXECUTION_DOCUMENT_GUID_CONFLICT");
+
+  repo.executionDocuments.delete(126);
+  await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:30:00+03:00",
+    execution_documents: EXECUTION_DOCUMENTS,
+  });
+  await assert.rejects(service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:29:59+03:00",
+    execution_documents: [],
+  }), (error) => error.code === "STALE_STAGE_UPDATE");
+});
+
+test("COMPLETED with execution snapshot does not complete Portal workflow", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  const result = await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "COMPLETED",
+    changed_at: "2026-09-08T10:30:00+03:00",
+    execution_documents: [{ ...EXECUTION_DOCUMENTS[0], confirmed: true }],
+  });
+  assert.equal(result.one_c_stage, "COMPLETED");
+  assert.equal(result.portal_status, "PLANNED");
+  assert.equal(repo.documents.get(125).status, "PLANNED");
+  assert.equal(repo.executionDocuments.get(125).length, 1);
+});
+
+test("CANCELLED after IN_PROGRESS changes only 1C stage and keeps execution snapshot atomic", async () => {
   const repo = fakeRepository();
   const notifications = [];
   const service = createTroIntegrationService(
@@ -442,30 +716,35 @@ test("CANCELLED after IN_PROGRESS also rejects the portal request", async () => 
     source_system: "UP",
     stage: "CANCELLED",
     changed_at: "2026-09-06T15:31:00+03:00",
+    execution_documents: EXECUTION_DOCUMENTS,
   });
   const repeated = await service.stage(USER, 125, {
     document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
     source_system: "UP",
     stage: "CANCELLED",
     changed_at: "2026-09-06T15:31:00+03:00",
+    execution_documents: EXECUTION_DOCUMENTS,
   });
 
   assert.deepEqual(cancelled, {
     idempotent: false,
-    portal_status: "REJECTED",
+    stage_changed: true,
+    execution_documents_changed: true,
+    portal_status: "PLANNED",
     one_c_stage: "CANCELLED",
   });
-  assert.equal(repo.documents.get(125).status, "REJECTED");
+  assert.equal(repo.documents.get(125).status, "PLANNED");
   assert.equal(repo.documents.get(125).one_c_stage, "CANCELLED");
+  assert.equal(repo.executionDocuments.get(125).length, 2);
   assert.equal(repeated.idempotent, true);
   assert.equal(repo.history.filter((item) => item.action === "ONE_C_STAGE").length, 2);
-  assert.equal(notifications.length, 1);
-  assert.deepEqual(notifications[0].slice(1), [125, "PLANNED", "REJECTED"]);
-  assert.equal(notifications[0][0].role, 1);
-  assert.equal(notifications[0][0].branchId, 1);
+  const cancellationHistory = repo.history.at(-1);
+  assert.equal(cancellationHistory.oldStatus, null);
+  assert.equal(cancellationHistory.newStatus, null);
+  assert.equal(notifications.length, 0);
 });
 
-test("repeated CANCELLED repairs a portal request that was not cancelled", async () => {
+test("legacy CANCELLED without a full execution snapshot never cancels Portal business status", async () => {
   const repo = fakeRepository([document({
     status: "PLANNED",
     document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
@@ -480,11 +759,236 @@ test("repeated CANCELLED repairs a portal request that was not cancelled", async
     changed_at: "2026-09-06T15:31:00+03:00",
   });
 
+  assert.equal(result.idempotent, true);
+  assert.equal(result.portal_status, "PLANNED");
+  assert.equal(repo.documents.get(125).status, "PLANNED");
+  assert.equal(repo.history.length, 0);
+});
+
+test("cancelled parent with any active execution stays planned and pending until the full snapshot is empty", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  const initial = { ...repo.documents.get(125) };
+  const payload = {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "CANCELLED",
+    changed_at: "2026-09-08T10:30:00+03:00",
+    execution_documents: [EXECUTION_DOCUMENTS[0]], // Even one confirmed document blocks cancellation.
+  };
+  const conflict = await service.stage(USER, 125, payload);
+  assert.equal(conflict.portal_status, "PLANNED");
+  assert.equal(repo.executionDocuments.get(125).length, 1);
+  assert.deepEqual((await service.listPending(USER)).data.map((row) => row.portal_document_id), [125]);
+
+  // Same 1C stage: removal of the final execution must still finalize the Portal request.
+  const finalPayload = { ...payload, changed_at: "2026-09-08T10:31:00+03:00", execution_documents: [] };
+  const final = await service.stage(USER, 125, finalPayload);
+  assert.equal(final.portal_status, "CANCELLED");
+  assert.equal(final.stage_changed, false);
+  assert.equal(repo.documents.get(125).status, "CANCELLED");
+  assert.equal(repo.executionDocuments.get(125).length, 0);
+  assert.equal((await service.listPending(USER)).data.length, 0);
+  const historyCount = repo.history.length;
+  const retry = await service.stage(USER, 125, finalPayload);
+  assert.equal(retry.idempotent, true);
+  assert.equal(repo.history.length, historyCount);
+  assert.deepEqual(repo.history.filter((row) => row.action === "ONE_C_CANCELLED"), [{
+    documentId: 125, userId: null, action: "ONE_C_CANCELLED",
+    oldStatus: "PLANNED", newStatus: "CANCELLED",
+    comment: "Заявку скасовано в УП. Повний знімок 1С підтвердив відсутність активних документів виконання.",
+  }]);
+  for (const field of ["document_1c_guid", "author_user_id", "ta_user_id", "up_document_number", "executor_guid"]) {
+    assert.equal(repo.documents.get(125)[field], initial[field]);
+  }
+});
+
+test("both INSTALL and RETURN cancel directly only with an authoritative empty snapshot", async () => {
+  for (const movement_type of ["INSTALL", "RETURN"]) {
+    const repo = fakeRepository([document({ movement_type })]);
+    const service = createTroIntegrationService(repo);
+    await service.created(USER, 125, CREATED_PAYLOAD);
+    const result = await service.stage(USER, 125, {
+      document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+      source_system: "UP", stage: "CANCELLED",
+      changed_at: "2026-09-08T10:30:00+03:00", execution_documents: [],
+    });
+    assert.equal(result.portal_status, "CANCELLED");
+    assert.equal(repo.history.filter((row) => row.action === "ONE_C_CANCELLED").length, 1);
+  }
+});
+
+test("restoring a cancelled parent resumes normal polling and keeps its execution snapshot", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  const payload = {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "CANCELLED",
+    changed_at: "2026-09-08T10:30:00+03:00", execution_documents: EXECUTION_DOCUMENTS,
+  };
+  await service.stage(USER, 125, payload);
+  const restored = await service.stage(USER, 125, {
+    ...payload, stage: "IN_PROGRESS", changed_at: "2026-09-08T10:31:00+03:00",
+  });
+  assert.equal(restored.portal_status, "PLANNED");
+  assert.equal(restored.one_c_stage, "IN_PROGRESS");
+  assert.equal(repo.executionDocuments.get(125).length, 2);
+  assert.equal((await service.listPending(USER)).data.length, 1);
+  assert.equal(repo.history.filter((row) => row.action === "ONE_C_CANCELLED").length, 0);
+});
+
+test("legacy CANCELLED keeps stored executions and stays in the synchronization queue", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  const payload = {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "IN_PROGRESS",
+    changed_at: "2026-09-08T10:30:00+03:00", execution_documents: EXECUTION_DOCUMENTS,
+  };
+  await service.stage(USER, 125, payload);
+  const { execution_documents: _snapshot, ...legacy } = payload;
+  await service.stage(USER, 125, { ...legacy, stage: "CANCELLED", changed_at: "2026-09-08T10:31:00+03:00" });
+  assert.equal(repo.documents.get(125).status, "PLANNED");
+  assert.equal(repo.executionDocuments.get(125).length, 2);
+  assert.equal((await service.listPending(USER)).data.length, 1);
+});
+
+test("previously cancelled planned requests with no stored executions are polled for confirmation", async () => {
+  const repo = fakeRepository([document({
+    status: "PLANNED", one_c_stage: "CANCELLED", source_system: "UP",
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    one_c_stage_updated_at: new Date("2026-09-08T07:30:00Z"),
+    one_c_observed_at: new Date("2026-09-08T07:30:00Z"),
+  })]);
+  const service = createTroIntegrationService(repo);
+  assert.equal((await service.listPending(USER)).data.length, 1);
+  const result = await service.stage(USER, 125, {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid, source_system: "UP",
+    stage: "CANCELLED", changed_at: "2026-09-08T10:30:00+03:00", execution_documents: [],
+  });
   assert.equal(result.idempotent, false);
-  assert.equal(result.portal_status, "REJECTED");
-  assert.equal(repo.documents.get(125).status, "REJECTED");
-  assert.equal(repo.history.at(-1).oldStatus, "PLANNED");
-  assert.equal(repo.history.at(-1).newStatus, "REJECTED");
+  assert.equal(result.stage_changed, false);
+  assert.equal(result.portal_status, "CANCELLED");
+  assert.equal((await service.listPending(USER)).data.length, 0);
+});
+
+test("stale cancellation cannot clear active executions or finalize the Portal request", async () => {
+  const repo = fakeRepository();
+  const service = createTroIntegrationService(repo);
+  await service.created(USER, 125, CREATED_PAYLOAD);
+  const payload = {
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    source_system: "UP", stage: "CANCELLED",
+    changed_at: "2026-09-08T10:30:00+03:00", execution_documents: EXECUTION_DOCUMENTS,
+  };
+  await service.stage(USER, 125, payload);
+  await assert.rejects(service.stage(USER, 125, {
+    ...payload, changed_at: "2026-09-08T10:29:59+03:00", execution_documents: [],
+  }), (error) => error.code === "STALE_STAGE_UPDATE");
+  assert.equal(repo.documents.get(125).status, "PLANNED");
+  assert.equal(repo.executionDocuments.get(125).length, 2);
+});
+
+test("cancellation preserves completed and other non-planned Portal statuses", async () => {
+  for (const status of ["COMPLETED", "REJECTED", "NEW", "NOT_COMPLETED", "REVISION"]) {
+    const repo = fakeRepository([document({
+      status, one_c_stage: "IN_PROGRESS", source_system: "UP",
+      document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    })]);
+    const result = await createTroIntegrationService(repo).stage(USER, 125, {
+      document_1c_guid: CREATED_PAYLOAD.document_1c_guid, source_system: "UP",
+      stage: "CANCELLED", changed_at: "2026-09-08T10:30:00+03:00", execution_documents: [],
+    });
+    assert.equal(result.portal_status, status);
+    assert.equal(repo.documents.get(125).status, status);
+  }
+});
+
+test("pending SQL keeps cancelled conflicts under the same branch/city and cursor boundaries", () => {
+  const { where, params } = TroIntegrationRepository.buildPendingWhere({
+    branchIds: [1, 2], cityIds: [3],
+    after: { createdAt: "2026-09-08T07:30:00Z", id: 4 },
+    ceiling: { createdAt: "2026-09-08T07:31:00Z", id: 9 },
+  });
+  const sql = where.join(" AND ");
+  assert.match(sql, /d\.branch_id IN \(\?, \?\)/);
+  assert.match(sql, /d\.city IN \(\?\)/);
+  assert.match(sql, /td\.one_c_stage = 'CANCELLED'[\s\S]*d\.status = 'PLANNED' OR EXISTS/);
+  assert.match(sql, /te\.portal_document_id = d\.id/);
+  assert.match(sql, /OR td\.status_sync_requested_at IS NOT NULL/);
+  assert.deepEqual(params, [1, 2, 3, "2026-09-08T07:31:00Z", "2026-09-08T07:31:00Z", 9,
+    "2026-09-08T07:30:00Z", "2026-09-08T07:30:00Z", 4]);
+});
+
+test("manual registrations extend the existing queue and respect city scope and cursor pagination", async () => {
+  const repo = fakeRepository([
+    document({ id: 125, status: "PLANNED", one_c_stage: "IN_PROGRESS", document_1c_guid: CREATED_PAYLOAD.document_1c_guid }),
+    document({ id: 126, status: "COMPLETED", one_c_stage: "COMPLETED", document_1c_guid: CREATED_PAYLOAD.document_1c_guid, status_sync_requested_at: "2026-09-08T07:00:00Z" }),
+    document({ id: 127, city: 99, status: "COMPLETED", one_c_stage: "COMPLETED", document_1c_guid: CREATED_PAYLOAD.document_1c_guid, status_sync_requested_at: "2026-09-08T07:00:00Z" }),
+    document({ id: 128, status: "COMPLETED", one_c_stage: "COMPLETED", document_1c_guid: CREATED_PAYLOAD.document_1c_guid }),
+  ]);
+  const service = createTroIntegrationService(repo, async () => {}, { cursorSecret: "manual-registration-test-secret" });
+  const first = await service.listPending(USER, { limit: 1 });
+  const second = await service.listPending(USER, { limit: 1, cursor: first.pagination.next_cursor });
+  assert.deepEqual([...first.data, ...second.data].map((item) => item.portal_document_id), [125, 126]);
+  assert.equal(second.pagination.has_more, false);
+  assert.equal(repo.documents.get(126).one_c_stage, "COMPLETED");
+});
+
+test("manual request is consumed by a fresh complete snapshot, even when stage and snapshot are identical", async () => {
+  const observed = "2026-09-08T07:30:00Z";
+  const repo = fakeRepository([document({ status: "COMPLETED", source_system: "UP", one_c_stage: "COMPLETED",
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid, status_sync_requested_at: observed,
+    one_c_observed_at: observed, one_c_stage_updated_at: observed })]);
+  const service = createTroIntegrationService(repo);
+  assert.equal((await service.listPending(USER)).data.length, 1);
+  const result = await service.stage(USER, 125, { document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    stage: "COMPLETED", changed_at: observed, execution_documents: [] });
+  assert.equal(result.idempotent, true);
+  assert.equal(repo.documents.get(125).status_sync_requested_at, null);
+  assert.equal(repo.documents.get(125).status, "COMPLETED");
+  assert.equal((await service.listPending(USER)).data.length, 0);
+  assert.equal(repo.history.length, 0);
+});
+
+test("GET, legacy callbacks, stale observations, wrong links and older in-flight snapshots cannot consume registration", async () => {
+  const repo = fakeRepository([document({ status: "COMPLETED", source_system: "UP", one_c_stage: "COMPLETED",
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid, status_sync_requested_at: "2026-09-08T07:31:00Z",
+    one_c_observed_at: "2026-09-08T07:30:00Z", one_c_stage_updated_at: "2026-09-08T07:30:00Z" })]);
+  const service = createTroIntegrationService(repo);
+  const payload = { document_1c_guid: CREATED_PAYLOAD.document_1c_guid, stage: "COMPLETED", changed_at: "2026-09-08T07:30:00Z" };
+  await service.listPending(USER);
+  await service.stage(USER, 125, payload);
+  await service.stage(USER, 125, { ...payload, execution_documents: [] });
+  await assert.rejects(service.stage(USER, 125, { ...payload, changed_at: "2026-09-08T07:29:00Z", execution_documents: [] }), { code: "STALE_STAGE_UPDATE" });
+  await assert.rejects(service.stage(USER, 125, { ...payload, document_1c_guid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", execution_documents: [] }), { code: "ONE_C_LINK_MISMATCH" });
+  assert.equal(repo.documents.get(125).status_sync_requested_at, "2026-09-08T07:31:00Z");
+  assert.equal((await service.listPending(USER)).data.length, 1);
+});
+
+test("resync discovers cancellation of formerly completed UP documents while retaining Portal completion protection", async () => {
+  for (const status of ["PLANNED", "COMPLETED"]) {
+    const repo = fakeRepository([document({ status, source_system: "UP", one_c_stage: "COMPLETED",
+      document_1c_guid: CREATED_PAYLOAD.document_1c_guid, status_sync_requested_at: "2026-09-08T07:00:00Z" })]);
+    const result = await createTroIntegrationService(repo).stage(USER, 125, {
+      document_1c_guid: CREATED_PAYLOAD.document_1c_guid, stage: "CANCELLED", changed_at: "2026-09-08T07:31:00Z", execution_documents: [],
+    });
+    assert.equal(result.portal_status, status === "PLANNED" ? "CANCELLED" : "COMPLETED");
+    assert.equal(repo.documents.get(125).status_sync_requested_at, null);
+  }
+});
+
+test("acknowledging a manual check does not remove a remaining natural cancellation conflict", async () => {
+  const repo = fakeRepository([document({ status: "COMPLETED", source_system: "UP", one_c_stage: "COMPLETED",
+    document_1c_guid: CREATED_PAYLOAD.document_1c_guid, status_sync_requested_at: "2026-09-08T07:00:00Z" })]);
+  const service = createTroIntegrationService(repo);
+  await service.stage(USER, 125, { document_1c_guid: CREATED_PAYLOAD.document_1c_guid,
+    stage: "CANCELLED", changed_at: "2026-09-08T07:31:00Z", execution_documents: EXECUTION_DOCUMENTS });
+  assert.equal(repo.documents.get(125).status_sync_requested_at, null);
+  assert.equal(repo.documents.get(125).status, "COMPLETED");
+  assert.equal((await service.listPending(USER)).data.length, 1);
 });
 
 test("rejected keeps the document and repeated identical request is idempotent", async () => {

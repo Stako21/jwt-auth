@@ -1,0 +1,126 @@
+@use "../../theme.scss" as *;
+@use "../../styles/filterPanel" as filter-panel;
+@use "../../styles/dataViewport" as data-viewport;
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  gap: $space-3;
+  padding: $space-3;
+  color: $text-medium;
+}
+
+.header > button, .toolbar > button, .pagination > button,
+.filters > button, .confirmation footer > button {
+  min-height: $control-height-sm;
+  padding: $space-1 $space-3;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-md;
+  background: $surface-container;
+  color: $text-medium;
+  font-size: 0.75rem;
+  cursor: pointer;
+  &:hover:not(:disabled) { border-color: $primary-accent-border; color: $text-high; }
+  &:focus-visible { outline: 2px solid $primary-accent-light; outline-offset: 2px; }
+  &:disabled { cursor: not-allowed; color: $text-muted; }
+}
+
+.header, .toolbar, .pagination {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-2;
+  font-size: 0.75rem;
+}
+.header {
+  justify-content: space-between;
+  h2 { margin: 0; color: $text-high; font-size: 1rem; }
+  p { margin: $space-1 0 0; color: $text-muted; }
+}
+.filters {
+  @include filter-panel.shell($space-3, $radius-lg);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: $space-2;
+  flex: 0 0 auto;
+  label { display: grid; min-width: 0; gap: $space-1; }
+  label > span { @include filter-panel.label; }
+  .search { grid-column: span 2; }
+}
+.results {
+  @include data-viewport.scroller;
+  border: 1px solid $table-border;
+  border-radius: $radius-lg;
+  background: $table-shell-surface;
+  table { width: 100%; border-collapse: collapse; color: $table-text; font-size: 0.74rem; }
+  th, td { padding: $space-2; text-align: left; border-bottom: 1px solid $table-border; vertical-align: middle; }
+  th { position: sticky; top: 0; z-index: 1; background: $table-head-surface; color: $table-text-strong; font-size: 0.68rem; }
+  tbody tr:nth-child(odd) { background: $table-row-odd; }
+  tbody tr:nth-child(even) { background: $table-row-even; }
+  tbody tr:hover { background: $table-row-hover; }
+  tbody tr[data-selected="true"] { background: $table-row-selected; }
+  td { overflow-wrap: anywhere; }
+  small { display: block; margin-top: $space-1; color: $table-text-muted; font-size: 0.67rem; }
+  td:first-child, th:first-child { width: 36px; }
+}
+.empty { padding: $space-5; text-align: center; color: $text-muted; }
+.error { color: $negative-muted; font-size: 0.75rem; }
+.report {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  summary { color: $primary-accent-light; cursor: pointer; }
+  ul { max-height: 140px; overflow-y: auto; padding: $space-2 $space-4; }
+}
+.pagination { justify-content: flex-end; span { margin-right: auto; } }
+.confirmation {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  transform: translateX(calc(var(--ui-sidebar-current-width, #{$sidebar-width}) / 2));
+  width: min(560px, calc(100vw - var(--ui-sidebar-current-width, #{$sidebar-width}) - #{$space-6}));
+  max-height: calc(100dvh - #{$space-6});
+  padding: 0;
+  border: 1px solid $outline-medium;
+  border-radius: $radius-xl;
+  background: $surface-modal;
+  color: $text-medium;
+  box-shadow: $shadow-modal;
+  overflow: hidden;
+  &::backdrop { background: $surface-modal-overlay; backdrop-filter: blur(4px); }
+  form { display: flex; flex-direction: column; max-height: calc(100dvh - #{$space-6}); }
+  header, footer { flex: 0 0 auto; padding: $space-3; background: $surface-modal-strong; }
+  h3 { margin: 0; color: $text-high; font-size: 1rem; }
+  footer { display: flex; justify-content: flex-end; gap: $space-2; }
+}
+.confirmationBody {
+  padding: $space-3;
+  overflow-y: auto;
+  font-size: 0.8rem;
+  ul { max-height: 160px; overflow-y: auto; padding: $space-2 $space-4; }
+  p { margin: 0 0 $space-3; }
+  label { display: grid; gap: $space-2; }
+}
+@media (max-width: $mobile-breakpoint) {
+  .workspace { height: auto; }
+  .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); .search { grid-column: span 2; } }
+  .results {
+    overflow: auto;
+    max-height: 65dvh;
+    border: 0;
+    background: $color-transparent;
+    table, tbody { display: block; }
+    thead { display: none; }
+    tbody { display: grid; gap: $space-2; }
+    tbody tr { display: grid; grid-template-columns: 36px minmax(0, 1fr); border: 1px solid $table-border; border-radius: $radius-lg; }
+    td { display: block; grid-column: 2; border: 0; padding: $space-1 $space-2; }
+    td:first-child { grid-column: 1; grid-row: 1 / span 5; padding: $space-3 $space-2; }
+    td[data-label]::before { content: attr(data-label) ": "; color: $table-text-muted; font-size: 0.68rem; }
+  }
+  .toolbar { button { flex: 1 1 auto; } }
+  .confirmation { transform: none; width: calc(100vw - #{$space-6}); }
+}

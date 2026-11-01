@@ -16,6 +16,7 @@ import ScrollToTopButton from "../components/ScrollToTopButton/ScrollToTopButton
 import ThemeSelector from "../components/ThemeSelector/ThemeSelector.jsx";
 import { IntegrationAccounts } from "../components/IntegrationAccounts/IntegrationAccounts.jsx";
 import { WarehouseDashboardAccounts } from "../components/WarehouseDashboardAccounts/WarehouseDashboardAccounts.jsx";
+import { DocumentActions } from "../components/Documents/DocumentActions.jsx";
 import "../components/Configuration/configurationCompact.css";
 import style from "./AdminPage.module.scss";
 
@@ -31,6 +32,7 @@ const ALLOWED_ADMIN_TABS = new Set([
   "configuration",
   "integration-accounts",
   "warehouse-dashboards",
+  "document-actions",
 ]);
 const CONFIGURATION_SECTIONS = [
   ["branches", "Філії"],
@@ -143,6 +145,7 @@ export default function AdminPage() {
           ["configuration", "Конфігурація", "fa-sliders"],
           ["integration-accounts", "Технічні записи", "fa-key"],
           ["warehouse-dashboards", "Складські екрани", "fa-tv"],
+          ["document-actions", "Дії з документами", "fa-file-pen"],
         ].map(([tab, label, icon]) => (
           <button
             key={tab}
@@ -275,6 +278,7 @@ export default function AdminPage() {
 
         {activeTab === "integration-accounts" && <IntegrationAccounts />}
         {activeTab === "warehouse-dashboards" && <WarehouseDashboardAccounts />}
+        {activeTab === "document-actions" && <DocumentActions />}
       </section>
 
       <ScrollToTopButton />

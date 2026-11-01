@@ -18,10 +18,14 @@ import {
   exportSelectedDocumentsXlsx,
 } from "../controllers/documentsController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
+import { ensureRole, ROLE_IDS } from "../utils/roles.js";
 import { getDocumentPdf } from "../controllers/documentsController.js";
 import { getDocumentNotifications } from "../controllers/documentsController.js";
+import { listDocumentActions, executeDocumentActions } from "../controllers/documentActionsController.js";
 
 const router = Router();
+router.get("/admin/actions", authMiddleware, ensureRole(ROLE_IDS.Admin), listDocumentActions);
+router.post("/admin/actions", authMiddleware, ensureRole(ROLE_IDS.Admin), executeDocumentActions);
 
 // Route to create a new document (protected)
 router.post("/", authMiddleware, createDocument);

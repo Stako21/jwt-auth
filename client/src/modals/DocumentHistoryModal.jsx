@@ -13,9 +13,13 @@ const ACTION_LABELS = {
   ONE_C_CREATED: { label: "Створено в УП", tone: "info" },
   ONE_C_REJECTED: { label: "Відхилено в УП", tone: "negative" },
   ONE_C_STAGE: { label: "Зміна стану в УП", tone: "info" },
+  ONE_C_CANCELLED: { label: "Скасовано після звірки з УП", tone: "negative" },
   PREPARE: { label: "Погоджено до підпису", tone: "info" },
   SIGN: { label: "Підписано", tone: "positive" },
   REVISION: { label: "На доопрацювання", tone: "warning" },
+  ADMIN_REVISION: { label: "На доопрацювання адміністратором", tone: "warning" },
+  ADMIN_CANCEL: { label: "Скасовано адміністратором", tone: "negative" },
+  ADMIN_SYNC_REQUEST: { label: "Зареєстровано на синхронізацію", tone: "info" },
   REJECT: { label: "Відхилено", tone: "negative" },
   UPDATE: { label: "Оновлено", tone: "info" },
   ACCOUNTING_UPDATE: { label: "Дані бухгалтера", tone: "info" },
@@ -29,6 +33,7 @@ const STATUS_LABELS = {
   SIGNED: { label: "Підписано", tone: "positive" },
   NOT_COMPLETED: { label: "Не виконано", tone: "warning" },
   PLANNED: { label: "Заплановано", tone: "info" },
+  CANCELLED: { label: "Скасовано", tone: "negative" },
   COMPLETED: { label: "Виконано", tone: "positive" },
 };
 

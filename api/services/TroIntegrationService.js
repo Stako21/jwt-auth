@@ -58,6 +58,53 @@ function stageLabel(stage) {
   return ({ NEW: "Новий", IN_PROGRESS: "Виконується", COMPLETED: "Завершено", CANCELLED: "Скасовано" })[stage] || stage;
 }
 
+function parseExecutionDocuments(payload) {
+  if (!Object.prototype.hasOwnProperty.call(payload, "execution_documents")) {
+    return null;
+  }
+  if (!Array.isArray(payload.execution_documents)) {
+    throw new IntegrationError(422, "INVALID_EXECUTION_DOCUMENTS", "execution_documents має бути масивом");
+  }
+  const seen = new Set();
+  return payload.execution_documents.map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new IntegrationError(422, "INVALID_EXECUTION_DOCUMENT", `Некоректний execution_documents[${index}]`);
+    }
+    const documentGuid = guid(item.document_1c_guid, `execution_documents[${index}].document_1c_guid`);
+    if (seen.has(documentGuid)) {
+      throw new IntegrationError(422, "DUPLICATE_EXECUTION_DOCUMENT_GUID", `GUID ${documentGuid} повторюється в execution_documents`);
+    }
+    seen.add(documentGuid);
+    const documentNumber = clean(item.document_number, 64);
+    if (!documentNumber) {
+      throw new IntegrationError(422, "INVALID_EXECUTION_DOCUMENT_NUMBER", `Порожній номер у execution_documents[${index}]`);
+    }
+    if (typeof item.confirmed !== "boolean" || typeof item.shipped_from_warehouse !== "boolean") {
+      throw new IntegrationError(422, "INVALID_EXECUTION_DOCUMENT_FLAGS", `Прапорці execution_documents[${index}] мають бути boolean`);
+    }
+    return {
+      documentGuid,
+      documentNumber,
+      documentDate: date(item.document_date, `execution_documents[${index}].document_date`),
+      confirmed: item.confirmed,
+      shippedFromWarehouse: item.shipped_from_warehouse,
+    };
+  });
+}
+
+function executionDocumentsEqual(existing, incoming) {
+  if (existing.length !== incoming.length) return false;
+  const byGuid = new Map(existing.map((item) => [String(item.document_1c_guid).toLowerCase(), item]));
+  return incoming.every((item) => {
+    const current = byGuid.get(item.documentGuid);
+    return current
+      && current.document_number === item.documentNumber
+      && sameDate(current.document_date, item.documentDate)
+      && Boolean(current.confirmed) === item.confirmed
+      && Boolean(current.shipped_from_warehouse) === item.shippedFromWarehouse;
+  });
+}
+
 function rejectionComment({ reason, reasonCode, responsibleName }) {
   return [
     "Заявку відхилено в УП.",
@@ -463,6 +510,7 @@ export function createTroIntegrationService(
       const sourceSystem = clean(payload.source_system || "UP", 32).toUpperCase();
       const nextStage = clean(payload.stage, 32).toUpperCase();
       const changedAt = date(payload.changed_at, "changed_at");
+      const executionDocuments = parseExecutionDocuments(payload);
       if (!STAGES.has(nextStage)) {
         throw new IntegrationError(422, "INVALID_ONE_C_STAGE", "Невідомий стан документа 1С");
       }
@@ -475,51 +523,106 @@ export function createTroIntegrationService(
           throw new IntegrationError(409, "ONE_C_LINK_MISMATCH", "Зв'язок з документом 1С не відповідає запиту");
         }
         const stageChanged = doc.one_c_stage !== nextStage;
-        const cancelPortalRequest = nextStage === "CANCELLED" && doc.status !== "REJECTED";
-        const portalStatusBefore = doc.status;
-        if (!stageChanged && !cancelPortalRequest) {
-          return { idempotent: true, portal_status: doc.status, one_c_stage: doc.one_c_stage };
-        }
-        if (stageChanged
-          && doc.one_c_stage_updated_at
-          && changedAt < new Date(doc.one_c_stage_updated_at)) {
+        const observationBarrier = executionDocuments === null
+          ? doc.one_c_stage_updated_at
+          : (doc.one_c_observed_at || doc.one_c_stage_updated_at);
+        if ((stageChanged || executionDocuments !== null)
+          && observationBarrier
+          && changedAt < new Date(observationBarrier)) {
           throw new IntegrationError(409, "STALE_STAGE_UPDATE", "Отримано застарілу зміну стану 1С");
         }
-        if (stageChanged) {
-          await repository.saveStage(connection, doc.id, nextStage, changedAt);
+
+        let executionDocumentsChanged = false;
+        let existingExecutionDocuments = [];
+        if (executionDocuments !== null) {
+          existingExecutionDocuments = await repository.getExecutionDocuments(connection, doc.id, true);
+          executionDocumentsChanged = !executionDocumentsEqual(existingExecutionDocuments, executionDocuments);
+          const conflicts = await repository.findExecutionDocumentConflicts(
+            connection,
+            sourceSystem,
+            executionDocuments.map((item) => item.documentGuid),
+            doc.id,
+          );
+          if (conflicts.length) {
+            throw new IntegrationError(409, "EXECUTION_DOCUMENT_GUID_CONFLICT", "Документ виконання 1С вже пов'язаний з іншою заявкою Portal");
+          }
         }
-        if (cancelPortalRequest) {
-          await repository.savePortalStatus(connection, doc.id, "REJECTED");
+
+        const observationChanged = executionDocuments !== null
+          && !sameDate(doc.one_c_observed_at || doc.one_c_stage_updated_at, changedAt);
+        // Only a complete, explicitly empty snapshot can finalize cancellation.
+        // Legacy payloads must never infer absence from omitted execution data.
+        const cancelPortalRequest = doc.status === "PLANNED"
+          && nextStage === "CANCELLED"
+          && executionDocuments !== null
+          && executionDocuments.length === 0;
+        // A GET or a legacy callback without a full snapshot must not consume the request.
+        // This also handles an otherwise identical terminal snapshot.
+        if (doc.status_sync_requested_at && executionDocuments !== null
+          && changedAt >= new Date(doc.status_sync_requested_at)) {
+          await repository.acknowledgeStatusSyncRequest(connection, doc.id);
+        }
+        if (!stageChanged && !executionDocumentsChanged && !observationChanged && !cancelPortalRequest) {
+          return {
+            idempotent: true,
+            stage_changed: false,
+            execution_documents_changed: false,
+            portal_status: doc.status,
+            one_c_stage: doc.one_c_stage,
+          };
+        }
+
+        if (executionDocumentsChanged) {
+          try {
+            await repository.syncExecutionDocuments(
+              connection,
+              doc.id,
+              sourceSystem,
+              executionDocuments,
+              existingExecutionDocuments,
+            );
+          } catch (error) {
+            if (error?.code === "ER_DUP_ENTRY") {
+              throw new IntegrationError(409, "EXECUTION_DOCUMENT_GUID_CONFLICT", "Документ виконання 1С вже пов'язаний з іншою заявкою Portal");
+            }
+            throw error;
+          }
+        }
+        if (executionDocuments !== null) {
+          await repository.saveStageObservation(connection, doc.id, nextStage, changedAt, stageChanged);
+        } else if (stageChanged) {
+          await repository.saveStage(connection, doc.id, nextStage, changedAt);
         }
         const comments = [];
         if (stageChanged) {
           comments.push(`Стан документа в УП змінено: ${stageLabel(doc.one_c_stage || "NEW")} → ${stageLabel(nextStage)}.`);
         }
-        if (cancelPortalRequest) {
-          comments.push("Заявку в Portal скасовано через скасування документа в УП.");
+        if (comments.length) {
+          await repository.addHistory(connection, {
+            documentId: doc.id, userId: null, action: "ONE_C_STAGE",
+            oldStatus: null,
+            newStatus: null,
+            comment: comments.join(" "),
+          });
         }
-        await repository.addHistory(connection, {
-          documentId: doc.id, userId: null, action: "ONE_C_STAGE",
-          oldStatus: cancelPortalRequest ? portalStatusBefore : null,
-          newStatus: cancelPortalRequest ? "REJECTED" : null,
-          comment: comments.join(" "),
-        });
+        if (cancelPortalRequest) {
+          await repository.cancelPlanned(connection, doc.id, doc.branch_id);
+          await repository.addHistory(connection, {
+            documentId: doc.id, userId: null, action: "ONE_C_CANCELLED",
+            oldStatus: doc.status,
+            newStatus: "CANCELLED",
+            comment: "Заявку скасовано в УП. Повний знімок 1С підтвердив відсутність активних документів виконання.",
+          });
+        }
         return {
           idempotent: false,
-          portal_status: cancelPortalRequest ? "REJECTED" : portalStatusBefore,
+          stage_changed: stageChanged,
+          execution_documents_changed: executionDocumentsChanged,
+          portal_status: cancelPortalRequest ? "CANCELLED" : doc.status,
           one_c_stage: nextStage,
-          notification_old_status: cancelPortalRequest ? portalStatusBefore : null,
-          notification_branch_id: doc.branch_id,
         };
       });
-      if (result.notification_old_status) {
-        notify({ ...user, id: 0, role: 1, branchId: result.notification_branch_id }, Number(documentId), result.notification_old_status, "REJECTED").catch((error) =>
-          console.error("1C cancelled status notification failed:", error));
-      }
-      const response = { ...result };
-      delete response.notification_old_status;
-      delete response.notification_branch_id;
-      return response;
+      return result;
     },
   };
 }

@@ -19,6 +19,11 @@ const STATUS_CONFIG = {
     icon: "fa-file-circle-xmark",
     className: style.rejected,
   },
+  CANCELLED: {
+    label: "Скасовано",
+    icon: "fa-ban",
+    className: style.rejected,
+  },
   SIGNED: {
     label: "Підписано",
     icon: "fa-file-circle-check",

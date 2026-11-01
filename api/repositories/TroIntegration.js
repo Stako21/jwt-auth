@@ -1,4 +1,5 @@
 import pool from "../db.cjs";
+import { TRO_STATUS_PENDING_SQL } from "../utils/troStatusSync.js";
 
 export default class TroIntegrationRepository {
   static async getAccessibleBranchIds(userId, primaryBranchId) {
@@ -108,9 +109,8 @@ export default class TroIntegrationRepository {
     const where = [
       "d.document_type = 'TRO'",
       `d.branch_id IN (${branchIds.map(() => "?").join(", ")})`,
-      "d.status <> 'REJECTED'",
       "td.document_1c_guid IS NOT NULL",
-      "(td.one_c_stage IS NULL OR td.one_c_stage IN ('NEW', 'IN_PROGRESS'))",
+      TRO_STATUS_PENDING_SQL,
     ];
     const params = [...branchIds];
     if (cityIds.length) {
@@ -186,6 +186,7 @@ export default class TroIntegrationRepository {
               td.source_system, td.one_c_sales_agent_id, td.one_c_sales_agent_guid,
               td.one_c_sales_agent_name,
               td.warehouse_guid, td.one_c_stage, td.one_c_stage_updated_at,
+              td.one_c_observed_at, td.status_sync_requested_at,
               td.last_sync_error, td.rejected_by_1c_guid, td.rejected_by_1c_name
        FROM documents d
        JOIN tro_document_details td ON td.document_id = d.id
@@ -284,10 +285,99 @@ export default class TroIntegrationRepository {
     );
   }
 
-  static async savePortalStatus(connection, documentId, status) {
+  static async getExecutionDocuments(connection, documentId, lock = false) {
+    const [rows] = await connection.query(
+      `SELECT id, portal_document_id, source_system, document_1c_guid,
+              document_number, document_date, confirmed, shipped_from_warehouse
+       FROM tro_1c_execution_documents
+       WHERE portal_document_id = ?
+       ORDER BY document_date, id${lock ? " FOR UPDATE" : ""}`,
+      [documentId],
+    );
+    return rows;
+  }
+
+  static async findExecutionDocumentConflicts(connection, sourceSystem, guids, documentId) {
+    if (!guids.length) return [];
+    const [rows] = await connection.query(
+      `SELECT document_1c_guid, portal_document_id
+       FROM tro_1c_execution_documents
+       WHERE source_system = ? AND document_1c_guid IN (?)
+         AND portal_document_id <> ?
+       FOR UPDATE`,
+      [sourceSystem, guids, documentId],
+    );
+    return rows;
+  }
+
+  static async syncExecutionDocuments(connection, documentId, sourceSystem, documents, existing = []) {
+    const guids = documents.map((item) => item.documentGuid);
+    const existingByGuid = new Map(existing.map((item) => [
+      String(item.document_1c_guid).toLowerCase(),
+      item,
+    ]));
+    for (const item of documents) {
+      const current = existingByGuid.get(item.documentGuid);
+      if (!current) {
+        await connection.query(
+          `INSERT INTO tro_1c_execution_documents
+             (portal_document_id, source_system, document_1c_guid, document_number,
+              document_date, confirmed, shipped_from_warehouse)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [documentId, sourceSystem, item.documentGuid, item.documentNumber,
+            item.documentDate, item.confirmed, item.shippedFromWarehouse],
+        );
+      } else if (current.document_number !== item.documentNumber
+        || new Date(current.document_date).getTime() !== item.documentDate.getTime()
+        || Boolean(current.confirmed) !== item.confirmed
+        || Boolean(current.shipped_from_warehouse) !== item.shippedFromWarehouse) {
+        await connection.query(
+          `UPDATE tro_1c_execution_documents
+           SET document_number = ?, document_date = ?, confirmed = ?,
+               shipped_from_warehouse = ?
+           WHERE id = ? AND portal_document_id = ?`,
+          [item.documentNumber, item.documentDate, item.confirmed,
+            item.shippedFromWarehouse, current.id, documentId],
+        );
+      }
+    }
+    if (guids.length) {
+      await connection.query(
+        `DELETE FROM tro_1c_execution_documents
+         WHERE portal_document_id = ? AND document_1c_guid NOT IN (?)`,
+        [documentId, guids],
+      );
+    } else {
+      await connection.query(
+        "DELETE FROM tro_1c_execution_documents WHERE portal_document_id = ?",
+        [documentId],
+      );
+    }
+  }
+
+  static async saveStageObservation(connection, documentId, stage, changedAt, stageChanged) {
+    if (stageChanged) {
+      await connection.query(
+        `UPDATE tro_document_details
+         SET one_c_stage = ?, one_c_stage_updated_at = ?, one_c_observed_at = ?,
+             last_synced_at = NOW(), last_sync_error = NULL
+         WHERE document_id = ?`,
+        [stage, changedAt, changedAt, documentId],
+      );
+      return;
+    }
     await connection.query(
-      "UPDATE documents SET status = ? WHERE id = ?",
-      [status, documentId],
+      `UPDATE tro_document_details
+       SET one_c_observed_at = ?, last_synced_at = NOW(), last_sync_error = NULL
+       WHERE document_id = ?`,
+      [changedAt, documentId],
+    );
+  }
+
+  static async acknowledgeStatusSyncRequest(connection, documentId) {
+    await connection.query(
+      "UPDATE tro_document_details SET status_sync_requested_at = NULL WHERE document_id = ?",
+      [documentId],
     );
   }
 
@@ -302,6 +392,15 @@ export default class TroIntegrationRepository {
       "UPDATE documents SET status = 'REJECTED' WHERE id = ?",
       [documentId],
     );
+  }
+
+  static async cancelPlanned(connection, documentId, branchId) {
+    const [result] = await connection.query(
+      `UPDATE documents SET status = 'CANCELLED'
+       WHERE id = ? AND branch_id = ? AND document_type = 'TRO' AND status = 'PLANNED'`,
+      [documentId, branchId],
+    );
+    if (result.affectedRows !== 1) throw new Error("Не вдалося скасувати заплановану заявку ТРО");
   }
 
   static async addHistory(connection, { documentId, userId, action, oldStatus, newStatus, comment }) {
