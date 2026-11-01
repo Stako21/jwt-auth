@@ -27,8 +27,17 @@ Implemented in the current workspace:
 - scheduler task settings and persisted `lastRun`
 - import path resolution through `IMPORT_DIR` with legacy fallback to `client/public/Sorce`
 - installation/return TRO documents with an imported branch-scoped TRO directory, multi-position name/quantity rows, TA/SV/NTO approval rules, accountant planning/completion fields, status notifications, and document history
+- Admin `Дії з документами` for bulk TRO cancellation, restricted revision, and additive registration for another UP status check; requires migration 033
 - separate return/exchange and TRO document workspaces with dedicated menu entries, routes, server-filtered tables, creation actions, and status filter sets
 - a dedicated Full HD warehouse ranking dashboard for the current 08:00–08:00 shift, with isolated screen accounts, many-to-many warehouse access, automatic refresh, and invoice/row/weight totals without earnings data
+
+## Administrative document actions
+
+`Адмін -> Дії з документами` lists TRO requests within the administrator's visible branches, with server-side date/status/search filters and 100-row pages. Select documents on the current page, choose an action, review the document numbers and enter a reason. Each document reports its own result; a denied or concurrently changed document does not block the rest. Revision retains the existing UP/accounting restrictions. Cancellation preserves signatures, accounting fields and integration snapshots.
+
+`Реєстрація на синхронізацію` adds selected UP-linked requests to the existing `status-pending` queue without resetting either workflow or altering documents already pending. This permits another check of UP-completed requests. Registration survives API restarts and is consumed only by an accepted full execution snapshot observed at or after registration; GETs, omitted snapshots and failed callbacks keep it pending. If the refreshed state remains naturally pending, ordinary synchronization continues. Portal-COMPLETED requests are still never cancelled automatically; use explicit administrative cancellation when needed. Physical deletion of the parent in UP still produces a synchronization error in the existing EPF.
+
+Apply `api/migrations/033_tro_status_sync_requests.js` through the existing migration runner against an approved target database **before deploying this API version**. It adds one nullable timestamp column and does not register or change existing documents. Applied with user approval on 2026-10-31 to local DEV `auth` at `Stako_PC` (`localhost:3306`); all 102 existing TRO detail rows retained their previous fields and received an empty registration timestamp. Other deployments must apply it separately to their approved database. The existing v2 status-processing source already sends full snapshots; no EPF change is required.
 
 ## Run
 
